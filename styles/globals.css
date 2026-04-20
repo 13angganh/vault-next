@@ -1,0 +1,453 @@
+/* ============================================================
+   VAULT NEXT — Global Styles
+   ============================================================ */
+
+@import './tokens.css';
+
+/* === Dark Mode (default) === */
+:root,
+[data-theme="dark"] {
+  /* Background layers */
+  --bg-root:    #06070E;
+  --bg-surface: #0D0F1A;
+  --bg-card:    #111827;
+  --bg-overlay: #1A1F2E;
+  --bg-input:   #0F1320;
+  --bg-hover:   rgba(240,165,0,0.06);
+  --bg-active:  rgba(240,165,0,0.1);
+
+  /* Gold accent */
+  --gold:           #F0A500;
+  --gold-soft:      #F0A50022;
+  --gold-border:    #F0A50044;
+  --gold-glow:      rgba(240,165,0,0.35);
+  --gold-text:      #F5B429;
+
+  /* Text */
+  --text-primary:   #F0EDE6;
+  --text-secondary: #9CA3AF;
+  --text-muted:     #4B5563;
+  --text-inverse:   #06070E;
+
+  /* Borders */
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-default: rgba(255,255,255,0.1);
+  --border-strong:  rgba(255,255,255,0.18);
+  --border-gold:    rgba(240,165,0,0.3);
+
+  /* Strength meter */
+  --strength-1: #EF4444;
+  --strength-2: #F97316;
+  --strength-3: #EAB308;
+  --strength-4: #84CC16;
+  --strength-5: #22C55E;
+
+  /* Status */
+  --status-success: #22C55E;
+  --status-warning: #F59E0B;
+  --status-danger:  #EF4444;
+  --status-info:    #3B82F6;
+
+  /* Overlay dimming */
+  --overlay-dim: rgba(6,7,14,0.7);
+
+  /* Shadows dark */
+  --shadow-card:    0 2px 12px rgba(0,0,0,0.4);
+  --shadow-modal:   0 8px 48px rgba(0,0,0,0.6);
+  --shadow-sidebar: 4px 0 32px rgba(0,0,0,0.5);
+}
+
+/* === Light Mode === */
+[data-theme="light"] {
+  /* Background layers — warm white, bukan cold gray */
+  --bg-root:    #FAFAF8;
+  --bg-surface: #F5F4F0;
+  --bg-card:    #FFFFFF;
+  --bg-overlay: #EEECE8;
+  --bg-input:   #F9F8F5;
+  --bg-hover:   rgba(240,165,0,0.06);
+  --bg-active:  rgba(240,165,0,0.12);
+
+  /* Gold accent — sedikit lebih gelap di light */
+  --gold:           #C8860A;
+  --gold-soft:      #C8860A18;
+  --gold-border:    #C8860A33;
+  --gold-glow:      rgba(200,134,10,0.25);
+  --gold-text:      #A06C08;
+
+  /* Text */
+  --text-primary:   #1A1A1A;
+  --text-secondary: #6B7280;
+  --text-muted:     #9CA3AF;
+  --text-inverse:   #FAFAF8;
+
+  /* Borders */
+  --border-subtle:  rgba(0,0,0,0.05);
+  --border-default: rgba(0,0,0,0.1);
+  --border-strong:  rgba(0,0,0,0.2);
+  --border-gold:    rgba(200,134,10,0.3);
+
+  /* Strength meter — sama */
+  --strength-1: #EF4444;
+  --strength-2: #F97316;
+  --strength-3: #EAB308;
+  --strength-4: #84CC16;
+  --strength-5: #22C55E;
+
+  /* Status */
+  --status-success: #16A34A;
+  --status-warning: #D97706;
+  --status-danger:  #DC2626;
+  --status-info:    #2563EB;
+
+  /* Overlay dimming */
+  --overlay-dim: rgba(250,250,248,0.75);
+
+  /* Shadows light */
+  --shadow-card:    0 2px 12px rgba(0,0,0,0.08);
+  --shadow-modal:   0 8px 48px rgba(0,0,0,0.16);
+  --shadow-sidebar: 4px 0 32px rgba(0,0,0,0.12);
+}
+
+/* === Reset & Base === */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-root);
+  color: var(--text-primary);
+  font-family: var(--font-outfit, 'Outfit', sans-serif);
+  font-size: var(--text-base);
+  font-weight: var(--fw-body);
+  line-height: var(--lh-normal);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* Mono font class */
+.mono {
+  font-family: var(--font-jetbrains, 'JetBrains Mono', monospace);
+}
+
+/* === Scrollbar Custom === */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-border);
+}
+
+/* === Selection === */
+::selection {
+  background: var(--gold-soft);
+  color: var(--text-primary);
+}
+
+/* === Focus Ring === */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* === Link Reset === */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* === Button Reset === */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* === Input Reset === */
+input, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+/* === Image === */
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* ============================================================
+   ANIMASI GLOBAL
+   ============================================================ */
+
+/* Fade + scale — transisi antar view */
+@keyframes fadeScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeScaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97) translateY(-8px);
+  }
+}
+
+/* Slide in dari kiri — sidebar */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Fade in sederhana */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Scale up — modal */
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse gold — PIN dots */
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50%       { box-shadow: 0 0 12px 4px var(--gold-glow); }
+}
+
+/* Ripple — button click */
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Shimmer — loading skeleton */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Spin — loading indicator */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Bounce subtle — success feedback */
+@keyframes bounceSoft {
+  0%, 100% { transform: scale(1); }
+  40%       { transform: scale(1.08); }
+  70%       { transform: scale(0.96); }
+}
+
+/* Shake — error feedback (wrong PIN) */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-6px); }
+  80%       { transform: translateX(6px); }
+}
+
+/* Loading screen reveal */
+@keyframes loadingReveal {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes loadingBar {
+  0%   { width: 0%; }
+  40%  { width: 60%; }
+  70%  { width: 80%; }
+  90%  { width: 92%; }
+  100% { width: 100%; }
+}
+
+@keyframes loadingBarFill {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Gold icon float */
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) ease both;
+}
+
+.animate-fade-scale-in {
+  animation: fadeScaleIn var(--transition-slow) ease both;
+}
+
+.animate-scale-up {
+  animation: scaleUp var(--transition-normal) ease both;
+}
+
+.animate-shake {
+  animation: shake 400ms ease;
+}
+
+.animate-bounce-soft {
+  animation: bounceSoft 500ms ease;
+}
+
+/* Ripple button wrapper */
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(0);
+  animation: ripple 600ms linear;
+  pointer-events: none;
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-overlay) 25%,
+    var(--bg-card) 50%,
+    var(--bg-overlay) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+/* Visually hidden (accessibility) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes viewEnter {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Responsive Mobile Layout ─────────────────────────────────────────────── */
+
+/* Hide desktop sidebar on mobile */
+@media (max-width: 768px) {
+  .sidebar-desktop {
+    display: none !important;
+  }
+
+  /* Show hamburger button */
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+
+  /* Show mobile topbar */
+  .mobile-topbar {
+    display: flex !important;
+  }
+
+  /* Vault grid: single column on mobile */
+  .vault-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide detail panel on mobile by default — 
+     detail opens as overlay when entry selected */
+  .vault-grid > div:nth-child(2) {
+    display: none;
+  }
+}
+
+/* Mobile: header has hamburger + title */
+@media (max-width: 768px) {
+  header {
+    padding-left: var(--space-2) !important;
+  }
+}
