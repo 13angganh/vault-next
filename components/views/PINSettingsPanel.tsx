@@ -3,23 +3,26 @@
 /**
  * Vault Next — PINSettingsPanel
  * Setup, ganti, atau hapus PIN dari SettingsView.
- * Sesi 5.
+ * FIX Sesi 6B: setupPin sekarang require masterPw untuk simpan encMasterByPin.
  */
 
 import { useState } from 'react';
-import { setupPin, verifyPin, hasPinSetup } from '@/lib/vaultService';
-import { lsRemove, LS_PIN } from '@/lib/storage';
+import { Lock, Unlock, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { setupPin, verifyPin, removePin, hasPinSetup } from '@/lib/vaultService';
+import { useAppStore } from '@/lib/store/appStore';
 
 type PINMode = 'idle' | 'setup' | 'change-verify' | 'change-new' | 'remove-verify';
 
 export function PINSettingsPanel() {
-  const pinExists = hasPinSetup();
-  const [mode,      setMode]      = useState<PINMode>('idle');
-  const [pin,       setPin]       = useState('');
-  const [pinConf,   setPinConf]   = useState('');
-  const [pinErr,    setPinErr]    = useState('');
-  const [pinSuccess, setPinSuccess] = useState('');
-  const [loading,   setLoading]   = useState(false);
+  const masterPw     = useAppStore((s) => s.masterPw);
+  const pinExists    = hasPinSetup();
+
+  const [mode,           setMode]           = useState<PINMode>('idle');
+  const [pin,            setPin]            = useState('');
+  const [pinConf,        setPinConf]        = useState('');
+  const [pinErr,         setPinErr]         = useState('');
+  const [pinSuccess,     setPinSuccess]     = useState('');
+  const [loading,        setLoading]        = useState(false);
   const [localPinExists, setLocalPinExists] = useState(pinExists);
 
   const reset = () => {
@@ -28,11 +31,12 @@ export function PINSettingsPanel() {
 
   // ── Setup PIN baru ───────────────────────────────────────────────────────────
   const handleSetupSubmit = async () => {
-    if (pin.length < 4) { setPinErr('PIN minimal 4 digit'); return; }
-    if (pin !== pinConf) { setPinErr('PIN tidak cocok'); return; }
+    if (pin.length < 4)    { setPinErr('PIN minimal 4 digit'); return; }
+    if (pin !== pinConf)   { setPinErr('PIN tidak cocok'); return; }
+    if (!masterPw)         { setPinErr('Tidak dapat membaca master password sesi ini'); return; }
     setLoading(true);
     try {
-      await setupPin(pin);
+      await setupPin(pin, masterPw);
       setLocalPinExists(true);
       setPinSuccess('✅ PIN berhasil dibuat!');
       setTimeout(reset, 1500);
@@ -41,7 +45,7 @@ export function PINSettingsPanel() {
     } finally { setLoading(false); }
   };
 
-  // ── Ganti PIN: verifikasi lama ────────────────────────────────────────────────
+  // ── Verifikasi PIN lama sebelum ganti ────────────────────────────────────────
   const handleChangeVerify = async () => {
     if (!pin) { setPinErr('Masukkan PIN lama'); return; }
     setLoading(true);
@@ -53,13 +57,14 @@ export function PINSettingsPanel() {
     } finally { setLoading(false); }
   };
 
-  // ── Ganti PIN: simpan baru ────────────────────────────────────────────────────
+  // ── Simpan PIN baru ────────────────────────────────────────────────────────
   const handleChangeNew = async () => {
-    if (pin.length < 4) { setPinErr('PIN baru minimal 4 digit'); return; }
+    if (pin.length < 4)  { setPinErr('PIN baru minimal 4 digit'); return; }
     if (pin !== pinConf) { setPinErr('PIN tidak cocok'); return; }
+    if (!masterPw)       { setPinErr('Tidak dapat membaca master password sesi ini'); return; }
     setLoading(true);
     try {
-      await setupPin(pin);
+      await setupPin(pin, masterPw);
       setPinSuccess('✅ PIN berhasil diubah!');
       setTimeout(reset, 1500);
     } catch {
@@ -74,20 +79,20 @@ export function PINSettingsPanel() {
     try {
       const ok = await verifyPin(pin);
       if (!ok) { setPinErr('PIN salah'); setLoading(false); return; }
-      lsRemove(LS_PIN);
+      removePin();
       setLocalPinExists(false);
       setPinSuccess('✅ PIN berhasil dihapus.');
       setTimeout(reset, 1500);
     } finally { setLoading(false); }
   };
 
-  const renderPinInputs = (isConfirm = false) => (
+  const renderPinInputs = (withConfirm = false) => (
     <div className="pin-settings__inputs">
       <div className="form-group">
         <label className="form-label" htmlFor="ps-pin">
-          {mode === 'change-verify' ? 'PIN Lama'
+          {mode === 'change-verify'  ? 'PIN Lama'
            : mode === 'remove-verify' ? 'PIN (konfirmasi)'
-           : mode === 'change-new' ? 'PIN Baru'
+           : mode === 'change-new'   ? 'PIN Baru'
            : 'PIN (4–8 digit)'}
         </label>
         <input
@@ -101,16 +106,16 @@ export function PINSettingsPanel() {
           autoFocus
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              if (mode === 'setup') handleSetupSubmit();
-              if (mode === 'change-verify') handleChangeVerify();
-              if (mode === 'change-new') handleChangeNew();
-              if (mode === 'remove-verify') handleRemoveVerify();
+              if (mode === 'setup')          handleSetupSubmit();
+              if (mode === 'change-verify')  handleChangeVerify();
+              if (mode === 'change-new')     handleChangeNew();
+              if (mode === 'remove-verify')  handleRemoveVerify();
             }
             if (e.key === 'Escape') reset();
           }}
         />
       </div>
-      {isConfirm && (
+      {withConfirm && (
         <div className="form-group">
           <label className="form-label" htmlFor="ps-pin-conf">Ulangi PIN</label>
           <input
@@ -123,25 +128,24 @@ export function PINSettingsPanel() {
             placeholder="••••"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                if (mode === 'setup') handleSetupSubmit();
+                if (mode === 'setup')      handleSetupSubmit();
                 if (mode === 'change-new') handleChangeNew();
               }
             }}
           />
         </div>
       )}
-      {pinErr     && <p className="form-error">{pinErr}</p>}
-      {pinSuccess  && <p className="form-hint" style={{ color: 'var(--c-success)' }}>{pinSuccess}</p>}
+      {pinErr    && <p className="form-error">{pinErr}</p>}
+      {pinSuccess && <p className="form-hint" style={{ color: '#4ade80' }}>{pinSuccess}</p>}
     </div>
   );
 
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="pin-settings">
       {mode === 'idle' && (
         <>
           <div className="pin-settings__status">
-            <span className="pin-settings__status-icon">{localPinExists ? '🔒' : '🔓'}</span>
+            <span className="pin-settings__status-icon">{localPinExists ? <Lock size={16} /> : <Unlock size={16} />}</span>
             <span className="pin-settings__status-text">
               {localPinExists ? 'PIN aktif — login cepat tersedia' : 'PIN belum dikonfigurasi'}
             </span>
@@ -149,15 +153,15 @@ export function PINSettingsPanel() {
           <div className="pin-settings__actions">
             {!localPinExists ? (
               <button className="btn btn-primary btn--sm" onClick={() => { setMode('setup'); setPinErr(''); }}>
-                ➕ Buat PIN
+                <><Plus size={14} /> Buat PIN</>
               </button>
             ) : (
               <>
                 <button className="btn btn-ghost btn--sm" onClick={() => { setMode('change-verify'); setPinErr(''); }}>
-                  ✏️ Ganti PIN
+                  <><Pencil size={14} /> Ganti PIN</>
                 </button>
                 <button className="btn btn-ghost btn--sm btn--danger-ghost" onClick={() => { setMode('remove-verify'); setPinErr(''); }}>
-                  🗑️ Hapus PIN
+                  <><Trash2 size={14} /> Hapus PIN</>
                 </button>
               </>
             )}
@@ -207,12 +211,12 @@ export function PINSettingsPanel() {
       {mode === 'remove-verify' && (
         <>
           <h4 className="pin-settings__form-title">Hapus PIN</h4>
-          <p className="pin-settings__warn">⚠️ Masukkan PIN untuk mengonfirmasi penghapusan.</p>
+          <p className="pin-settings__warn"><AlertTriangle size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> Masukkan PIN untuk mengonfirmasi penghapusan.</p>
           {renderPinInputs(false)}
           <div className="pin-settings__form-actions">
             <button className="btn btn-ghost btn--sm" onClick={reset} disabled={loading}>Batal</button>
             <button className="btn btn--sm btn--danger" onClick={handleRemoveVerify} disabled={loading}>
-              {loading ? '⏳' : '🗑️ Hapus PIN'}
+              {loading ? '⏳' : <><Trash2 size={14} /> Hapus PIN</>}
             </button>
           </div>
         </>

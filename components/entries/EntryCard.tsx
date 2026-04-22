@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useRef, memo } from 'react';
+import { Pencil, Lock, Unlock, Star, RotateCcw, Trash2, X, Copy, Eye, EyeOff } from 'lucide-react';
 import { useAppStore }      from '@/lib/store/appStore';
 import { saveVault }         from '@/lib/vaultService';
 import { CategoryIcon }      from '@/components/entries/CategoryIcon';
@@ -335,8 +336,8 @@ export function EntryCard({
         </div>
 
         <div className="entry-card__badges">
-          {entry.fav && <span className="entry-card__fav" aria-label="Favorit">⭐</span>}
-          {isLocked  && <span className="entry-card__lock-badge" aria-label="Terkunci">🔒</span>}
+          {entry.fav && <span className="entry-card__fav" aria-label="Favorit"><Star size={12} fill="currentColor" /></span>}
+          {isLocked  && <span className="entry-card__lock-badge" aria-label="Terkunci"><Lock size={12} /></span>}
         </div>
 
         <span className={`entry-card__chevron ${isExpanded ? 'entry-card__chevron--up' : ''}`} aria-hidden="true">
@@ -355,22 +356,17 @@ export function EntryCard({
           {/* Action row */}
           <div className="entry-card__actions">
             {!isRecycleBin && onEdit && (
-              <button
-                className="entry-action-btn entry-action-btn--edit"
-                onClick={() => onEdit(entry)}
-                title="Edit"
-              >
-                ✎ Edit
+              <button className="entry-action-btn entry-action-btn--edit"
+                onClick={() => onEdit(entry)} title="Edit">
+                <Pencil size={13} /> Edit
               </button>
             )}
 
             {!isRecycleBin && (
-              <button
-                className="entry-action-btn entry-action-btn--lock"
+              <button className="entry-action-btn entry-action-btn--lock"
                 onClick={handleToggleLock}
-                title={isLocked ? 'Lepas kunci' : 'Kunci entri'}
-              >
-                {isLocked ? '🔓 Lepas' : '🔒 Kunci'}
+                title={isLocked ? 'Lepas kunci' : 'Kunci entri'}>
+                {isLocked ? <><Unlock size={13} /> Lepas</> : <><Lock size={13} /> Kunci</>}
               </button>
             )}
 
@@ -378,28 +374,24 @@ export function EntryCard({
               <button
                 className={`entry-action-btn entry-action-btn--fav ${entry.fav ? 'entry-action-btn--fav-active' : ''}`}
                 onClick={handleFav}
-                title={entry.fav ? 'Hapus favorit' : 'Tandai favorit'}
-              >
-                {entry.fav ? '★ Favorit' : '☆ Favorit'}
+                title={entry.fav ? 'Hapus favorit' : 'Tandai favorit'}>
+                <Star size={13} fill={entry.fav ? 'currentColor' : 'none'} />
+                {entry.fav ? 'Favorit' : 'Favorit'}
               </button>
             )}
 
             {isRecycleBin && (
-              <button
-                className="entry-action-btn entry-action-btn--restore"
-                onClick={handleRestore}
-                title="Pulihkan"
-              >
-                ↩ Pulihkan
+              <button className="entry-action-btn entry-action-btn--restore"
+                onClick={handleRestore} title="Pulihkan">
+                <RotateCcw size={13} /> Pulihkan
               </button>
             )}
 
-            <button
-              className="entry-action-btn entry-action-btn--delete"
+            <button className="entry-action-btn entry-action-btn--delete"
               onClick={handleDelete}
-              title={isRecycleBin ? 'Hapus permanen' : 'Hapus'}
-            >
-              {isRecycleBin ? '✕ Hapus Permanen' : '🗑 Hapus'}
+              title={isRecycleBin ? 'Hapus permanen' : 'Hapus'}>
+              <Trash2 size={13} />
+              {isRecycleBin ? 'Hapus Permanen' : 'Hapus'}
             </button>
           </div>
         </div>
@@ -409,7 +401,7 @@ export function EntryCard({
       {showUnlockPrompt && (
         <div className="entry-unlock-overlay" role="dialog" aria-modal="true" aria-label="Verifikasi untuk membuka entri">
           <div className="entry-unlock-card" onClick={(e) => e.stopPropagation()}>
-            <div className="entry-unlock-icon">🔒</div>
+            <div className="entry-unlock-icon"><Lock size={28} /></div>
             <p className="entry-unlock-title">Entri Terkunci</p>
             <p className="entry-unlock-desc">Masukkan PIN atau Master Password untuk melihat entri ini</p>
             <input

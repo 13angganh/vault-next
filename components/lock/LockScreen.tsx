@@ -1,37 +1,41 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Sun, Moon, Shield } from 'lucide-react';
+/**
+ * Vault Next — LockScreen (Sesi 6B — rewrite bersih)
+ *
+ * Panel:
+ *  pin      — PIN pad, standalone unlock vault (FIX utama)
+ *  master   — master password
+ *  seed     — masuk via seed phrase TANPA reset (seperti app lama)
+ *  recovery — recovery / reset password
+ *  setup    — buat vault baru
+ */
 
-import { VaultIcon } from '@/components/LoadingScreen';
-import { useTheme } from '@/components/providers/ThemeProvider';
-import { MasterPwPanel } from './MasterPwPanel';
-import { PINPad } from './PINPad';
-import { RecoveryPanel } from './RecoveryPanel';
-import { SetupFlow } from './SetupFlow';
+import { useState, useCallback, useEffect } from 'react';
+import { Sun, Moon, KeyRound, Lock, Fingerprint, RefreshCw, ArrowLeft, Plus } from 'lucide-react';
+
+import { VaultIcon }          from '@/components/LoadingScreen';
+import { useTheme }           from '@/components/providers/ThemeProvider';
+import { PINPad }             from './PINPad';
+import { RecoveryPanel }      from './RecoveryPanel';
+import { SetupFlow }          from './SetupFlow';
 import { BiometricHintModal } from './BiometricHintModal';
 
 import {
   unlockVault,
   setupVault,
-  setupPin,
-  verifyPin,
+  verifyPinAndGetMaster,
   hasPinSetup,
   recoverMasterPw,
   hasVaultData,
   getVaultHint,
 } from '@/lib/vaultService';
-import { useAppStore } from '@/lib/store/appStore';
 import type { UnlockPayload } from '@/lib/vaultService';
 
-// ─── Panel type ───────────────────────────────────────────────────────────────
-type Panel = 'pin' | 'master' | 'recovery' | 'setup' | 'biometric';
+type Panel = 'pin' | 'master' | 'seed' | 'recovery' | 'setup';
 
-// ─── PIN lockout constants ────────────────────────────────────────────────────
 const MAX_PIN_ATTEMPTS = 5;
-const PIN_LOCKOUT_MS   = 5 * 60 * 1000; // 5 menit
-
-// ─── Component ────────────────────────────────────────────────────────────────
+const PIN_LOCKOUT_MS   = 5 * 60 * 1000;
 
 interface LockScreenProps {
   onUnlocked: (payload: UnlockPayload, masterPw: string) => void;
@@ -39,37 +43,56 @@ interface LockScreenProps {
 
 export function LockScreen({ onUnlocked }: LockScreenProps) {
   const { theme, toggleTheme } = useTheme();
-  const store = useAppStore();
 
-  // Tentukan panel awal
   const initialPanel = (): Panel => {
     if (!hasVaultData()) return 'setup';
-    if (hasPinSetup()) return 'pin';
+    if (hasPinSetup())   return 'pin';
     return 'master';
   };
 
-  const [panel, setPanel]         = useState<Panel>(initialPanel);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState('');
-  const [showBiometric, setShowBiometric] = useState(false);
+  const [panel,          setPanel]          = useState<Panel>(initialPanel);
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState('');
+  const [showBiometric,  setShowBiometric]  = useState(false);
 
   // PIN state
-  const [pinBuf, setPinBuf]       = useState('');
-  const [pinAttempts, setPinAttempts] = useState(0);
+  const [pinBuf,         setPinBuf]         = useState('');
+  const [pinAttempts,    setPinAttempts]    = useState(0);
   const [pinLockedUntil, setPinLockedUntil] = useState(0);
+  const [lockRemain,     setLockRemain]     = useState(0);
 
-  // Setelah recover, simpan master pw untuk re-enkripsi
-  const [recoveredPw, setRecoveredPw] = useState('');
+  // Master password state
+  const [masterInput,    setMasterInput]    = useState('');
+  const [masterShow,     setMasterShow]     = useState(false);
 
-  const hint = getVaultHint();
+  // Seed phrase state
+  const [seedInput,      setSeedInput]      = useState('');
+
+  const hint      = getVaultHint();
   const pinLocked = Date.now() < pinLockedUntil;
-  const pinLockRemain = pinLocked
-    ? Math.ceil((pinLockedUntil - Date.now()) / 1000)
-    : 0;
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // Countdown timer
+  useEffect(() => {
+    if (!pinLocked) { setLockRemain(0); return; }
+    const tick = () => {
+      const r = Math.ceil((pinLockedUntil - Date.now()) / 1000);
+      setLockRemain(r <= 0 ? 0 : r);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [pinLockedUntil, pinLocked]);
 
-  const doUnlock = useCallback(async (masterPw: string) => {
+  const goPanel = (p: Panel) => {
+    setPanel(p);
+    setError('');
+    setPinBuf('');
+    setMasterInput('');
+    setSeedInput('');
+  };
+
+  // ── Unlock via master password ─────────────────────────────────────────────
+  const doUnlockWithMaster = useCallback(async (masterPw: string) => {
     setLoading(true);
     setError('');
     try {
@@ -82,55 +105,69 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     }
   }, [onUnlocked]);
 
-  // ── Master Password ────────────────────────────────────────────────────────
-
-  const handleMasterSubmit = async (pw: string) => {
-    await doUnlock(pw);
+  const handleMasterSubmit = () => {
+    if (!masterInput.trim()) { setError('Masukkan master password'); return; }
+    doUnlockWithMaster(masterInput);
   };
 
-  // ── PIN ────────────────────────────────────────────────────────────────────
+  // ── Unlock via PIN (standalone — langsung buka vault) ──────────────────────
+  const handlePinSubmit = useCallback(async () => {
+    if (pinLocked) {
+      setError(`PIN dikunci. Coba lagi dalam ${lockRemain} detik.`);
+      return;
+    }
+    if (pinBuf.length < 4) { setError('PIN minimal 4 digit'); return; }
 
-  const handlePinSubmit = async () => {
-    if (pinBuf.length < 4) return;
     setLoading(true);
     setError('');
+    try {
+      const masterPw = await verifyPinAndGetMaster(pinBuf);
+      setPinBuf('');
+      await doUnlockWithMaster(masterPw);
+    } catch (e) {
+      setPinBuf('');
+      const msg = (e as Error).message ?? 'PIN salah';
 
-    const ok = await verifyPin(pinBuf);
-    setPinBuf('');
-
-    if (ok) {
-      // PIN benar → kita butuh masterPw untuk decrypt vault
-      // Simpan flow: PIN hanya shortcut — user perlu juga input masterPw
-      // Di sini kita redirect ke master (rare path: PIN tidak bisa standalone unlock)
-      // Pada sesi berikutnya bisa disimpan encMasterByPin di storage
-      setPanel('master');
-      setError('PIN benar! Masukkan master password untuk membuka vault.');
-      setLoading(false);
-    } else {
-      const newAttempts = pinAttempts + 1;
-      setPinAttempts(newAttempts);
-
-      if (newAttempts >= MAX_PIN_ATTEMPTS) {
-        setPinLockedUntil(Date.now() + PIN_LOCKOUT_MS);
-        setPinAttempts(0);
-        setError('Terlalu banyak percobaan. PIN dikunci 5 menit.');
+      if (msg.includes('Format PIN lama')) {
+        setError('Format PIN lama terdeteksi. Masuk dengan master password, lalu setup ulang PIN di Pengaturan.');
+        goPanel('master');
       } else {
-        setError(`PIN salah. ${MAX_PIN_ATTEMPTS - newAttempts} percobaan tersisa.`);
+        const next = pinAttempts + 1;
+        setPinAttempts(next);
+        if (next >= MAX_PIN_ATTEMPTS) {
+          setPinLockedUntil(Date.now() + PIN_LOCKOUT_MS);
+          setPinAttempts(0);
+          setError('Terlalu banyak percobaan. PIN dikunci 5 menit.');
+        } else {
+          setError(`PIN salah. ${MAX_PIN_ATTEMPTS - next} percobaan tersisa.`);
+        }
       }
+      setLoading(false);
+    }
+  }, [pinBuf, pinLocked, lockRemain, pinAttempts, doUnlockWithMaster]);
+
+  // ── Seed phrase login (masuk langsung tanpa reset) ─────────────────────────
+  const handleSeedLogin = async () => {
+    if (!seedInput.trim()) { setError('Masukkan recovery phrase'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      const masterPw = await recoverMasterPw(seedInput.trim());
+      const payload  = await unlockVault(masterPw);
+      onUnlocked(payload, masterPw);
+    } catch (e) {
+      setError((e as Error).message ?? 'Recovery phrase salah');
       setLoading(false);
     }
   };
 
-  // ── Recovery ───────────────────────────────────────────────────────────────
-
+  // ── Recovery panel submit ──────────────────────────────────────────────────
   const handleRecoverySubmit = async (phrase: string) => {
     setLoading(true);
     setError('');
     try {
       const masterPw = await recoverMasterPw(phrase);
-      setRecoveredPw(masterPw);
-      // Langsung unlock
-      const payload = await unlockVault(masterPw);
+      const payload  = await unlockVault(masterPw);
       onUnlocked(payload, masterPw);
     } catch (e) {
       setError((e as Error).message ?? 'Recovery gagal');
@@ -138,249 +175,220 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     }
   };
 
-  // ── Setup ──────────────────────────────────────────────────────────────────
-
-  const handleSetupComplete = async (masterPw: string, hint: string, recovery: string) => {
-    await setupVault({ masterPw, hint, recoveryPhrase: recovery });
-    // Langsung unlock setelah setup
+  // ── Setup vault baru ───────────────────────────────────────────────────────
+  const handleSetupComplete = async (masterPw: string, hintStr: string, recovery: string) => {
+    await setupVault({ masterPw, hint: hintStr, recoveryPhrase: recovery });
     const payload = await unlockVault(masterPw);
     onUnlocked(payload, masterPw);
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const panelTitle: Record<Panel, string> = {
-    pin:       'Masukkan PIN',
-    master:    'Buka Vault',
-    recovery:  'Pulihkan Akses',
-    setup:     'Buat Vault Baru',
-    biometric: '',
-  };
-
-  const panelSubtitle: Record<Panel, string> = {
-    pin:       'Gunakan PIN 4–6 digit kamu',
-    master:    'Terenkripsi · Sepenuhnya offline',
-    recovery:  'Gunakan recovery phrase kamu',
-    setup:     'Setup sekali, aman selamanya',
-    biometric: '',
-  };
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
-      <div style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg)',
-        padding: 'var(--space-6)',
-        position: 'relative',
-      }}>
+      <div className="lock-screen">
 
         {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          style={{
-            position: 'fixed', top: 16, right: 16,
-            width: 36, height: 36,
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border)',
-            background: 'var(--bg-s1)',
-            color: 'var(--muted2)',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all var(--transition-fast)',
-            zIndex: 10,
-          }}
-          title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
-        >
-          {theme === 'dark'
-            ? <Sun size={15} />
-            : <Moon size={15} />
-          }
+        <button className="lock-theme-btn" onClick={toggleTheme}
+          aria-label={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}>
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
-        {/* Main card */}
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 380,
-            animation: 'fadeScaleIn 0.4s cubic-bezier(0.34,1.2,0.64,1) both',
-          }}
-        >
-          {/* Logo + Title */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            marginBottom: 'var(--space-7)',
-            gap: 'var(--space-4)',
-          }}>
-            {/* Icon */}
-            <div style={{
-              width: 72, height: 72,
-              background: 'linear-gradient(135deg, var(--bg-s2), var(--bg-s3))',
-              border: '1.5px solid var(--gold-border)',
-              borderRadius: 20,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 32px var(--gold-glow)',
-              position: 'relative',
-            }}>
-              <VaultIcon size={42} />
-              {/* Setup badge */}
-              {panel === 'setup' && (
-                <div style={{
-                  position: 'absolute', bottom: -6, right: -6,
-                  width: 20, height: 20,
-                  background: 'var(--teal)',
-                  borderRadius: '50%',
-                  border: '2px solid var(--bg)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: 9, color: 'var(--bg)', fontWeight: 800 }}>+</span>
-                </div>
-              )}
-            </div>
+        {/* Logo */}
+        <div className="lock-logo-wrap">
+          <VaultIcon size={64} />
+          <h1 className="lock-title">
+            Vault <span className="lock-title__accent">Next</span>
+          </h1>
+          <p className="lock-subtitle">Pencatat akun terenkripsi · Sepenuhnya offline</p>
+        </div>
 
-            {/* Title */}
-            <div style={{ textAlign: 'center' }}>
-              <h1 style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: 'var(--text-xl)',
-                fontWeight: 800,
-                color: 'var(--text)',
-                letterSpacing: 'var(--ls-tight)',
-                lineHeight: 1.2,
-              }}>
-                {panel !== 'setup'
-                  ? <>Vault<span style={{ color: 'var(--gold)' }}>.</span></>
-                  : <>Selamat Datang</>
-                }
-              </h1>
-              <p style={{
-                fontSize: 'var(--text-xs)',
-                color: 'var(--muted2)',
-                marginTop: 4,
-              }}>
-                {panelSubtitle[panel]}
-              </p>
-            </div>
-          </div>
+        {/* Card */}
+        <div className="lock-card">
 
-          {/* Panel card */}
-          <div style={{
-            background: 'var(--bg-s1)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            padding: 'var(--space-7)',
-            boxShadow: 'var(--shadow)',
-          }}>
-            {/* Panel header */}
-            {panel !== 'setup' && (
-              <div style={{ marginBottom: 'var(--space-5)' }}>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text)' }}>
-                  {panelTitle[panel]}
-                </div>
-
-                {/* Panel switcher tabs (hanya untuk pin/master) */}
-                {(panel === 'pin' || panel === 'master') && hasPinSetup() && hasVaultData() && (
-                  <div style={{
-                    display: 'flex',
-                    gap: 4,
-                    marginTop: 'var(--space-3)',
-                    background: 'var(--bg-s2)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: 3,
-                  }}>
-                    {(['pin', 'master'] as const).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => { setPanel(p); setError(''); setPinBuf(''); }}
-                        style={{
-                          flex: 1,
-                          padding: '6px 0',
-                          borderRadius: 'var(--radius-sm)',
-                          border: 'none',
-                          background: panel === p ? 'var(--bg-s3)' : 'transparent',
-                          color: panel === p ? 'var(--text)' : 'var(--muted2)',
-                          fontSize: 'var(--text-xs)',
-                          fontWeight: panel === p ? 600 : 400,
-                          cursor: 'pointer',
-                          transition: 'all var(--transition-fast)',
-                        }}
-                      >
-                        {p === 'pin' ? '🔢 PIN' : '🔑 Password'}
-                      </button>
-                    ))}
+          {/* ── PIN ── */}
+          {panel === 'pin' && (
+            <div className="lock-panel">
+              <div className="lock-panel__header">
+                <Lock size={20} className="lock-panel__icon" />
+                <div>
+                  <div className="lock-panel__title">Masukkan PIN</div>
+                  <div className="lock-panel__sub">
+                    {pinLocked ? `Dikunci ${lockRemain} detik lagi…` : 'PIN untuk membuka Vault'}
                   </div>
-                )}
+                </div>
               </div>
-            )}
 
-            {/* ── Panel: PIN ── */}
-            {panel === 'pin' && (
               <PINPad
                 value={pinBuf}
-                onDigit={(d) => { setError(''); setPinBuf((b) => b.length < 6 ? b + d : b); }}
+                maxLen={8}
+                onDigit={(d) => {
+                  if (!pinLocked && !loading) {
+                    setPinBuf((b) => b.length < 8 ? b + d : b);
+                    setError('');
+                  }
+                }}
                 onDelete={() => setPinBuf((b) => b.slice(0, -1))}
                 onSubmit={handlePinSubmit}
                 disabled={loading}
                 locked={pinLocked}
+                lockedLabel={`Dikunci ${lockRemain} detik lagi…`}
                 error={error}
-                sublabel={`${hasPinSetup() ? 'Masukkan PIN 4–6 digit' : ''}`}
-                lockedLabel={`PIN dikunci ${pinLockRemain}s`}
               />
-            )}
 
-            {/* ── Panel: Master Password ── */}
-            {panel === 'master' && (
-              <MasterPwPanel
-                hint={hint}
-                loading={loading}
-                error={error}
-                onSubmit={handleMasterSubmit}
-                onShowRecovery={() => { setPanel('recovery'); setError(''); }}
-                onShowBiometric={() => setShowBiometric(true)}
-              />
-            )}
+              <div className="lock-panel__links">
+                <button className="lock-link" onClick={() => goPanel('master')}>
+                  <KeyRound size={13} /> Gunakan Master Password
+                </button>
+                <button className="lock-link" onClick={() => goPanel('seed')}>
+                  <KeyRound size={13} /> Masuk via Seed Phrase
+                </button>
+              </div>
+            </div>
+          )}
 
-            {/* ── Panel: Recovery ── */}
-            {panel === 'recovery' && (
+          {/* ── Master Password ── */}
+          {panel === 'master' && (
+            <div className="lock-panel">
+              <div className="lock-panel__header">
+                <KeyRound size={20} className="lock-panel__icon" />
+                <div>
+                  <div className="lock-panel__title">Master Password</div>
+                  <div className="lock-panel__sub">Gunakan master password untuk membuka vault</div>
+                </div>
+              </div>
+
+              {hint && (
+                <div className="lock-hint">
+                  <span className="lock-hint__label">Petunjuk:</span> {hint}
+                </div>
+              )}
+
+              <div className="lock-field">
+                <div className="lock-pw-wrap">
+                  <input
+                    className="lock-input"
+                    type={masterShow ? 'text' : 'password'}
+                    value={masterInput}
+                    onChange={(e) => { setMasterInput(e.target.value); setError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleMasterSubmit()}
+                    placeholder="Masukkan master password..."
+                    autoFocus
+                    autoComplete="current-password"
+                    disabled={loading}
+                  />
+                  <button className="lock-pw-toggle" type="button"
+                    onClick={() => setMasterShow((v) => !v)}
+                    aria-label={masterShow ? 'Sembunyikan' : 'Tampilkan'}>
+                    {masterShow ? '🙈' : '👁️'}
+                  </button>
+                </div>
+                {error && <p className="lock-error">{error}</p>}
+              </div>
+
+              <button className="btn btn-primary lock-submit-btn"
+                onClick={handleMasterSubmit} disabled={loading || !masterInput}>
+                {loading ? '⏳ Membuka...' : '🔓 Buka Vault'}
+              </button>
+
+              <div className="lock-panel__links">
+                {hasPinSetup() && (
+                  <button className="lock-link" onClick={() => goPanel('pin')}>
+                    <ArrowLeft size={13} /> Kembali ke PIN
+                  </button>
+                )}
+                <button className="lock-link" onClick={() => goPanel('seed')}>
+                  <KeyRound size={13} /> Masuk via Seed Phrase
+                </button>
+                <button className="lock-link lock-link--muted" onClick={() => goPanel('recovery')}>
+                  <RefreshCw size={12} /> Lupa password?
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Seed Phrase Login ── */}
+          {panel === 'seed' && (
+            <div className="lock-panel">
+              <div className="lock-panel__header">
+                <KeyRound size={20} className="lock-panel__icon" />
+                <div>
+                  <div className="lock-panel__title">Masuk via Seed Phrase</div>
+                  <div className="lock-panel__sub">Vault terbuka langsung, data tidak terhapus</div>
+                </div>
+              </div>
+
+              <div className="lock-seed-info">
+                ✅ Masukkan seed phrase → vault langsung terbuka dengan semua data utuh.
+              </div>
+
+              <div className="lock-field">
+                <label className="lock-label">Recovery Phrase (pisahkan spasi)</label>
+                <textarea
+                  className="lock-textarea"
+                  value={seedInput}
+                  onChange={(e) => { setSeedInput(e.target.value); setError(''); }}
+                  placeholder="kata1 kata2 kata3 kata4 kata5..."
+                  rows={3}
+                  autoFocus
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  disabled={loading}
+                />
+                {error && <p className="lock-error">{error}</p>}
+              </div>
+
+              <button className="btn btn-primary lock-submit-btn"
+                onClick={handleSeedLogin} disabled={loading || !seedInput.trim()}>
+                {loading ? '⏳ Membuka...' : '🔓 Buka Vault'}
+              </button>
+
+              <div className="lock-panel__links">
+                <button className="lock-link" onClick={() => goPanel(hasPinSetup() ? 'pin' : 'master')}>
+                  <ArrowLeft size={13} /> Kembali
+                </button>
+                <button className="lock-link lock-link--muted" onClick={() => goPanel('recovery')}>
+                  <RefreshCw size={12} /> Reset password
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Recovery ── */}
+          {panel === 'recovery' && (
+            <div className="lock-panel">
               <RecoveryPanel
+                onSubmit={handleRecoverySubmit}
+                onBack={() => goPanel(hasPinSetup() ? 'pin' : 'master')}
                 loading={loading}
                 error={error}
-                onSubmit={handleRecoverySubmit}
-                onBack={() => { setPanel('master'); setError(''); }}
               />
-            )}
+            </div>
+          )}
 
-            {/* ── Panel: Setup ── */}
-            {panel === 'setup' && (
+          {/* ── Setup Baru ── */}
+          {panel === 'setup' && (
+            <div className="lock-panel">
               <SetupFlow onComplete={handleSetupComplete} />
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Footer: security badge */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            marginTop: 'var(--space-5)',
-          }}>
-            <Shield size={12} style={{ color: 'var(--muted)' }} />
-            <span style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
-              AES-256-GCM · PBKDF2 · 100% Offline
-            </span>
-          </div>
+          {/* ── Footer ── */}
+          {panel !== 'setup' && panel !== 'recovery' && (
+            <div className="lock-footer">
+              <button className="lock-link lock-link--muted" onClick={() => goPanel('setup')}>
+                <Plus size={13} /> Setup Vault Baru
+              </button>
+              <button className="lock-link lock-link--muted"
+                onClick={() => setShowBiometric(true)} aria-label="Info biometrik">
+                <Fingerprint size={13} /> Biometrik
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Biometric Modal */}
-      {showBiometric && (
-        <BiometricHintModal onClose={() => setShowBiometric(false)} />
-      )}
+      {showBiometric && <BiometricHintModal onClose={() => setShowBiometric(false)} />}
     </>
   );
 }

@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { X, Star, Lock, Unlock, Eye, EyeOff, Copy } from 'lucide-react';
 import { useAppStore }       from '@/lib/store/appStore';
 import { saveVault }          from '@/lib/vaultService';
 import { CategoryIcon }       from '@/components/entries/CategoryIcon';
@@ -108,11 +109,11 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
           <div className="detail-field__btns">
             {sensitive && (
               <button className="btn-icon" onClick={onToggleVisible} aria-label={isVisible ? 'Sembunyikan' : 'Tampilkan'}>
-                {isVisible ? '🙈' : '👁'}
+                {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             )}
             <button className="btn-icon" onClick={() => copy(value, label)} aria-label={`Salin ${label}`} title="Salin">
-              ⎘
+              <Copy size={14} />
             </button>
           </div>
         </div>
@@ -131,11 +132,11 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
           <span className="detail-field__label">Seed Phrase ({words.length} kata)</span>
           <div className="detail-field__btns">
             <button className="btn-icon" onClick={() => store.toggleSeedVisible(entry.id)} aria-label={seedShow ? 'Sembunyikan' : 'Tampilkan'}>
-              {seedShow ? '🙈' : '👁'}
+              {seedShow ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
             {seedShow && (
               <button className="btn-icon" onClick={() => copy(words.join(' '), 'Seed Phrase')} aria-label="Salin seed phrase">
-                ⎘
+                <Copy size={14} />
               </button>
             )}
           </div>
@@ -221,10 +222,10 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
             <span className="detail-header__cat">{catInfo.emoji} {catInfo.label}</span>
           </div>
           <div className="detail-header__badges">
-            {entry.fav   && <span aria-label="Favorit">⭐</span>}
-            {isLocked    && <span aria-label="Terkunci">🔒</span>}
+            {entry.fav   && <span aria-label="Favorit"><Star size={14} fill="currentColor" style={{ color: 'var(--gold)' }} /></span>}
+            {isLocked    && <span aria-label="Terkunci"><Lock size={14} /></span>}
           </div>
-          <button className="btn-icon detail-header__close" onClick={onClose} aria-label="Tutup">✕</button>
+          <button className="btn-icon detail-header__close" onClick={onClose} aria-label="Tutup"><X size={16} /></button>
         </div>
 
         {/* Body */}
@@ -244,7 +245,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
             ✎ Edit
           </button>
           <button className="detail-action-btn" onClick={handleToggleLock} title={isLocked ? 'Lepas kunci' : 'Kunci'}>
-            {isLocked ? '🔓 Lepas' : '🔒 Kunci'}
+            {isLocked ? <><Unlock size={14} /> Lepas</> : <><Lock size={14} /> Kunci</>}
           </button>
           <button
             className={`detail-action-btn ${entry.fav ? 'detail-action-btn--fav-active' : ''}`}

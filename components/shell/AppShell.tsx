@@ -71,10 +71,12 @@ export function AppShell() {
 
         {/* Main content */}
         <main className="app-main" id="main-content" tabIndex={-1}>
-          {shellView === 'vault' && <VaultListView ref={vaultListRef} />}
-          {shellView === 'settings' && (
-            <SettingsView onClose={() => setShellView('vault')} />
-          )}
+          <div key={shellView} className="view-transition">
+            {shellView === 'vault' && <VaultListView ref={vaultListRef} />}
+            {shellView === 'settings' && (
+              <SettingsView onClose={() => setShellView('vault')} />
+            )}
+          </div>
         </main>
       </div>
 
@@ -82,6 +84,7 @@ export function AppShell() {
       <BottomNav
         onCategoryTab={() => setCatDrawerOpen(true)}
         onSettingsTab={() => setShellView('settings')}
+        settingsActive={shellView === 'settings'}
       />
 
       {/* ── Category Drawer — mobile ── */}

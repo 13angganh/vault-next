@@ -7,6 +7,7 @@
  */
 
 import { useState, useRef }  from 'react';
+import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Package } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { exportBackup, importBackup, saveVault } from '@/lib/vaultService';
 import { lsSet, LS_BACKUP }  from '@/lib/storage';
@@ -192,20 +193,20 @@ export function BackupModal({ onClose }: BackupModalProps) {
     <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown} tabIndex={-1}>
       <div className="modal backup-modal" ref={trapRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Backup & Sync" aria-labelledby="backup-modal-title">
         <div className="modal__header">
-          <h2 className="modal__title" id="backup-modal-title">☁️ Backup & Sync</h2>
-          <button className="icon-btn modal__close" onClick={onClose} aria-label="Tutup">✕</button>
+          <h2 className="modal__title" id="backup-modal-title"><Cloud size={18} style={{ display:'inline', verticalAlign:'middle', marginRight:6 }} />Backup & Sync</h2>
+          <button className="icon-btn modal__close" onClick={onClose} aria-label="Tutup"><X size={16} /></button>
         </div>
 
         {/* Tabs */}
         <div className="backup-tabs">
           <button className={`backup-tab ${tab === 'export' ? 'backup-tab--active' : ''}`} onClick={() => setTab('export')}>
-            📤 Export
+            <Upload size={14} /> Export
           </button>
           <button className={`backup-tab ${tab === 'import' ? 'backup-tab--active' : ''}`} onClick={() => setTab('import')}>
-            📥 Import
+            <Download size={14} /> Import
           </button>
           <button className={`backup-tab ${tab === 'sync' ? 'backup-tab--active' : ''}`} onClick={() => setTab('sync')}>
-            🔄 Sync
+            <RefreshCw size={14} /> Sync
           </button>
         </div>
 
@@ -215,7 +216,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
           {tab === 'export' && (
             <div className="backup-section">
               <div className="backup-info-box">
-                <p>📦 Export semua entri ke file <code>.vault</code> yang terenkripsi.</p>
+                <p>Export semua entri ke file <code>.vault</code> yang terenkripsi.</p>
                 <p>File ini bisa diimport kembali di perangkat lain atau sebagai backup.</p>
               </div>
 
@@ -235,14 +236,14 @@ export function BackupModal({ onClose }: BackupModalProps) {
               </div>
 
               {exportError && <p className="backup-error">{exportError}</p>}
-              {exportDone  && <p className="backup-success">✅ File backup berhasil diunduh!</p>}
+              {exportDone  && <p className="backup-success"><Check size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> File backup berhasil diunduh!</p>}
 
               <button
                 className="btn btn-primary backup-action-btn"
                 onClick={handleExport}
                 disabled={exporting || !store.vaultMeta}
               >
-                {exporting ? '⏳ Mengekspor…' : '📤 Download Backup (.vault)'}
+                {exporting ? '⏳ Mengekspor…' : <><Download size={14} /> Download Backup (.vault)</>}
               </button>
             </div>
           )}
@@ -251,7 +252,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
           {tab === 'import' && (
             <div className="backup-section">
               <div className="backup-info-box backup-info-box--warn">
-                <p>⚠️ Import akan memuat data dari file backup.</p>
+                <p><AlertTriangle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> Import akan memuat data dari file backup.</p>
                 <p>Pilih mode <strong>Ganti</strong> atau <strong>Gabungkan</strong>.</p>
               </div>
 
@@ -261,7 +262,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                   className={`backup-mode-btn ${importMode === 'replace' ? 'backup-mode-btn--active' : ''}`}
                   onClick={() => setImportMode('replace')}
                 >
-                  🔄 Ganti Semua
+                  <RefreshCw size={14} /> Ganti Semua
                 </button>
                 <button
                   className={`backup-mode-btn ${importMode === 'merge' ? 'backup-mode-btn--active' : ''}`}
@@ -320,7 +321,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                     type="button"
                     aria-label="Toggle visibility"
                   >
-                    {importPwShow ? '🙈' : '👁️'}
+                    {importPwShow ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
               </div>
@@ -333,7 +334,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 onClick={handleImport}
                 disabled={importing}
               >
-                {importing ? '⏳ Mengimpor…' : '📥 Import Backup'}
+                {importing ? '⏳ Mengimpor…' : '<Download size={14} /> Import Backup'}
               </button>
             </div>
           )}
@@ -342,7 +343,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
           {tab === 'sync' && (
             <div className="backup-section">
               <div className="backup-info-box">
-                <p>🔄 Sync manual via copy-paste teks terenkripsi.</p>
+                <p>Sync manual via copy-paste teks terenkripsi.</p>
                 <p>Tidak butuh internet — 100% offline & aman.</p>
               </div>
 
@@ -352,13 +353,13 @@ export function BackupModal({ onClose }: BackupModalProps) {
                   className={`backup-mode-btn ${syncMode === 'send' ? 'backup-mode-btn--active' : ''}`}
                   onClick={() => { setSyncMode('send'); setSyncText(''); setSyncResult(''); setSyncError(''); }}
                 >
-                  📤 Kirim
+                  <Upload size={14} /> Kirim
                 </button>
                 <button
                   className={`backup-mode-btn ${syncMode === 'receive' ? 'backup-mode-btn--active' : ''}`}
                   onClick={() => { setSyncMode('receive'); setSyncText(''); setSyncResult(''); setSyncError(''); }}
                 >
-                  📥 Terima
+                  <Download size={14} /> Terima
                 </button>
               </div>
 
@@ -389,7 +390,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                         className={`btn ${syncCopied ? 'btn-success' : 'btn-primary'} backup-action-btn`}
                         onClick={handleSyncCopy}
                       >
-                        {syncCopied ? '✅ Tersalin!' : '📋 Salin Teks'}
+                        {syncCopied ? '<Check size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> Tersalin!' : <><Copy size={14} /> Salin Teks</>}
                       </button>
                     </>
                   )}
@@ -430,7 +431,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                         type="button"
                         aria-label="Toggle visibility"
                       >
-                        {syncPwShow ? '🙈' : '👁️'}
+                        {syncPwShow ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                     </div>
                   </div>
@@ -439,7 +440,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                     onClick={handleSyncReceive}
                     disabled={syncing}
                   >
-                    {syncing ? '⏳ Menyinkronkan…' : '🔄 Terapkan Sync'}
+                    {syncing ? '⏳ Menyinkronkan…' : <><RefreshCw size={14} /> Terapkan Sync</>}
                   </button>
                 </>
               )}

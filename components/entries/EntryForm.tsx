@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { X } from 'lucide-react';
 import { useAppStore }             from '@/lib/store/appStore';
 import { saveVault }                from '@/lib/vaultService';
 import { CategoryIcon }             from '@/components/entries/CategoryIcon';
@@ -310,7 +311,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         {/* Header */}
         <div className="modal__header">
           <h2 className="modal__title">{isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}</h2>
-          <button className="btn-icon modal__close" onClick={onClose} aria-label="Tutup">✕</button>
+          <button className="btn-icon modal__close" onClick={onClose} aria-label="Tutup"><X size={16} /></button>
         </div>
 
         {/* Scrollable body */}

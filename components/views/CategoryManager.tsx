@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { ArrowLeft, Pencil, Plus, LayoutGrid, X } from 'lucide-react';
 import { useAppStore }         from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES }  from '@/lib/types';
 import type { CustomCategory } from '@/lib/types';
@@ -105,9 +106,9 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       <div className="cat-manager-form">
         <div className="cat-manager-form__header">
           <button className="icon-btn" onClick={() => setMode('list')} aria-label="Kembali">
-            ←
+            <ArrowLeft size={16} />
           </button>
-          <h3>{mode === 'add' ? '➕ Tambah Kategori' : '✏️ Edit Kategori'}</h3>
+          <h3>{mode === 'add' ? <><Plus size={16} /> Tambah Kategori</> : <><Pencil size={16} /> Edit Kategori</>}</h3>
         </div>
 
         {/* Emoji preview + picker toggle */}
@@ -185,9 +186,9 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     <div className="cat-manager">
       <div className="cat-manager__header">
         {onClose && (
-          <button className="icon-btn" onClick={onClose} aria-label="Kembali">←</button>
+          <button className="icon-btn" onClick={onClose} aria-label="Kembali"><ArrowLeft size={16} /></button>
         )}
-        <h3>🗂️ Kategori</h3>
+        <h3><LayoutGrid size={16} style={{display:"inline",verticalAlign:"middle",marginRight:6}} />Kategori</h3>
         <span className="cat-manager__count">{totalCatCount}</span>
       </div>
 
@@ -225,7 +226,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                   className="icon-btn icon-btn--sm"
                   onClick={() => openEdit(cat)}
                   aria-label={`Edit ${cat.label}`}
-                >✏️</button>
+                ><Pencil size={14} /></button>
                 <button
                   className={`icon-btn icon-btn--sm ${deleteConfirm === cat.id ? 'icon-btn--danger' : ''}`}
                   onClick={() => handleDelete(cat.id)}
@@ -245,7 +246,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
         className="btn btn-primary cat-manager__add-btn"
         onClick={() => setMode('add')}
       >
-        ➕ Tambah Kategori
+        <><Plus size={16} /> Tambah Kategori</>
       </button>
     </div>
   );

@@ -2,6 +2,11 @@
  * Vault Next — Vault Service
  * Operasi tingkat tinggi: simpan, muat, unlock, setup, PIN.
  * Semua crypto lewat lib/crypto.ts, storage lewat lib/storage.ts.
+ *
+ * FIX Sesi 6B:
+ * - setupPin sekarang menyimpan encMasterByPin (PIN bisa standalone unlock vault)
+ * - verifyPinAndGetMaster — return master password jika PIN benar
+ * - Seed phrase login langsung (bukan hanya reset)
  */
 
 import { encrypt, decrypt, sha256, hashStr } from '@/lib/crypto';
@@ -26,35 +31,32 @@ export interface UnlockPayload {
 }
 
 export interface SetupPayload {
-  masterPw:    string;
-  hint:        string;
-  recoveryPhrase?: string;  // opsional
+  masterPw:        string;
+  hint:            string;
+  recoveryPhrase?: string;
+}
+
+interface PinStorage {
+  hash:         string;   // sha256(pin)
+  encMaster:    string;   // encrypt(masterPw, pin) — untuk standalone PIN unlock
 }
 
 // ─── Setup Pertama Kali ───────────────────────────────────────────────────────
 
-/**
- * Inisialisasi vault baru.
- * Buat vault kosong, simpan terenkripsi, simpan meta.
- */
 export async function setupVault(payload: SetupPayload): Promise<void> {
   const { masterPw, hint, recoveryPhrase } = payload;
 
   const meta: VaultMeta = {
     hint,
-    recoveryHash: recoveryPhrase ? await hashStr(recoveryPhrase.trim().toLowerCase()) : '',
-    recovery:     '',
+    recoveryHash:    recoveryPhrase ? await hashStr(recoveryPhrase.trim().toLowerCase()) : '',
+    recovery:        '',
     encMasterBySeed: recoveryPhrase
       ? await encrypt(masterPw, recoveryPhrase.trim().toLowerCase())
       : '',
   };
 
   const inner: VaultBackupPayload = {
-    vault:      [],
-    meta,
-    customCats: [],
-    lockedIds:  [],
-    recycleBin: [],
+    vault: [], meta, customCats: [], lockedIds: [], recycleBin: [],
   };
 
   const ciphertext = await encrypt(JSON.stringify(inner), masterPw);
@@ -64,11 +66,6 @@ export async function setupVault(payload: SetupPayload): Promise<void> {
 
 // ─── Unlock ───────────────────────────────────────────────────────────────────
 
-/**
- * Coba unlock vault dengan master password.
- * Throws jika password salah atau data korup.
- * Returns UnlockPayload jika berhasil.
- */
 export async function unlockVault(masterPw: string): Promise<UnlockPayload> {
   const ciphertext = loadVaultData();
   if (!ciphertext) throw new Error('Vault belum dibuat');
@@ -90,11 +87,8 @@ export async function unlockVault(masterPw: string): Promise<UnlockPayload> {
   };
 }
 
-// ─── Save (auto-save) ─────────────────────────────────────────────────────────
+// ─── Save ─────────────────────────────────────────────────────────────────────
 
-/**
- * Simpan state vault ke localStorage (re-enkripsi).
- */
 export async function saveVault(
   masterPw: string,
   vault: VaultEntry[],
@@ -110,26 +104,58 @@ export async function saveVault(
 
 // ─── PIN ──────────────────────────────────────────────────────────────────────
 
-/** Setup PIN baru (simpan ter-hash) */
-export async function setupPin(pin: string): Promise<void> {
-  const hashed = await sha256(pin);
-  lsSet(LS_PIN, hashed);
+/**
+ * Setup PIN — simpan hash + encMasterByPin agar PIN bisa standalone unlock vault.
+ * masterPw wajib diberikan saat setup/ganti PIN.
+ */
+export async function setupPin(pin: string, masterPw: string): Promise<void> {
+  const hash      = await sha256(pin);
+  const encMaster = await encrypt(masterPw, pin);
+  const stored: PinStorage = { hash, encMaster };
+  lsSet(LS_PIN, JSON.stringify(stored));
 }
 
-/** Verifikasi PIN — return true jika cocok */
+/**
+ * Verifikasi PIN.
+ * Returns master password jika PIN benar (untuk langsung unlock vault).
+ * Throws jika PIN salah.
+ */
+export async function verifyPinAndGetMaster(pin: string): Promise<string> {
+  const raw = lsGet(LS_PIN);
+  if (!raw) throw new Error('PIN belum dikonfigurasi');
+
+  let stored: PinStorage;
+  try {
+    stored = JSON.parse(raw) as PinStorage;
+  } catch {
+    // Format lama (hanya hash string) — PIN tidak bisa standalone unlock
+    throw new Error('Format PIN lama, setup ulang PIN dari Pengaturan');
+  }
+
+  const hash = await sha256(pin);
+  if (hash !== stored.hash) throw new Error('PIN salah');
+
+  try {
+    return await decrypt(stored.encMaster, pin);
+  } catch {
+    throw new Error('Gagal mendekripsi dengan PIN ini');
+  }
+}
+
+/** Verifikasi PIN — return boolean (untuk settings panel) */
 export async function verifyPin(pin: string): Promise<boolean> {
-  const stored = lsGet(LS_PIN);
-  if (!stored) return false;
-  const hashed = await sha256(pin);
-  return hashed === stored;
+  try {
+    await verifyPinAndGetMaster(pin);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-/** Cek apakah PIN sudah di-setup */
 export function hasPinSetup(): boolean {
   return !!lsGet(LS_PIN);
 }
 
-/** Skip setup PIN */
 export function skipPinSetup(): void {
   lsSet(LS_PIN_SKIPPED, 'true');
 }
@@ -138,34 +164,43 @@ export function isPinSkipped(): boolean {
   return lsGet(LS_PIN_SKIPPED) === 'true';
 }
 
-// ─── Recovery ─────────────────────────────────────────────────────────────────
+/** Hapus PIN */
+export function removePin(): void {
+  lsRemove(LS_PIN);
+  lsRemove(LS_PIN_SKIPPED);
+}
+
+// ─── Recovery (Seed Phrase) ───────────────────────────────────────────────────
 
 /**
- * Coba recover master password via recovery phrase.
- * Returns master password jika berhasil, throws jika gagal.
+ * Login langsung via seed phrase — return master password.
+ * Vault langsung bisa dibuka tanpa reset apapun.
  */
 export async function recoverMasterPw(recoveryPhrase: string): Promise<string> {
   const raw = lsGetJson<VaultMeta | null>(LS_META, null);
-  if (!raw || !raw.encMasterBySeed) throw new Error('Recovery phrase tidak dikonfigurasi');
+  if (!raw || !raw.encMasterBySeed) {
+    throw new Error('Recovery phrase belum dikonfigurasi di vault ini');
+  }
 
   const normalized = recoveryPhrase.trim().toLowerCase();
-  const hash = await hashStr(normalized);
 
-  if (hash !== raw.recoveryHash) throw new Error('Recovery phrase salah');
+  // Verifikasi hash dulu
+  if (raw.recoveryHash) {
+    const hash = await hashStr(normalized);
+    if (hash !== raw.recoveryHash) {
+      throw new Error('Recovery phrase salah');
+    }
+  }
 
   try {
     return await decrypt(raw.encMasterBySeed, normalized);
   } catch {
-    throw new Error('Gagal mendekripsi data recovery');
+    throw new Error('Gagal mendekripsi — recovery phrase tidak cocok');
   }
 }
 
 // ─── Backup Export ────────────────────────────────────────────────────────────
 
-/**
- * Buat file backup .vault (format vault2).
- * Returns object yang siap di-JSON.stringify dan di-download.
- */
 export async function exportBackup(
   masterPw: string,
   vault: VaultEntry[],
@@ -185,7 +220,6 @@ export async function exportBackup(
     exportedAt: new Date().toISOString(),
   };
 
-  // Simpan timestamp backup terakhir
   lsSet(LS_BACKUP, String(Date.now()));
   lsSet(LS_BKPDATA, JSON.stringify(backup));
 
@@ -194,11 +228,6 @@ export async function exportBackup(
 
 // ─── Backup Import ────────────────────────────────────────────────────────────
 
-/**
- * Import backup .vault.
- * Validasi format, dekripsi, return payload.
- * Throws jika format invalid atau password salah.
- */
 export async function importBackup(
   fileContent: string,
   masterPw: string,
@@ -233,10 +262,8 @@ export async function importBackup(
 
 // ─── Util ─────────────────────────────────────────────────────────────────────
 
-/** Cek apakah vault sudah pernah dibuat */
 export { hasVaultData };
 
-/** Ambil hint dari meta (tanpa unlock) */
 export function getVaultHint(): string {
   const raw = lsGetJson<VaultMeta | null>(LS_META, null);
   return raw?.hint ?? '';

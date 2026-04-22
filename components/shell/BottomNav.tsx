@@ -2,38 +2,35 @@
 
 /**
  * Vault Next — BottomNav
- * Tab bar mobile (≤768px): Vault · Favorit · Kategori · Pengaturan
+ * Tab bar mobile (≤768px). Sesi 6B: semua emoji → Lucide icons.
  */
 
+import { Lock, Star, LayoutGrid, Settings } from 'lucide-react';
 import { useAppStore } from '@/lib/store/appStore';
 import type { FilterType } from '@/lib/store/appStore';
 
 interface BottomNavProps {
-  onCategoryTab: () => void;   // buka drawer kategori
-  onSettingsTab: () => void;   // buka halaman settings
+  onCategoryTab:  () => void;
+  onSettingsTab:  () => void;
+  settingsActive?: boolean;   // AppShell pass ini saat shellView === 'settings'
 }
 
-export function BottomNav({ onCategoryTab, onSettingsTab }: BottomNavProps) {
+export function BottomNav({ onCategoryTab, onSettingsTab, settingsActive }: BottomNavProps) {
   const currentFilter = useAppStore((s) => s.currentFilter);
   const setFilter     = useAppStore((s) => s.setFilter);
 
-  // Tentukan tab aktif dari currentFilter
   const activeTab: 'vault' | 'fav' | 'cats' | 'settings' = (() => {
+    if (settingsActive)  return 'settings';
     if (currentFilter === 'fav') return 'fav';
-    if (currentFilter === 'settings') return 'settings';
-    // Jika bukan 'all' / 'fav' / 'bin', berarti di kategori
     if (currentFilter !== 'all' && currentFilter !== 'bin') return 'cats';
     return 'vault';
   })();
 
   const Tab = ({
-    id,
-    emoji,
-    label,
-    onClick,
+    id, icon, label, onClick,
   }: {
     id: typeof activeTab;
-    emoji: string;
+    icon: React.ReactNode;
     label: string;
     onClick: () => void;
   }) => {
@@ -46,7 +43,7 @@ export function BottomNav({ onCategoryTab, onSettingsTab }: BottomNavProps) {
         aria-label={label}
         aria-current={active ? 'page' : undefined}
       >
-        <span className="bottom-nav__emoji">{emoji}</span>
+        <span className="bottom-nav__icon">{icon}</span>
         <span className="bottom-nav__label">{label}</span>
         {active && <span className="bottom-nav__indicator" />}
       </button>
@@ -55,10 +52,10 @@ export function BottomNav({ onCategoryTab, onSettingsTab }: BottomNavProps) {
 
   return (
     <nav className="bottom-nav" aria-label="Navigasi bawah">
-      <Tab id="vault"    emoji="🔐" label="Vault"     onClick={() => setFilter('all')} />
-      <Tab id="fav"      emoji="⭐" label="Favorit"   onClick={() => setFilter('fav')} />
-      <Tab id="cats"     emoji="🗂️" label="Kategori"  onClick={onCategoryTab} />
-      <Tab id="settings" emoji="⚙️" label="Pengaturan" onClick={onSettingsTab} />
+      <Tab id="vault"    icon={<Lock size={20} />}        label="Vault"      onClick={() => setFilter('all')} />
+      <Tab id="fav"      icon={<Star size={20} />}        label="Favorit"    onClick={() => setFilter('fav')} />
+      <Tab id="cats"     icon={<LayoutGrid size={20} />}  label="Kategori"   onClick={onCategoryTab} />
+      <Tab id="settings" icon={<Settings size={20} />}    label="Pengaturan" onClick={onSettingsTab} />
     </nav>
   );
 }

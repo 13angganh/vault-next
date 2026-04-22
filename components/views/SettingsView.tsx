@@ -5,6 +5,7 @@
  */
 
 import { useState }            from 'react';
+import { Settings, ArrowLeft, Cloud } from 'lucide-react';
 import { useAppStore }         from '@/lib/store/appStore';
 import { useTheme }            from '@/components/providers/ThemeProvider';
 import { PINSettingsPanel }    from '@/components/views/PINSettingsPanel';
@@ -58,9 +59,9 @@ export function SettingsView({ onClose }: SettingsViewProps) {
       <div className="settings-view">
         <div className="settings-header">
           {onClose && (
-            <button className="icon-btn" onClick={onClose} aria-label="Kembali">←</button>
+            <button className="icon-btn" onClick={onClose} aria-label="Kembali"><ArrowLeft size={18} /></button>
           )}
-          <h2 className="settings-title">⚙️ Pengaturan</h2>
+          <h2 className="settings-title"><Settings size={20} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Pengaturan</h2>
         </div>
 
         {/* Tampilan */}
@@ -151,7 +152,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
               <span className="settings-row__desc">Export/Import .vault · Sync manual antar perangkat</span>
             </div>
             <button className="btn btn-ghost settings-row__action" onClick={() => setShowBackup(true)}>
-              ☁️ Buka
+              <Cloud size={14} /> Buka
             </button>
           </div>
         </section>
