@@ -1,34 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- Perisai background -->
-  <path d="M32 2L6 13V34C6 48.5 17.5 61 32 64C46.5 61 58 48.5 58 34V13L32 2Z" fill="#06070E"/>
-  <!-- Perisai border gold gradient -->
-  <path d="M32 2L6 13V34C6 48.5 17.5 61 32 64C46.5 61 58 48.5 58 34V13L32 2Z" fill="none" stroke="url(#fg)" stroke-width="2"/>
-  <!-- Perisai inner glow -->
-  <path d="M32 8L11 17.5V34C11 45.5 20 56.5 32 60C44 56.5 53 45.5 53 34V17.5L32 8Z" fill="url(#ig)" opacity="0.4"/>
-  <!-- Kunci body -->
-  <rect x="21" y="31" width="22" height="16" rx="3.5" fill="url(#kb)"/>
+  <path d="M16 2L4 7V16C4 22.6 9.2 28.1 16 30C22.8 28.1 28 22.6 28 16V7L16 2Z" fill="#f0a500" opacity="0.15"/>
+  <path d="M16 2L4 7V16C4 22.6 9.2 28.1 16 30C22.8 28.1 28 22.6 28 16V7L16 2Z" stroke="#f0a500" stroke-width="1.5" fill="none"/>
+  <!-- Kunci badan -->
+  <rect x="10" y="15" width="12" height="10" rx="2.5" fill="#f0a500"/>
+  <!-- Kunci busur -->
+  <path d="M12 15V12C12 9.8 13.8 8 16 8C18.2 8 20 9.8 20 12V15" stroke="#f0a500" stroke-width="2" stroke-linecap="round" fill="none"/>
   <!-- Lubang kunci -->
-  <circle cx="32" cy="38" r="3.2" fill="#06070E" opacity="0.75"/>
-  <rect x="30.5" y="38" width="3" height="4.5" rx="1" fill="#06070E" opacity="0.75"/>
-  <!-- Kunci handle -->
-  <path d="M25.5 31V26C25.5 21.3 28.5 18 32 18C35.5 18 38.5 21.3 38.5 26V31" stroke="url(#kh)" stroke-width="4" stroke-linecap="round" fill="none"/>
-  <defs>
-    <linearGradient id="fg" x1="6" y1="2" x2="58" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#F0A500" stop-opacity="0.8"/>
-      <stop offset="50%" stop-color="#F0A500" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#F0A500" stop-opacity="0.7"/>
-    </linearGradient>
-    <linearGradient id="ig" x1="32" y1="8" x2="32" y2="60" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#F0A500" stop-opacity="0.2"/>
-      <stop offset="100%" stop-color="#F0A500" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="kb" x1="21" y1="31" x2="43" y2="47" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#F5B429"/>
-      <stop offset="100%" stop-color="#C8860A"/>
-    </linearGradient>
-    <linearGradient id="kh" x1="25.5" y1="18" x2="38.5" y2="31" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FFD166"/>
-      <stop offset="100%" stop-color="#F0A500"/>
-    </linearGradient>
-  </defs>
+  <circle cx="16" cy="19.5" r="1.8" fill="#07080f" opacity="0.8"/>
+  <rect x="15.1" y="20.5" width="1.8" height="2.5" rx="0.9" fill="#07080f" opacity="0.8"/>
 </svg>

@@ -1,194 +1,129 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, ArrowLeft, Loader2, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, TriangleAlert } from 'lucide-react';
 
 interface RecoveryPanelProps {
-  onSubmit: (phrase: string, newPIN: string, newMasterPW: string) => Promise<void>;
+  loading?: boolean;
+  error?: string;
+  onSubmit: (phrase: string) => void;
   onBack: () => void;
-  isLoading?: boolean;
-  error?: string | null;
 }
 
-export function RecoveryPanel({ onSubmit, onBack, isLoading = false, error = null }: RecoveryPanelProps) {
+export function RecoveryPanel({ loading, error, onSubmit, onBack }: RecoveryPanelProps) {
   const [phrase, setPhrase] = useState('');
-  const [newPIN, setNewPIN] = useState('');
-  const [newMasterPW, setNewMasterPW] = useState('');
-  const [showPW, setShowPW] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
 
-  const isValidPhrase = phrase.trim().split(/\s+/).length === 12;
-  const isValidPIN = newPIN.length === 6 && /^\d+$/.test(newPIN);
-  const isValidPW = newMasterPW.length >= 8;
-  const canSubmit = isValidPhrase && isValidPIN && isValidPW && !isLoading;
-
-  const handleSubmit = async () => {
-    if (!canSubmit) return;
-    await onSubmit(phrase.trim().toLowerCase(), newPIN, newMasterPW);
+  const handleSubmit = () => {
+    if (!phrase.trim() || loading) return;
+    onSubmit(phrase.trim());
   };
 
-  const inputStyle = (hasError?: boolean) => ({
-    width: '100%',
-    padding: 'var(--space-3) var(--space-4)',
-    borderRadius: 'var(--radius-lg)',
-    border: `1px solid ${hasError ? 'var(--status-danger)' : 'var(--border-default)'}`,
-    background: 'var(--bg-input)',
-    color: 'var(--text-primary)',
-    fontSize: 'var(--text-sm)',
-    fontFamily: 'var(--font-jetbrains)',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    transition: 'border-color var(--transition-fast)',
-    resize: 'none' as const,
-  });
-
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'var(--space-5)',
-      width: '100%',
-      maxWidth: '320px',
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            cursor: 'pointer', padding: 'var(--space-1)', display: 'flex',
-          }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <ShieldAlert size={16} color="var(--status-warning)" />
-          <span style={{
-            fontSize: 'var(--text-sm)', color: 'var(--text-secondary)',
-            fontFamily: 'var(--font-outfit)',
-          }}>
-            Pemulihan Akun
-          </span>
-        </div>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%' }}>
 
-      {/* Warning */}
+      {/* Warning banner */}
       <div style={{
-        padding: 'var(--space-3)',
+        padding: '12px 14px',
+        background: 'rgba(255,77,109,0.06)',
+        border: '1px solid rgba(255,77,109,0.2)',
         borderRadius: 'var(--radius-md)',
-        background: 'rgba(245, 158, 11, 0.08)',
-        border: '1px solid rgba(245, 158, 11, 0.2)',
-        fontSize: 'var(--text-xs)',
-        color: 'var(--text-muted)',
-        fontFamily: 'var(--font-outfit)',
-        lineHeight: 1.6,
+        display: 'flex',
+        gap: 10,
+        alignItems: 'flex-start',
       }}>
-        Masukkan 12 kata seed phrase secara berurutan, dipisah spasi. Data vault tetap aman.
+        <TriangleAlert size={14} style={{ color: 'var(--danger)', marginTop: 2, flexShrink: 0 }} />
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text2)', lineHeight: 1.6 }}>
+          Recovery phrase hanya digunakan untuk <strong style={{ color: 'var(--text)' }}>memulihkan master password</strong>.
+          Pastikan kamu berada di tempat aman.
+        </span>
       </div>
 
-      {/* Seed Phrase */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)' }}>
-          Seed Phrase (12 kata)
+      {/* Textarea */}
+      <div>
+        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>
+          Recovery phrase / seed phrase
         </label>
         <textarea
           value={phrase}
           onChange={(e) => setPhrase(e.target.value)}
-          placeholder="kata1 kata2 kata3 ... kata12"
-          rows={3}
-          disabled={isLoading}
-          style={inputStyle()}
+          placeholder="Ketikkan recovery phrase kamu…"
+          rows={4}
+          autoComplete="off"
+          spellCheck={false}
+          style={{
+            width: '100%',
+            padding: '12px 14px',
+            background: 'var(--bg-s1)',
+            border: `1px solid ${error ? 'var(--danger)' : 'var(--border)'}`,
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--text)',
+            fontSize: 'var(--text-sm)',
+            fontFamily: 'var(--font-mono)',
+            resize: 'none',
+            outline: 'none',
+            transition: 'border-color var(--transition-fast)',
+            boxSizing: 'border-box',
+            lineHeight: 1.6,
+          }}
+          onFocus={(e) => {
+            if (!error) e.target.style.borderColor = 'var(--gold-border)';
+          }}
+          onBlur={(e) => {
+            if (!error) e.target.style.borderColor = 'var(--border)';
+          }}
         />
-        {phrase && !isValidPhrase && (
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--status-danger)', fontFamily: 'var(--font-outfit)' }}>
-            Harus tepat 12 kata
-          </p>
+        {error && (
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--danger)', marginTop: 6 }}>
+            {error}
+          </div>
         )}
       </div>
-
-      {/* New PIN */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)' }}>
-          PIN Baru (6 digit)
-        </label>
-        <input
-          type="password"
-          value={newPIN}
-          onChange={(e) => setNewPIN(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          placeholder="••••••"
-          disabled={isLoading}
-          maxLength={6}
-          inputMode="numeric"
-          style={{ ...inputStyle(), letterSpacing: '0.2em' }}
-        />
-      </div>
-
-      {/* New Master PW */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)' }}>
-          Kata Sandi Utama Baru (min. 8 karakter)
-        </label>
-        <div style={{ position: 'relative' }}>
-          <input
-            type={showPW ? 'text' : 'password'}
-            value={newMasterPW}
-            onChange={(e) => setNewMasterPW(e.target.value)}
-            placeholder="Kata sandi baru"
-            disabled={isLoading}
-            style={{ ...inputStyle(), paddingRight: 'var(--space-10)' }}
-          />
-          <button
-            onClick={() => setShowPW((s) => !s)}
-            style={{
-              position: 'absolute', right: 'var(--space-3)', top: '50%',
-              transform: 'translateY(-50%)', background: 'none', border: 'none',
-              color: 'var(--text-muted)', cursor: 'pointer', display: 'flex',
-            }}
-          >
-            {showPW ? <EyeOff size={14} /> : <Eye size={14} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <p style={{
-          fontSize: 'var(--text-xs)', color: 'var(--status-danger)',
-          fontFamily: 'var(--font-outfit)',
-        }}>
-          {error}
-        </p>
-      )}
 
       {/* Submit */}
       <button
         onClick={handleSubmit}
-        disabled={!canSubmit}
+        disabled={!phrase.trim() || loading}
+        className="btn btn-gold"
         style={{
-          padding: 'var(--space-4)',
-          borderRadius: 'var(--radius-lg)',
-          background: canSubmit ? 'var(--gold)' : 'var(--bg-hover)',
-          border: 'none',
-          color: canSubmit ? 'var(--text-inverse)' : 'var(--text-muted)',
-          fontSize: 'var(--text-base)',
-          fontWeight: 'var(--fw-button)',
-          fontFamily: 'var(--font-outfit)',
-          cursor: canSubmit ? 'pointer' : 'not-allowed',
-          transition: 'all var(--transition-base)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 'var(--space-2)',
+          width: '100%', justifyContent: 'center', gap: 8,
+          opacity: !phrase.trim() || loading ? 0.5 : 1,
         }}
       >
-        {isLoading ? (
-          <>
-            <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-            Memulihkan...
-          </>
+        {loading ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              width: 14, height: 14,
+              border: '2px solid var(--gold)',
+              borderTopColor: 'transparent',
+              borderRadius: '50%',
+              animation: 'spin 0.6s linear infinite',
+              display: 'inline-block',
+            }} />
+            Memulihkan…
+          </span>
         ) : (
-          'Pulihkan Akun'
+          <>
+            <ShieldCheck size={16} />
+            Pulihkan Akses
+          </>
         )}
+      </button>
+
+      {/* Back */}
+      <button
+        onClick={onBack}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 'var(--text-xs)', color: 'var(--muted2)',
+          display: 'flex', alignItems: 'center', gap: 6,
+          margin: '0 auto', padding: 0,
+          transition: 'color var(--transition-fast)',
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text2)')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted2)')}
+      >
+        <ArrowLeft size={13} />
+        Kembali ke login
       </button>
     </div>
   );

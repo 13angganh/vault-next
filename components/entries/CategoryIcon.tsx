@@ -1,97 +1,74 @@
 'use client';
 
-import {
-  KeyRound,
-  CreditCard,
-  FileText,
-  Wifi,
-  Mail,
-  FolderOpen,
-  type LucideIcon,
-} from 'lucide-react';
-import type { EntryCategory } from '@/lib/store/vaultStore';
+/**
+ * Vault Next — CategoryIcon
+ * Emoji + background color per kategori.
+ * Ukuran: sm (24px) | md (32px) | lg (44px)
+ */
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+import { DEFAULT_CATEGORIES } from '@/lib/types';
+import type { CustomCategory } from '@/lib/types';
 
-interface CategoryConfig {
-  Icon: LucideIcon;
-  color: string;        // CSS var or hex
-  bg: string;           // CSS var or hex
-  label: string;
-}
-
-export const CATEGORY_CONFIG: Record<EntryCategory, CategoryConfig> = {
-  password: {
-    Icon: KeyRound,
-    color: '#F0A500',
-    bg: 'rgba(240,165,0,0.12)',
-    label: 'Password',
-  },
-  kartu: {
-    Icon: CreditCard,
-    color: '#60A5FA',
-    bg: 'rgba(96,165,250,0.12)',
-    label: 'Kartu',
-  },
-  catatan: {
-    Icon: FileText,
-    color: '#A78BFA',
-    bg: 'rgba(167,139,250,0.12)',
-    label: 'Catatan',
-  },
-  wifi: {
-    Icon: Wifi,
-    color: '#34D399',
-    bg: 'rgba(52,211,153,0.12)',
-    label: 'Wi-Fi',
-  },
-  email: {
-    Icon: Mail,
-    color: '#FB923C',
-    bg: 'rgba(251,146,60,0.12)',
-    label: 'Email',
-  },
-  lainnya: {
-    Icon: FolderOpen,
-    color: '#9CA3AF',
-    bg: 'rgba(156,163,175,0.12)',
-    label: 'Lainnya',
-  },
+// Warna background per kategori default
+const CAT_COLORS: Record<string, string> = {
+  sosmed:  'rgba(99,102,241,0.18)',  // indigo
+  email:   'rgba(59,130,246,0.18)',  // blue
+  bank:    'rgba(16,185,129,0.18)',  // emerald
+  game:    'rgba(239,68,68,0.18)',   // red
+  crypto:  'rgba(245,158,11,0.20)',  // amber/gold
+  kartu:   'rgba(14,165,233,0.18)',  // sky
+  wifi:    'rgba(168,85,247,0.18)',  // purple
+  lainnya: 'rgba(156,163,175,0.18)', // gray
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const SIZE_MAP = {
+  sm: { box: 28, font: 14 },
+  md: { box: 36, font: 18 },
+  lg: { box: 48, font: 24 },
+};
 
 interface CategoryIconProps {
-  category: EntryCategory;
-  size?: 'sm' | 'md' | 'lg';
+  catId:      string;
+  customCats?: CustomCategory[];
+  size?:      'sm' | 'md' | 'lg';
   className?: string;
 }
 
-const SIZE_MAP = {
-  sm: { container: 28, icon: 14, radius: 6 },
-  md: { container: 36, icon: 18, radius: 8 },
-  lg: { container: 48, icon: 22, radius: 10 },
-};
+export function CategoryIcon({
+  catId,
+  customCats = [],
+  size = 'md',
+  className = '',
+}: CategoryIconProps) {
+  const allCats = [
+    ...DEFAULT_CATEGORIES,
+    ...customCats,
+  ];
 
-export function CategoryIcon({ category, size = 'md' }: CategoryIconProps) {
-  const config = CATEGORY_CONFIG[category];
-  const dim = SIZE_MAP[size];
-  const { Icon } = config;
+  const cat = allCats.find((c) => c.id === catId);
+  const emoji = cat?.emoji ?? '🔑';
+  const bg = CAT_COLORS[catId] ?? 'rgba(156,163,175,0.18)';
+  const { box, font } = SIZE_MAP[size];
 
   return (
-    <div
+    <span
+      className={`cat-icon cat-icon--${size} ${className}`}
       style={{
-        width: dim.container,
-        height: dim.container,
-        borderRadius: dim.radius,
-        background: config.bg,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
+        width:            box,
+        height:           box,
+        fontSize:         font,
+        backgroundColor:  bg,
+        borderRadius:     box * 0.28,
+        display:          'inline-flex',
+        alignItems:       'center',
+        justifyContent:   'center',
+        flexShrink:       0,
+        userSelect:       'none',
+        lineHeight:       1,
       }}
+      aria-hidden="true"
     >
-      <Icon size={dim.icon} color={config.color} strokeWidth={2} />
-    </div>
+      {emoji}
+    </span>
   );
 }

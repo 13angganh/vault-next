@@ -2,261 +2,195 @@
 
 import { useEffect, useState } from 'react';
 
-interface LoadingScreenProps {
-  onComplete?: () => void;
-  /** Durasi total loading screen dalam ms (default: 2200) */
-  duration?: number;
-}
-
-export function LoadingScreen({ onComplete, duration = 2200 }: LoadingScreenProps) {
-  const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState<'enter' | 'loading' | 'exit'>('enter');
-
-  useEffect(() => {
-    // Phase enter
-    const enterTimer = setTimeout(() => setPhase('loading'), 200);
-
-    // Simulasi progress
-    const steps = [
-      { target: 30, delay: 300 },
-      { target: 60, delay: 700 },
-      { target: 80, delay: 1100 },
-      { target: 95, delay: 1600 },
-      { target: 100, delay: duration - 400 },
-    ];
-
-    const timers: ReturnType<typeof setTimeout>[] = [enterTimer];
-
-    steps.forEach(({ target, delay }) => {
-      timers.push(
-        setTimeout(() => setProgress(target), delay)
-      );
-    });
-
-    // Phase exit
-    timers.push(
-      setTimeout(() => {
-        setPhase('exit');
-        setTimeout(() => onComplete?.(), 400);
-      }, duration)
-    );
-
-    return () => timers.forEach(clearTimeout);
-  }, [duration, onComplete]);
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'var(--bg-root)',
-        opacity: phase === 'exit' ? 0 : 1,
-        transition: 'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)',
-        gap: 'var(--space-8)',
-      }}
-    >
-      {/* Noise texture overlay */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E")`,
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Glow halo di belakang icon */}
-      <div
-        style={{
-          position: 'absolute',
-          width: '300px',
-          height: '300px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(240,165,0,0.08) 0%, transparent 70%)',
-          animation: phase === 'loading' ? 'pulseGold 3s ease-in-out infinite' : 'none',
-        }}
-      />
-
-      {/* Icon + Nama */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 'var(--space-5)',
-          opacity: phase === 'enter' ? 0 : 1,
-          transform: phase === 'enter' ? 'translateY(20px) scale(0.95)' : 'translateY(0) scale(1)',
-          transition: 'all 600ms cubic-bezier(0.34, 1.56, 0.64, 1)',
-        }}
-      >
-        {/* SVG Icon — kunci + perisai */}
-        <div
-          style={{
-            animation: phase === 'loading' ? 'floatIcon 3s ease-in-out infinite' : 'none',
-          }}
-        >
-          <VaultIcon size={72} />
-        </div>
-
-        {/* App name */}
-        <div style={{ textAlign: 'center' }}>
-          <h1
-            style={{
-              fontFamily: 'var(--font-outfit, Outfit, sans-serif)',
-              fontSize: 'var(--text-2xl)',
-              fontWeight: 'var(--fw-display)',
-              color: 'var(--text-primary)',
-              letterSpacing: '-0.02em',
-              lineHeight: 1,
-            }}
-          >
-            Vault
-            <span style={{ color: 'var(--gold)' }}> Next</span>
-          </h1>
-          <p
-            style={{
-              marginTop: 'var(--space-2)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 'var(--fw-label)',
-              color: 'var(--text-muted)',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-            }}
-          >
-            v1.0
-          </p>
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      <div
-        style={{
-          width: '200px',
-          opacity: phase === 'enter' ? 0 : 1,
-          transform: phase === 'enter' ? 'translateY(10px)' : 'translateY(0)',
-          transition: 'all 700ms cubic-bezier(0.4, 0, 0.2, 1) 200ms',
-        }}
-      >
-        {/* Track */}
-        <div
-          style={{
-            width: '100%',
-            height: '2px',
-            backgroundColor: 'var(--border-subtle)',
-            borderRadius: 'var(--radius-full)',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Fill */}
-          <div
-            style={{
-              height: '100%',
-              width: `${progress}%`,
-              borderRadius: 'var(--radius-full)',
-              background: 'linear-gradient(90deg, var(--gold) 0%, #FFD166 100%)',
-              boxShadow: '0 0 8px var(--gold-glow)',
-              transition: 'width 400ms cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-          />
-        </div>
-
-        {/* Progress text */}
-        <p
-          style={{
-            marginTop: 'var(--space-3)',
-            textAlign: 'center',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 'var(--fw-label)',
-            color: 'var(--text-muted)',
-            letterSpacing: '0.05em',
-            fontFamily: 'var(--font-jetbrains, JetBrains Mono, monospace)',
-          }}
-        >
-          {progress < 100 ? 'Memuat...' : 'Siap'}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* === SVG Icon: kunci di dalam perisai === */
-function VaultIcon({ size = 64 }: { size?: number }) {
+// ─── VaultIcon SVG — kunci + perisai, aksen gold ──────────────────────────────
+export function VaultIcon({ size = 56 }: { size?: number }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 64 64"
+      viewBox="0 0 56 56"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Vault Next icon"
+      aria-hidden="true"
     >
       {/* Perisai */}
       <path
-        d="M32 4L8 14V34C8 47 18.5 58.5 32 62C45.5 58.5 56 47 56 34V14L32 4Z"
+        d="M28 4L8 12V28C8 39.5 16.8 48.6 28 52C39.2 48.6 48 39.5 48 28V12L28 4Z"
         fill="url(#shieldGrad)"
-        stroke="url(#shieldBorder)"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
+        opacity="0.18"
       />
-      {/* Perisai inner rim */}
       <path
-        d="M32 10L13 18.5V34C13 44.5 21.5 54 32 57.5C42.5 54 51 44.5 51 34V18.5L32 10Z"
-        fill="url(#shieldInner)"
-        opacity="0.5"
+        d="M28 4L8 12V28C8 39.5 16.8 48.6 28 52C39.2 48.6 48 39.5 48 28V12L28 4Z"
+        stroke="url(#strokeGrad)"
+        strokeWidth="1.5"
+        fill="none"
       />
-      {/* Kunci — body */}
+      {/* Badan kunci */}
       <rect
-        x="22"
-        y="32"
-        width="20"
+        x="19"
+        y="26"
+        width="18"
         height="14"
         rx="3"
-        fill="url(#keyBodyGrad)"
-        stroke="rgba(240,165,0,0.4)"
-        strokeWidth="0.75"
+        fill="url(#lockGrad)"
       />
-      {/* Kunci — lubang kunci */}
-      <circle cx="32" cy="38" r="3" fill="rgba(6,7,14,0.7)" />
-      <rect x="30.5" y="38" width="3" height="4" rx="1" fill="rgba(6,7,14,0.7)" />
-      {/* Kunci — pegangan */}
+      {/* Busur kunci */}
       <path
-        d="M26 32V27C26 22.6 29.1 19 32 19C34.9 19 38 22.6 38 27V32"
-        stroke="url(#keyHandleGrad)"
-        strokeWidth="3.5"
+        d="M22 26V21C22 17.686 25 15 28 15C31 15 34 17.686 34 21V26"
+        stroke="url(#strokeGrad)"
+        strokeWidth="2"
         strokeLinecap="round"
         fill="none"
       />
+      {/* Lubang kunci */}
+      <circle cx="28" cy="32" r="2.5" fill="#07080f" opacity="0.7" />
+      <rect x="27" y="33" width="2" height="3" rx="1" fill="#07080f" opacity="0.7" />
 
       <defs>
-        <linearGradient id="shieldGrad" x1="32" y1="4" x2="32" y2="62" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#1A1F2E" />
-          <stop offset="100%" stopColor="#0D0F1A" />
+        <linearGradient id="shieldGrad" x1="8" y1="4" x2="48" y2="52" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#f0a500" />
+          <stop offset="1" stopColor="#ffcc44" />
         </linearGradient>
-        <linearGradient id="shieldBorder" x1="8" y1="4" x2="56" y2="62" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="rgba(240,165,0,0.6)" />
-          <stop offset="50%" stopColor="rgba(240,165,0,0.2)" />
-          <stop offset="100%" stopColor="rgba(240,165,0,0.5)" />
+        <linearGradient id="strokeGrad" x1="8" y1="4" x2="48" y2="52" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#f0a500" />
+          <stop offset="1" stopColor="#ffcc44" />
         </linearGradient>
-        <linearGradient id="shieldInner" x1="32" y1="10" x2="32" y2="57" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="rgba(240,165,0,0.15)" />
-          <stop offset="100%" stopColor="rgba(240,165,0,0.02)" />
-        </linearGradient>
-        <linearGradient id="keyBodyGrad" x1="22" y1="32" x2="42" y2="46" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#F0A500" />
-          <stop offset="100%" stopColor="#C8860A" />
-        </linearGradient>
-        <linearGradient id="keyHandleGrad" x1="26" y1="19" x2="38" y2="32" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FFD166" />
-          <stop offset="100%" stopColor="#F0A500" />
+        <linearGradient id="lockGrad" x1="19" y1="26" x2="37" y2="40" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#f0a500" />
+          <stop offset="1" stopColor="#ffcc44" />
         </linearGradient>
       </defs>
     </svg>
   );
 }
 
-export { VaultIcon };
+// ─── LoadingScreen ────────────────────────────────────────────────────────────
+
+interface LoadingScreenProps {
+  onComplete?: () => void;
+  duration?: number;
+}
+
+export function LoadingScreen({ onComplete, duration = 2200 }: LoadingScreenProps) {
+  const [hiding, setHiding] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => {
+      setHiding(true);
+    }, duration - 400);
+
+    const t2 = setTimeout(() => {
+      onComplete?.();
+    }, duration);
+
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [duration, onComplete]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'var(--bg)',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: hiding ? 0 : 1,
+        visibility: hiding ? 'hidden' : 'visible',
+        transition: 'opacity 400ms ease, visibility 400ms ease',
+      }}
+    >
+      {/* Logo icon */}
+      <div
+        style={{
+          position: 'relative',
+          marginBottom: 32,
+          animation: 'loadingLogoPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+        }}
+      >
+        {/* Ring animasi 1 */}
+        <div style={{
+          position: 'absolute',
+          inset: -10,
+          borderRadius: '50%',
+          border: '2px solid var(--gold)',
+          animation: 'loadingRing 2s ease-in-out 0.5s infinite',
+          opacity: 0,
+        }} />
+        {/* Ring animasi 2 */}
+        <div style={{
+          position: 'absolute',
+          inset: -20,
+          borderRadius: '50%',
+          border: '1.5px solid var(--gold)',
+          animation: 'loadingRing 2s ease-in-out 0.8s infinite',
+          opacity: 0,
+        }} />
+
+        {/* Icon container */}
+        <div style={{
+          width: 96, height: 96,
+          background: 'linear-gradient(135deg, var(--bg-s2), var(--bg-s3))',
+          borderRadius: 28,
+          border: '1.5px solid var(--gold-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: 'var(--logo-shadow)',
+        }}>
+          <VaultIcon size={56} />
+        </div>
+      </div>
+
+      {/* Title */}
+      <div style={{
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-2xl)',
+        fontWeight: 800,
+        color: 'var(--text)',
+        letterSpacing: 'var(--ls-tight)',
+        animation: 'loadingFadeUp 0.6s ease 0.3s both',
+      }}>
+        Vault<span style={{ color: 'var(--gold)' }}>.</span>
+      </div>
+
+      {/* Subtitle */}
+      <div style={{
+        fontSize: 'var(--text-sm)',
+        color: 'var(--muted2)',
+        marginTop: 6,
+        animation: 'loadingFadeUp 0.6s ease 0.45s both',
+      }}>
+        Terenkripsi · Sepenuhnya offline
+      </div>
+
+      {/* Progress bar */}
+      <div style={{
+        width: 160, height: 2,
+        background: 'var(--border)',
+        borderRadius: 2,
+        marginTop: 40,
+        overflow: 'hidden',
+        animation: 'loadingFadeUp 0.6s ease 0.6s both',
+      }}>
+        <div style={{
+          height: '100%',
+          background: 'linear-gradient(90deg, var(--gold), var(--gold2))',
+          borderRadius: 2,
+          animation: 'loadingProgress 1.4s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both',
+        }} />
+      </div>
+
+      {/* Version */}
+      <div style={{
+        position: 'absolute', bottom: 28,
+        fontSize: 'var(--text-xs)',
+        color: 'var(--muted)',
+        fontFamily: 'var(--font-mono)',
+        letterSpacing: '0.05em',
+        animation: 'loadingFadeUp 0.6s ease 0.9s both',
+      }}>
+        v1.0
+      </div>
+    </div>
+  );
+}

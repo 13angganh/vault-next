@@ -1,372 +1,454 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Star, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { useVaultStore, type VaultEntry } from '@/lib/store/vaultStore';
-import { CategoryIcon, CATEGORY_CONFIG } from './CategoryIcon';
+/**
+ * Vault Next — EntryCard
+ * Kartu entri expandable di VaultListView.
+ *
+ * Collapsed: emoji kategori + nama + user/URL + badge fav + badge lock
+ * Expanded:  semua field per kategori, copy, show/hide password, actions
+ * Locked:    tampilkan gembok, klik → expand minta PIN/master password
+ */
 
-// ─── Context Menu ─────────────────────────────────────────────────────────────
-
-interface ContextMenuProps {
-  x: number;
-  y: number;
-  onEdit: () => void;
-  onDelete: () => void;
-  onClose: () => void;
-}
-
-function ContextMenu({ x, y, onEdit, onDelete, onClose }: ContextMenuProps) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [onClose]);
-
-  // Adjust position so menu doesn't go off-screen
-  const menuWidth = 160;
-  const adjustedX = x + menuWidth > window.innerWidth ? x - menuWidth : x;
-
-  return (
-    <div
-      ref={ref}
-      role="menu"
-      style={{
-        position: 'fixed',
-        top: y,
-        left: adjustedX,
-        width: menuWidth,
-        background: 'var(--bg-overlay)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-md)',
-        boxShadow: 'var(--shadow-modal)',
-        zIndex: 1000,
-        overflow: 'hidden',
-        animation: 'fadeScaleIn 150ms ease both',
-      }}
-    >
-      <button
-        role="menuitem"
-        onClick={() => { onEdit(); onClose(); }}
-        style={menuItemStyle}
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-      >
-        <Pencil size={13} />
-        Edit
-      </button>
-      <div style={{ height: 1, background: 'var(--border-subtle)' }} />
-      <button
-        role="menuitem"
-        onClick={() => { onDelete(); onClose(); }}
-        style={{ ...menuItemStyle, color: '#EF4444' }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-      >
-        <Trash2 size={13} />
-        Hapus
-      </button>
-    </div>
-  );
-}
-
-const menuItemStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  padding: '8px 12px',
-  width: '100%',
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--text-primary)',
-  fontSize: 'var(--text-sm)',
-  fontFamily: 'var(--font-outfit)',
-  cursor: 'pointer',
-  textAlign: 'left',
-  transition: 'background var(--transition-fast)',
-};
-
-// ─── Delete Confirm ───────────────────────────────────────────────────────────
-
-interface DeleteConfirmProps {
-  title: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-function DeleteConfirm({ title, onConfirm, onCancel }: DeleteConfirmProps) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2000,
-        animation: 'fadeIn 150ms ease both',
-      }}
-      onClick={onCancel}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-6)',
-          width: 320,
-          boxShadow: 'var(--shadow-modal)',
-          animation: 'fadeScaleIn 200ms var(--transition-spring) both',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 'var(--radius-md)',
-            background: 'rgba(239,68,68,0.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Trash2 size={16} color="#EF4444" />
-          </div>
-          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Hapus Entri
-          </h3>
-        </div>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-5)' }}>
-          Yakin hapus <strong style={{ color: 'var(--text-primary)' }}>{title}</strong>? Tindakan ini tidak dapat dibatalkan.
-        </p>
-        <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={cancelBtnStyle}>Batal</button>
-          <button onClick={onConfirm} style={deleteBtnStyle}>Hapus</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const cancelBtnStyle: React.CSSProperties = {
-  padding: '6px 16px',
-  borderRadius: 'var(--radius-md)',
-  border: '1px solid var(--border-default)',
-  background: 'transparent',
-  color: 'var(--text-secondary)',
-  fontSize: 'var(--text-sm)',
-  fontFamily: 'var(--font-outfit)',
-  cursor: 'pointer',
-  fontWeight: 500,
-};
-
-const deleteBtnStyle: React.CSSProperties = {
-  padding: '6px 16px',
-  borderRadius: 'var(--radius-md)',
-  border: 'none',
-  background: '#EF4444',
-  color: '#fff',
-  fontSize: 'var(--text-sm)',
-  fontFamily: 'var(--font-outfit)',
-  cursor: 'pointer',
-  fontWeight: 600,
-};
-
-// ─── EntryCard ────────────────────────────────────────────────────────────────
+import { useState, useEffect, useRef, memo } from 'react';
+import { useAppStore }      from '@/lib/store/appStore';
+import { saveVault }         from '@/lib/vaultService';
+import { CategoryIcon }      from '@/components/entries/CategoryIcon';
+import type { VaultEntry }   from '@/lib/types';
 
 interface EntryCardProps {
-  entry: VaultEntry;
+  entry:         VaultEntry;
+  isRecycleBin?: boolean;
+  onEdit?:       (entry: VaultEntry) => void;
+  onDetail?:     (entry: VaultEntry) => void;
+  onCopy?:       (text: string, label: string) => void;
 }
 
-export function EntryCard({ entry }: EntryCardProps) {
-  const { selectedId, setSelectedId, toggleFavorite, startEditing, deleteEntry } = useVaultStore();
-  const isSelected = selectedId === entry.id;
+export function EntryCard({
+  entry,
+  isRecycleBin = false,
+  onEdit,
+  onDetail,
+  onCopy,
+}: EntryCardProps) {
+  const store       = useAppStore();
+  const customCats  = store.customCats;
+  const lockedIds   = store.lockedIds;
+  const expandedIds = store.expandedIds;
+  const pwVisible   = store.pwVisible;
+  const seedVisible = store.seedVisible;
 
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [favAnim, setFavAnim] = useState(false);
+  const isLocked   = lockedIds.includes(entry.id);
+  const isExpanded = expandedIds.includes(entry.id);
 
-  const config = CATEGORY_CONFIG[entry.category];
+  // Local: show unlock prompt overlay
+  const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
+  const [unlockInput,      setUnlockInput]      = useState('');
+  const [unlockError,      setUnlockError]      = useState('');
+  const [unlockLoading,    setUnlockLoading]    = useState(false);
+  const unlockRef = useRef<HTMLInputElement>(null);
 
-  // Sub-label: show username / email / SSID / card holder
-  const subLabel =
-    entry.username ||
-    entry.email ||
-    entry.wifiSSID ||
-    entry.cardHolder ||
-    null;
+  useEffect(() => {
+    if (showUnlockPrompt && unlockRef.current) {
+      unlockRef.current.focus();
+    }
+  }, [showUnlockPrompt]);
 
-  const handleFavorite = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setFavAnim(true);
-      toggleFavorite(entry.id);
-      setTimeout(() => setFavAnim(false), 400);
-    },
-    [entry.id, toggleFavorite]
-  );
+  const handleToggleExpand = () => {
+    if (isLocked && !isExpanded) {
+      setShowUnlockPrompt(true);
+      return;
+    }
+    store.toggleExpanded(entry.id);
+  };
 
-  const handleMore = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setMenu({ x: rect.left, y: rect.bottom + 4 });
-  }, []);
+  const handleUnlockEntry = async () => {
+    if (!unlockInput.trim()) return;
+    setUnlockLoading(true);
+    setUnlockError('');
 
-  const handleDelete = useCallback(async () => {
-    await deleteEntry(entry.id);
-    setShowDeleteConfirm(false);
-  }, [entry.id, deleteEntry]);
+    try {
+      const { verifyPin, hasPinSetup } = await import('@/lib/vaultService');
+      let ok = false;
+
+      if (hasPinSetup()) {
+        ok = await verifyPin(unlockInput);
+      }
+      if (!ok && unlockInput === store.masterPw) {
+        ok = true;
+      }
+
+      if (ok) {
+        setShowUnlockPrompt(false);
+        setUnlockInput('');
+        // Setelah verifikasi berhasil, expand entry (tanpa unlock permanen)
+        store.toggleExpanded(entry.id);
+      } else {
+        setUnlockError('PIN atau password salah');
+      }
+    } catch {
+      setUnlockError('Terjadi kesalahan');
+    } finally {
+      setUnlockLoading(false);
+    }
+  };
+
+  const handleFav = async () => {
+    const updated = store.vault.map((e) =>
+      e.id === entry.id ? { ...e, fav: !e.fav } : e,
+    );
+    store.setVault(updated);
+    if (store.autoSaveEnabled) {
+      await saveVault(store.masterPw, updated, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (isRecycleBin) {
+      // Permanent delete
+      const updated = store.recycleBin.filter((e) => e.id !== entry.id);
+      store.setRecycleBin(updated);
+      if (store.autoSaveEnabled) {
+        await saveVault(store.masterPw, store.vault, updated, store.vaultMeta!, store.customCats, store.lockedIds);
+      }
+    } else {
+      // Move to recycle bin
+      const newVault = store.vault.filter((e) => e.id !== entry.id);
+      const newBin   = [...store.recycleBin, { ...entry, ts: Date.now() }];
+      store.setVault(newVault);
+      store.setRecycleBin(newBin);
+      if (store.autoSaveEnabled) {
+        await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds);
+      }
+    }
+  };
+
+  const handleRestore = async () => {
+    const newBin   = store.recycleBin.filter((e) => e.id !== entry.id);
+    const newVault = [...store.vault, { ...entry }];
+    store.setRecycleBin(newBin);
+    store.setVault(newVault);
+    if (store.autoSaveEnabled) {
+      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds);
+    }
+  };
+
+  const handleToggleLock = async () => {
+    store.toggleLockedId(entry.id);
+    // Collapse if locking
+    if (!lockedIds.includes(entry.id) && isExpanded) {
+      store.toggleExpanded(entry.id);
+    }
+    if (store.autoSaveEnabled) {
+      const newLocked = lockedIds.includes(entry.id)
+        ? lockedIds.filter((id) => id !== entry.id)
+        : [...lockedIds, entry.id];
+      await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked);
+    }
+  };
+
+  const copy = (text: string | undefined, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      onCopy?.(text, label);
+    });
+  };
+
+  const pwShow   = pwVisible[entry.id]   ?? false;
+  const seedShow = seedVisible[entry.id] ?? false;
+
+  // ── Field rendering helpers ──────────────────────────────────────────────
+
+  const Field = ({
+    label, value, sensitive = false, isVisible, onToggleVisible, mono = false,
+  }: {
+    label: string;
+    value?: string;
+    sensitive?: boolean;
+    isVisible?: boolean;
+    onToggleVisible?: () => void;
+    mono?: boolean;
+  }) => {
+    if (!value) return null;
+    const display = sensitive && !isVisible ? '••••••••' : value;
+    return (
+      <div className="entry-field">
+        <span className="entry-field__label">{label}</span>
+        <div className="entry-field__row">
+          <span className={`entry-field__value ${mono ? 'mono' : ''}`}>{display}</span>
+          <div className="entry-field__actions">
+            {sensitive && (
+              <button
+                className="entry-field__btn btn-icon"
+                onClick={onToggleVisible}
+                aria-label={isVisible ? 'Sembunyikan' : 'Tampilkan'}
+                title={isVisible ? 'Sembunyikan' : 'Tampilkan'}
+              >
+                {isVisible ? '🙈' : '👁'}
+              </button>
+            )}
+            <button
+              className="entry-field__btn btn-icon"
+              onClick={() => copy(value, label)}
+              aria-label={`Salin ${label}`}
+              title={`Salin ${label}`}
+            >
+              ⎘
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Seed phrase display
+  const SeedField = () => {
+    if (!entry.seedPhrase?.length) return null;
+    const words = entry.seedPhrase;
+    return (
+      <div className="entry-field">
+        <span className="entry-field__label">Seed Phrase</span>
+        {seedShow ? (
+          <div className="entry-seed-grid">
+            {words.map((w, i) => (
+              <span key={i} className="entry-seed-word mono">
+                <span className="entry-seed-word__num">{i + 1}.</span> {w}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="entry-field__value">{'•'.repeat(Math.min(words.length * 4, 32))}</span>
+        )}
+        <div className="entry-field__actions entry-field__actions--seed">
+          <button
+            className="entry-field__btn btn-icon"
+            onClick={() => store.toggleSeedVisible(entry.id)}
+            aria-label={seedShow ? 'Sembunyikan seed' : 'Tampilkan seed'}
+          >
+            {seedShow ? '🙈' : '👁'}
+          </button>
+          {seedShow && (
+            <button
+              className="entry-field__btn btn-icon"
+              onClick={() => copy(words.join(' '), 'Seed Phrase')}
+              aria-label="Salin seed phrase"
+            >
+              ⎘
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ── Category-specific fields ─────────────────────────────────────────────
+
+  const renderFields = () => {
+    switch (entry.cat) {
+      case 'crypto':
+        return <>
+          <Field label="Username"         value={entry.user} />
+          <Field label="Password"         value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <Field label="Network"          value={entry.network} />
+          <Field label="Alamat Wallet"    value={entry.walletAddr} mono />
+          <Field label="Password Wallet"  value={entry.walletPw} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <SeedField />
+          <Field label="URL"              value={entry.url} />
+          <Field label="Catatan"          value={entry.note} />
+        </>;
+
+      case 'kartu':
+        return <>
+          <Field label="Nomor Kartu"  value={entry.cardNo}     sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <Field label="Nama Pemegang" value={entry.cardHolder} />
+          <Field label="Masa Berlaku" value={entry.cardExpiry} />
+          <Field label="CVV"          value={entry.cardCVV}    sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <Field label="PIN"          value={entry.pass}       sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <Field label="Catatan"      value={entry.note} />
+        </>;
+
+      case 'wifi':
+        return <>
+          <Field label="Nama Jaringan (SSID)" value={entry.wifiSSID ?? entry.user} />
+          <Field label="Password Wi-Fi"       value={entry.wifiPass ?? entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <Field label="Catatan"              value={entry.note} />
+        </>;
+
+      case 'bank':
+        return <>
+          <Field label="Username / No. Rekening" value={entry.user} />
+          <Field label="Password"                value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <Field label="URL"                     value={entry.url} />
+          <Field label="Catatan"                 value={entry.note} />
+        </>;
+
+      case 'email':
+        return <>
+          <Field label="Alamat Email"   value={entry.emailAddr ?? entry.user} />
+          <Field label="Username"       value={entry.emailAddr ? entry.user : undefined} />
+          <Field label="Password"       value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <Field label="URL"            value={entry.url} />
+          <Field label="Catatan"        value={entry.note} />
+        </>;
+
+      default:
+        return <>
+          <Field label="Username" value={entry.user} />
+          <Field label="Password" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+          <Field label="URL"      value={entry.url} />
+          <Field label="Catatan"  value={entry.note} />
+        </>;
+    }
+  };
+
+  // ── Sub-label under name in collapsed view ───────────────────────────────
+
+  const subLabel = (() => {
+    if (entry.cat === 'wifi')  return entry.wifiSSID ?? entry.user ?? '';
+    if (entry.cat === 'kartu') return entry.cardHolder ?? '';
+    if (entry.cat === 'email') return entry.emailAddr ?? entry.user ?? '';
+    return entry.user ?? entry.url ?? '';
+  })();
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <>
+    <div
+      className={`entry-card ${isExpanded ? 'entry-card--expanded' : ''} ${isLocked ? 'entry-card--locked' : ''} ${isRecycleBin ? 'entry-card--bin' : ''}`}
+      data-id={entry.id}
+    >
+      {/* ── Collapsed row ── */}
       <div
+        className="entry-card__header"
+        onClick={handleToggleExpand}
         role="button"
         tabIndex={0}
-        onClick={() => setSelectedId(entry.id)}
-        onKeyDown={(e) => e.key === 'Enter' && setSelectedId(entry.id)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-3)',
-          padding: 'var(--space-3) var(--space-3)',
-          borderRadius: 'var(--radius-md)',
-          background: isSelected ? 'var(--bg-active)' : 'var(--bg-card)',
-          border: isSelected
-            ? '1px solid var(--gold-border)'
-            : '1px solid var(--border-subtle)',
-          cursor: 'pointer',
-          position: 'relative',
-          transition: 'all var(--transition-fast)',
-          outline: 'none',
-          userSelect: 'none',
-        }}
-        onMouseEnter={(e) => {
-          if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)';
-        }}
-        onMouseLeave={(e) => {
-          if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'var(--bg-card)';
-        }}
+        aria-expanded={isExpanded}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleExpand(); } }}
       >
-        {/* Category icon */}
-        <CategoryIcon category={entry.category} size="sm" />
+        <CategoryIcon catId={entry.cat} customCats={customCats} size="md" />
 
-        {/* Text */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{
-            fontWeight: 500,
-            fontSize: 'var(--text-sm)',
-            color: isSelected ? 'var(--gold-text)' : 'var(--text-primary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            lineHeight: 1.3,
-          }}>
-            {entry.title}
-          </p>
+        <div className="entry-card__title-wrap">
+          <span className="entry-card__name">{entry.name}</span>
           {subLabel && (
-            <p style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--text-muted)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              marginTop: 2,
-            }}>
-              {subLabel}
-            </p>
+            <span className="entry-card__sub">{subLabel}</span>
           )}
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-          {/* Favorite */}
-          <button
-            onClick={handleFavorite}
-            title={entry.isFavorite ? 'Hapus dari favorit' : 'Tambah ke favorit'}
-            style={{
-              width: 26,
-              height: 26,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 'var(--radius-sm)',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              color: entry.isFavorite ? 'var(--gold)' : 'var(--text-muted)',
-              transform: favAnim ? 'scale(1.4)' : 'scale(1)',
-              transition: 'transform 200ms var(--transition-spring), color var(--transition-fast)',
-            }}
-          >
-            <Star size={13} fill={entry.isFavorite ? 'currentColor' : 'none'} />
-          </button>
-
-          {/* More */}
-          <button
-            onClick={handleMore}
-            title="Opsi"
-            style={{
-              width: 26,
-              height: 26,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 'var(--radius-sm)',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              color: 'var(--text-muted)',
-              transition: 'color var(--transition-fast)',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-          >
-            <MoreVertical size={13} />
-          </button>
+        <div className="entry-card__badges">
+          {entry.fav && <span className="entry-card__fav" aria-label="Favorit">⭐</span>}
+          {isLocked  && <span className="entry-card__lock-badge" aria-label="Terkunci">🔒</span>}
         </div>
 
-        {/* Selected accent bar */}
-        {isSelected && (
-          <div style={{
-            position: 'absolute',
-            left: 0,
-            top: '20%',
-            bottom: '20%',
-            width: 3,
-            borderRadius: '0 3px 3px 0',
-            background: 'var(--gold)',
-          }} />
-        )}
+        <span className={`entry-card__chevron ${isExpanded ? 'entry-card__chevron--up' : ''}`} aria-hidden="true">
+          ›
+        </span>
       </div>
 
-      {/* Context menu */}
-      {menu && (
-        <ContextMenu
-          x={menu.x}
-          y={menu.y}
-          onEdit={() => startEditing(entry.id)}
-          onDelete={() => setShowDeleteConfirm(true)}
-          onClose={() => setMenu(null)}
-        />
+      {/* ── Expanded body ── */}
+      {isExpanded && (
+        <div className="entry-card__body">
+          {/* Fields */}
+          <div className="entry-card__fields">
+            {renderFields()}
+          </div>
+
+          {/* Action row */}
+          <div className="entry-card__actions">
+            {!isRecycleBin && onEdit && (
+              <button
+                className="entry-action-btn entry-action-btn--edit"
+                onClick={() => onEdit(entry)}
+                title="Edit"
+              >
+                ✎ Edit
+              </button>
+            )}
+
+            {!isRecycleBin && (
+              <button
+                className="entry-action-btn entry-action-btn--lock"
+                onClick={handleToggleLock}
+                title={isLocked ? 'Lepas kunci' : 'Kunci entri'}
+              >
+                {isLocked ? '🔓 Lepas' : '🔒 Kunci'}
+              </button>
+            )}
+
+            {!isRecycleBin && (
+              <button
+                className={`entry-action-btn entry-action-btn--fav ${entry.fav ? 'entry-action-btn--fav-active' : ''}`}
+                onClick={handleFav}
+                title={entry.fav ? 'Hapus favorit' : 'Tandai favorit'}
+              >
+                {entry.fav ? '★ Favorit' : '☆ Favorit'}
+              </button>
+            )}
+
+            {isRecycleBin && (
+              <button
+                className="entry-action-btn entry-action-btn--restore"
+                onClick={handleRestore}
+                title="Pulihkan"
+              >
+                ↩ Pulihkan
+              </button>
+            )}
+
+            <button
+              className="entry-action-btn entry-action-btn--delete"
+              onClick={handleDelete}
+              title={isRecycleBin ? 'Hapus permanen' : 'Hapus'}
+            >
+              {isRecycleBin ? '✕ Hapus Permanen' : '🗑 Hapus'}
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* Delete confirm */}
-      {showDeleteConfirm && (
-        <DeleteConfirm
-          title={entry.title}
-          onConfirm={handleDelete}
-          onCancel={() => setShowDeleteConfirm(false)}
-        />
+      {/* ── Unlock prompt overlay ── */}
+      {showUnlockPrompt && (
+        <div className="entry-unlock-overlay" role="dialog" aria-modal="true" aria-label="Verifikasi untuk membuka entri">
+          <div className="entry-unlock-card" onClick={(e) => e.stopPropagation()}>
+            <div className="entry-unlock-icon">🔒</div>
+            <p className="entry-unlock-title">Entri Terkunci</p>
+            <p className="entry-unlock-desc">Masukkan PIN atau Master Password untuk melihat entri ini</p>
+            <input
+              ref={unlockRef}
+              type="password"
+              className="input entry-unlock-input"
+              placeholder="PIN atau Master Password"
+              value={unlockInput}
+              onChange={(e) => { setUnlockInput(e.target.value); setUnlockError(''); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleUnlockEntry();
+                if (e.key === 'Escape') { setShowUnlockPrompt(false); setUnlockInput(''); }
+              }}
+              disabled={unlockLoading}
+            />
+            {unlockError && <p className="entry-unlock-error">{unlockError}</p>}
+            <div className="entry-unlock-actions">
+              <button
+                className="btn btn--ghost"
+                onClick={() => { setShowUnlockPrompt(false); setUnlockInput(''); setUnlockError(''); }}
+                disabled={unlockLoading}
+              >
+                Batal
+              </button>
+              <button
+                className="btn btn--primary"
+                onClick={handleUnlockEntry}
+                disabled={unlockLoading || !unlockInput.trim()}
+              >
+                {unlockLoading ? 'Memverifikasi…' : 'Buka'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 }
+
+// Sesi 6: memo untuk hindari re-render tidak perlu
+// EntryCard di-render banyak kali di list, memo signifikan
+export const EntryCardMemo = memo(EntryCard);

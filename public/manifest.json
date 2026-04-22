@@ -1,13 +1,16 @@
 {
-  "name": "Vault Next — Pengelola Kata Sandi",
+  "id": "/",
+  "name": "Vault Next — Pengelola Akun Terenkripsi",
   "short_name": "Vault Next",
-  "description": "Pengelola kata sandi offline terenkripsi AES-256. Aman, privat, tanpa server.",
+  "description": "Pengelola akun dan kata sandi terenkripsi AES-256. Sepenuhnya offline, tanpa server.",
   "lang": "id",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait-primary",
-  "background_color": "#06070E",
-  "theme_color": "#06070E",
+  "background_color": "#07080f",
+  "theme_color": "#07080f",
   "categories": ["productivity", "utilities", "security"],
   "icons": [
     { "src": "/icons/icon-72x72.png",   "sizes": "72x72",   "type": "image/png" },
@@ -15,11 +18,23 @@
     { "src": "/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png" },
     { "src": "/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png" },
     { "src": "/icons/icon-152x152.png", "sizes": "152x152", "type": "image/png" },
-    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "/icons/icon-384x384.png", "sizes": "384x384", "type": "image/png" },
-    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vault Next — Daftar Entri"
+    }
+  ],
   "related_applications": [],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
 }

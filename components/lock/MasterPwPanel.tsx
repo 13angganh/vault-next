@@ -1,99 +1,109 @@
 'use client';
 
-import { useState } from 'react';
-import { Eye, EyeOff, KeyRound, ArrowLeft, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Eye, EyeOff, LogIn, HelpCircle } from 'lucide-react';
 
 interface MasterPwPanelProps {
-  onSubmit: (password: string) => Promise<void>;
-  onBack: () => void;
-  isLoading?: boolean;
-  error?: string | null;
+  hint?: string;
+  loading?: boolean;
+  error?: string;
+  onSubmit: (pw: string) => void;
+  onShowRecovery: () => void;
+  onShowBiometric?: () => void;
 }
 
-export function MasterPwPanel({ onSubmit, onBack, isLoading = false, error = null }: MasterPwPanelProps) {
-  const [password, setPassword] = useState('');
+export function MasterPwPanel({
+  hint,
+  loading,
+  error,
+  onSubmit,
+  onShowRecovery,
+  onShowBiometric,
+}: MasterPwPanelProps) {
+  const [pw, setPw] = useState('');
   const [show, setShow] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async () => {
-    if (!password || isLoading) return;
-    await onSubmit(password);
-    setPassword('');
+  useEffect(() => {
+    // Delay sedikit untuk menunggu animasi panel muncul
+    const t = setTimeout(() => inputRef.current?.focus(), 200);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Clear field saat ada error baru
+  useEffect(() => {
+    if (error) {
+      setPw('');
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [error]);
+
+  const handleSubmit = () => {
+    if (!pw.trim() || loading) return;
+    onSubmit(pw);
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'var(--space-6)',
-      width: '100%',
-      maxWidth: '320px',
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: 'var(--space-1)',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <KeyRound size={16} color="var(--gold)" />
-          <span style={{
-            fontSize: 'var(--text-sm)',
-            color: 'var(--text-secondary)',
-            fontFamily: 'var(--font-outfit)',
-          }}>
-            Kata Sandi Utama
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%' }}>
+
+      {/* Hint */}
+      {hint && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 8,
+          padding: '10px 14px',
+          background: 'var(--gold-dim)',
+          border: '1px solid var(--gold-border)',
+          borderRadius: 'var(--radius-md)',
+          animation: 'fadeIn 0.3s ease',
+        }}>
+          <HelpCircle size={14} style={{ color: 'var(--gold)', marginTop: 2, flexShrink: 0 }} />
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gold-text)', lineHeight: 1.5 }}>
+            <strong>Petunjuk:</strong> {hint}
           </span>
         </div>
-      </div>
+      )}
 
-      {/* Input */}
+      {/* Password input */}
       <div style={{ position: 'relative' }}>
         <input
+          ref={inputRef}
           type={show ? 'text' : 'password'}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-          placeholder="Masukkan kata sandi utama"
-          autoFocus
-          disabled={isLoading}
+          placeholder="Master password…"
+          autoComplete="current-password"
           style={{
             width: '100%',
-            padding: 'var(--space-4) var(--space-12) var(--space-4) var(--space-4)',
-            borderRadius: 'var(--radius-lg)',
-            border: `1px solid ${error ? 'var(--status-danger)' : 'var(--border-default)'}`,
-            background: 'var(--bg-input)',
-            color: 'var(--text-primary)',
-            fontSize: 'var(--text-base)',
-            fontFamily: 'var(--font-jetbrains)',
+            padding: '14px 48px 14px 16px',
+            background: 'var(--bg-s1)',
+            border: `1px solid ${error ? 'var(--danger)' : 'var(--border)'}`,
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--text)',
+            fontSize: 'var(--text-sm)',
+            fontFamily: 'var(--font-mono)',
             outline: 'none',
-            boxSizing: 'border-box',
-            letterSpacing: show ? 'normal' : '0.15em',
             transition: 'border-color var(--transition-fast)',
+            boxSizing: 'border-box',
+            animation: error ? 'shake 0.3s ease' : 'none',
+          }}
+          onFocus={(e) => {
+            if (!error) e.target.style.borderColor = 'var(--gold-border)';
+          }}
+          onBlur={(e) => {
+            if (!error) e.target.style.borderColor = 'var(--border)';
           }}
         />
         <button
+          type="button"
           onClick={() => setShow((s) => !s)}
           style={{
-            position: 'absolute',
-            right: 'var(--space-3)',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: 'var(--space-1)',
-            display: 'flex',
+            position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--muted2)', padding: 4, display: 'flex',
+            transition: 'color var(--transition-fast)',
           }}
         >
           {show ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -102,46 +112,83 @@ export function MasterPwPanel({ onSubmit, onBack, isLoading = false, error = nul
 
       {/* Error */}
       {error && (
-        <p style={{
+        <div style={{
           fontSize: 'var(--text-xs)',
-          color: 'var(--status-danger)',
-          fontFamily: 'var(--font-outfit)',
-          marginTop: 'calc(var(--space-2) * -1)',
+          color: 'var(--danger)',
+          textAlign: 'center',
+          animation: 'fadeIn 0.2s ease',
         }}>
           {error}
-        </p>
+        </div>
       )}
 
-      {/* Submit */}
+      {/* Submit button */}
       <button
         onClick={handleSubmit}
-        disabled={!password || isLoading}
+        disabled={!pw.trim() || loading}
+        className="btn btn-gold"
         style={{
-          padding: 'var(--space-4)',
-          borderRadius: 'var(--radius-lg)',
-          background: password && !isLoading ? 'var(--gold)' : 'var(--bg-hover)',
-          border: 'none',
-          color: password && !isLoading ? 'var(--text-inverse)' : 'var(--text-muted)',
-          fontSize: 'var(--text-base)',
-          fontWeight: 'var(--fw-button)',
-          fontFamily: 'var(--font-outfit)',
-          cursor: password && !isLoading ? 'pointer' : 'not-allowed',
-          transition: 'all var(--transition-base)',
-          display: 'flex',
-          alignItems: 'center',
+          width: '100%',
           justifyContent: 'center',
-          gap: 'var(--space-2)',
+          gap: 8,
+          opacity: !pw.trim() || loading ? 0.5 : 1,
         }}
       >
-        {isLoading ? (
-          <>
-            <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-            Memverifikasi...
-          </>
+        {loading ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              width: 14, height: 14,
+              border: '2px solid var(--gold)',
+              borderTopColor: 'transparent',
+              borderRadius: '50%',
+              animation: 'spin 0.6s linear infinite',
+              display: 'inline-block',
+            }} />
+            Membuka…
+          </span>
         ) : (
-          'Buka Vault'
+          <>
+            <LogIn size={16} />
+            Buka Vault
+          </>
         )}
       </button>
+
+      {/* Footer links */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingTop: 'var(--space-2)',
+      }}>
+        <button
+          onClick={onShowRecovery}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 'var(--text-xs)', color: 'var(--muted2)',
+            padding: 0, transition: 'color var(--transition-fast)',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted2)')}
+        >
+          Lupa password?
+        </button>
+
+        {onShowBiometric && (
+          <button
+            onClick={onShowBiometric}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 'var(--text-xs)', color: 'var(--muted2)',
+              padding: 0, transition: 'color var(--transition-fast)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--teal)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted2)')}
+          >
+            Biometrik?
+          </button>
+        )}
+      </div>
     </div>
   );
 }

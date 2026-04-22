@@ -1,34 +1,33 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useAuthStore } from '@/lib/store/authStore';
+import { useState } from 'react';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { LockScreen } from '@/components/lock/LockScreen';
-import { SetupFlow } from '@/components/lock/SetupFlow';
-import { AppShell } from '@/components/shell/AppShell';
+import { LockScreen }    from '@/components/lock/LockScreen';
+import { AppShell }      from '@/components/shell/AppShell';
+import { useAppStore }   from '@/lib/store/appStore';
+import type { UnlockPayload } from '@/lib/vaultService';
 
-export default function Home() {
-  const { screen, initAuth } = useAuthStore();
+export default function Page() {
+  const [appReady, setAppReady] = useState(false);
+  const store      = useAppStore();
+  const isUnlocked = useAppStore((s) => s.isUnlocked);
 
-  useEffect(() => {
-    initAuth();
-  }, [initAuth]);
+  const handleUnlocked = (payload: UnlockPayload, masterPw: string) => {
+    store.unlock(masterPw);
+    store.setVault(payload.vault);
+    store.setRecycleBin(payload.recycleBin);
+    store.setVaultMeta(payload.meta);
+    store.setLockedIds(payload.lockedIds);
+    store.setCustomCats(payload.customCats);
+  };
 
-  if (screen === 'loading') {
-    return <LoadingScreen duration={1400} onComplete={() => {}} />;
+  if (!appReady) {
+    return <LoadingScreen onComplete={() => setAppReady(true)} />;
   }
 
-  if (screen === 'setup-pin' || screen === 'setup-master' || screen === 'setup-seed') {
-    return <SetupFlow />;
-  }
-
-  if (screen === 'lock') {
-    return <LockScreen />;
-  }
-
-  if (screen === 'unlocked') {
+  if (isUnlocked) {
     return <AppShell />;
   }
 
-  return null;
+  return <LockScreen onUnlocked={handleUnlocked} />;
 }

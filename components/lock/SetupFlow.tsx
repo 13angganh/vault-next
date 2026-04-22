@@ -1,411 +1,360 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Copy, Check, ShieldCheck, AlertTriangle, Loader2 } from 'lucide-react';
-import { useAuthStore } from '@/lib/store/authStore';
+import { Eye, EyeOff, ShieldCheck, KeyRound, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
-// ─── Step 1: Setup PIN ───────────────────────────────────────────────────────
-
-function StepSetupPIN({ onNext }: { onNext: (pin: string) => void }) {
-  const [pin, setPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [error, setError] = useState('');
-
-  const handleNext = () => {
-    if (pin.length !== 6) return setError('PIN harus 6 digit');
-    if (pin !== confirmPin) return setError('PIN tidak cocok');
-    setError('');
-    onNext(pin);
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: 'var(--space-4)',
-    borderRadius: 'var(--radius-lg)',
-    border: '1px solid var(--border-default)',
-    background: 'var(--bg-input)',
-    color: 'var(--text-primary)',
-    fontSize: '22px',
-    fontFamily: 'var(--font-jetbrains)',
-    letterSpacing: '0.4em',
-    textAlign: 'center' as const,
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-      <div>
-        <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-primary)', fontFamily: 'var(--font-outfit)', margin: '0 0 var(--space-1) 0' }}>
-          Buat PIN
-        </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)', margin: 0 }}>
-          PIN 6 digit untuk membuka vault setiap hari
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-        <input
-          type="password"
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          placeholder="••••••"
-          maxLength={6}
-          inputMode="numeric"
-          style={inputStyle}
-        />
-        <input
-          type="password"
-          value={confirmPin}
-          onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          placeholder="Ulangi PIN"
-          maxLength={6}
-          inputMode="numeric"
-          style={{ ...inputStyle, borderColor: confirmPin && confirmPin !== pin ? 'var(--status-danger)' : 'var(--border-default)' }}
-        />
-      </div>
-
-      {error && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--status-danger)', fontFamily: 'var(--font-outfit)' }}>{error}</p>}
-
-      <button
-        onClick={handleNext}
-        disabled={pin.length !== 6 || confirmPin.length !== 6}
-        style={btnStyle(pin.length === 6 && confirmPin.length === 6)}
-      >
-        Lanjut
-      </button>
-    </div>
-  );
+interface SetupFlowProps {
+  onComplete: (masterPw: string, hint: string, recoveryPhrase: string) => Promise<void>;
 }
 
-// ─── Step 2: Setup Master Password ──────────────────────────────────────────
+type Step = 'password' | 'pin_offer' | 'hint' | 'recovery' | 'done';
 
-function StepSetupMasterPW({ onNext }: { onNext: (pw: string) => void }) {
-  const [pw, setPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [show, setShow] = useState(false);
-  const [error, setError] = useState('');
+export function SetupFlow({ onComplete }: SetupFlowProps) {
+  const [step, setStep]             = useState<Step>('password');
+  const [pw, setPw]                 = useState('');
+  const [pwConfirm, setPwConfirm]   = useState('');
+  const [showPw, setShowPw]         = useState(false);
+  const [showPwC, setShowPwC]       = useState(false);
+  const [hint, setHint]             = useState('');
+  const [recovery, setRecovery]     = useState('');
+  const [error, setError]           = useState('');
+  const [loading, setLoading]       = useState(false);
 
-  const handleNext = () => {
-    if (pw.length < 8) return setError('Minimal 8 karakter');
-    if (pw !== confirmPw) return setError('Kata sandi tidak cocok');
+  const pwStrength = getStrength(pw);
+
+  // ── Step: Password ──────────────────────────────────────────────────────────
+  const handlePasswordNext = () => {
     setError('');
-    onNext(pw);
+    if (pw.length < 6) { setError('Password minimal 6 karakter'); return; }
+    if (pw !== pwConfirm) { setError('Password tidak cocok'); return; }
+    setStep('hint');
   };
 
-  const strength = pw.length === 0 ? 0 : pw.length < 8 ? 1 : pw.length < 12 ? 2 : pw.match(/[A-Z]/) && pw.match(/[0-9]/) ? 4 : 3;
-  const strengthLabel = ['', 'Lemah', 'Cukup', 'Kuat', 'Sangat Kuat'];
-  const strengthColors = ['', 'var(--strength-1)', 'var(--strength-3)', 'var(--strength-4)', 'var(--strength-5)'];
+  // ── Step: Hint ──────────────────────────────────────────────────────────────
+  const handleHintNext = () => setStep('recovery');
+
+  // ── Step: Recovery ──────────────────────────────────────────────────────────
+  const handleRecoveryNext = () => setStep('done');
+
+  // ── Step: Done ──────────────────────────────────────────────────────────────
+  const handleFinish = async () => {
+    setLoading(true);
+    try {
+      await onComplete(pw, hint, recovery);
+    } catch (e) {
+      setError('Gagal membuat vault. Coba lagi.');
+      setLoading(false);
+    }
+  };
+
+  const stepLabels: Step[] = ['password', 'hint', 'recovery', 'done'];
+  const stepIdx = stepLabels.indexOf(step);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-      <div>
-        <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-primary)', fontFamily: 'var(--font-outfit)', margin: '0 0 var(--space-1) 0' }}>
-          Kata Sandi Utama
-        </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)', margin: 0 }}>
-          Cadangan jika lupa PIN. Simpan dengan aman.
-        </p>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', width: '100%' }}>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-        <div style={{ position: 'relative' }}>
-          <input
-            type={show ? 'text' : 'password'}
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
-            placeholder="Kata sandi utama"
-            style={{
-              width: '100%',
-              padding: 'var(--space-4) var(--space-12) var(--space-4) var(--space-4)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--border-default)',
-              background: 'var(--bg-input)',
-              color: 'var(--text-primary)',
-              fontSize: 'var(--text-base)',
-              fontFamily: 'var(--font-jetbrains)',
-              outline: 'none',
-              boxSizing: 'border-box' as const,
-            }}
-          />
-          <button onClick={() => setShow((s) => !s)} style={{ position: 'absolute', right: 'var(--space-3)', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}>
-            {show ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-
-        {/* Strength bar */}
-        {pw.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <div style={{ flex: 1, height: '3px', borderRadius: '2px', background: 'var(--bg-hover)', overflow: 'hidden' }}>
-              <div style={{ width: `${(strength / 4) * 100}%`, height: '100%', background: strengthColors[strength], transition: 'all var(--transition-base)', borderRadius: '2px' }} />
+      {/* Progress steps */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {stepLabels.map((s, i) => (
+          <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i < stepLabels.length - 1 ? 1 : undefined }}>
+            <div style={{
+              width: 22, height: 22,
+              borderRadius: '50%',
+              background: i < stepIdx ? 'var(--gold)' : i === stepIdx ? 'var(--gold-soft)' : 'var(--bg-s3)',
+              border: `1.5px solid ${i <= stepIdx ? 'var(--gold)' : 'var(--border)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+              transition: 'all var(--transition-base)',
+            }}>
+              {i < stepIdx
+                ? <CheckCircle2 size={12} style={{ color: 'var(--bg)' }} />
+                : <span style={{ fontSize: 10, fontWeight: 700, color: i === stepIdx ? 'var(--gold)' : 'var(--muted)' }}>{i + 1}</span>
+              }
             </div>
-            <span style={{ fontSize: 'var(--text-xs)', color: strengthColors[strength], fontFamily: 'var(--font-outfit)', whiteSpace: 'nowrap' }}>
-              {strengthLabel[strength]}
-            </span>
-          </div>
-        )}
-
-        <input
-          type={show ? 'text' : 'password'}
-          value={confirmPw}
-          onChange={(e) => setConfirmPw(e.target.value)}
-          placeholder="Ulangi kata sandi"
-          style={{
-            width: '100%',
-            padding: 'var(--space-4)',
-            borderRadius: 'var(--radius-lg)',
-            border: `1px solid ${confirmPw && confirmPw !== pw ? 'var(--status-danger)' : 'var(--border-default)'}`,
-            background: 'var(--bg-input)',
-            color: 'var(--text-primary)',
-            fontSize: 'var(--text-base)',
-            fontFamily: 'var(--font-jetbrains)',
-            outline: 'none',
-            boxSizing: 'border-box' as const,
-          }}
-        />
-      </div>
-
-      {error && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--status-danger)', fontFamily: 'var(--font-outfit)' }}>{error}</p>}
-
-      <button onClick={handleNext} disabled={pw.length < 8 || confirmPw.length === 0} style={btnStyle(pw.length >= 8 && confirmPw.length > 0)}>
-        Lanjut
-      </button>
-    </div>
-  );
-}
-
-// ─── Step 3: Tampilkan Seed Phrase ──────────────────────────────────────────
-
-function StepShowSeed({ seedPhrase, isLoading, onConfirm }: { seedPhrase: string; isLoading: boolean; onConfirm: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  const words = seedPhrase.split(' ');
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(seedPhrase).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-      <div>
-        <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--fw-semibold)', color: 'var(--text-primary)', fontFamily: 'var(--font-outfit)', margin: '0 0 var(--space-1) 0' }}>
-          Seed Phrase
-        </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)', margin: 0 }}>
-          Simpan 12 kata ini di tempat aman. Satu-satunya cara pemulihan.
-        </p>
-      </div>
-
-      {/* Warning */}
-      <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', display: 'flex', gap: 'var(--space-2)', alignItems: 'flex-start' }}>
-        <AlertTriangle size={14} color="var(--gold)" style={{ marginTop: '2px', flexShrink: 0 }} />
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)', margin: 0, lineHeight: 1.6 }}>
-          Jangan screenshot. Tulis tangan dan simpan offline.
-        </p>
-      </div>
-
-      {/* Words Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-2)' }}>
-        {words.map((word, i) => (
-          <div key={i} style={{ padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-jetbrains)', minWidth: '14px' }}>{i + 1}.</span>
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontFamily: 'var(--font-jetbrains)', fontWeight: 'var(--fw-medium)' }}>{word}</span>
+            {i < stepLabels.length - 1 && (
+              <div style={{
+                flex: 1, height: 1.5,
+                background: i < stepIdx ? 'var(--gold)' : 'var(--border)',
+                transition: 'background var(--transition-base)',
+              }} />
+            )}
           </div>
         ))}
       </div>
 
-      {/* Copy Button */}
-      <button
-        onClick={handleCopy}
-        style={{
-          padding: 'var(--space-3)',
-          borderRadius: 'var(--radius-lg)',
-          background: 'var(--bg-hover)',
-          border: '1px solid var(--border-subtle)',
-          color: copied ? 'var(--status-success)' : 'var(--text-muted)',
-          fontSize: 'var(--text-sm)',
-          fontFamily: 'var(--font-outfit)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 'var(--space-2)',
-          transition: 'all var(--transition-fast)',
-        }}
-      >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
-        {copied ? 'Tersalin!' : 'Salin ke clipboard'}
-      </button>
-
-      {/* Checkbox */}
-      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={confirmed}
-          onChange={(e) => setConfirmed(e.target.checked)}
-          style={{ marginTop: '3px', accentColor: 'var(--gold)', width: '16px', height: '16px' }}
-        />
-        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)', lineHeight: 1.5 }}>
-          Saya sudah menyimpan seed phrase ini dengan aman
-        </span>
-      </label>
-
-      <button
-        onClick={onConfirm}
-        disabled={!confirmed || isLoading}
-        style={btnStyle(confirmed && !isLoading)}
-      >
-        {isLoading ? (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-            Menyiapkan...
-          </span>
-        ) : (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <ShieldCheck size={16} />
-            Selesai, Buka Vault
-          </span>
-        )}
-      </button>
-    </div>
-  );
-}
-
-// ─── Helper ──────────────────────────────────────────────────────────────────
-
-function btnStyle(enabled: boolean) {
-  return {
-    padding: 'var(--space-4)',
-    borderRadius: 'var(--radius-lg)',
-    background: enabled ? 'var(--gold)' : 'var(--bg-hover)',
-    border: 'none',
-    color: enabled ? 'var(--text-inverse)' : 'var(--text-muted)',
-    fontSize: 'var(--text-base)',
-    fontWeight: 'var(--fw-button)' as const,
-    fontFamily: 'var(--font-outfit)',
-    cursor: enabled ? 'pointer' : 'not-allowed',
-    transition: 'all var(--transition-base)',
-    width: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  };
-}
-
-// ─── SetupFlow Container ─────────────────────────────────────────────────────
-
-export function SetupFlow() {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [pin, setPin] = useState('');
-  const [masterPW, setMasterPW] = useState('');
-  const [seedPhrase, setSeedPhrase] = useState('');
-
-  const { setupVault, confirmSetupSeed, isLoading, error } = useAuthStore();
-
-  const handlePINNext = (p: string) => {
-    setPin(p);
-    setStep(2);
-  };
-
-  const handlePWNext = async (pw: string) => {
-    setMasterPW(pw);
-    try {
-      const result = await setupVault(pin, pw);
-      setSeedPhrase(result.seedPhrase);
-      setStep(3);
-    } catch {
-      // error ditangani di store
-    }
-  };
-
-  const handleConfirmSeed = () => {
-    confirmSetupSeed();
-  };
-
-  // Progress indicator
-  const steps = ['PIN', 'Kata Sandi', 'Seed Phrase'];
-
-  return (
-    <div style={{
-      minHeight: '100dvh',
-      background: 'var(--bg-root)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 'var(--space-6)',
-    }}>
-      <div style={{ width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
-        {/* Header */}
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gold)', fontFamily: 'var(--font-jetbrains)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 var(--space-1) 0' }}>
-            VAULT NEXT
+      {/* ── Step: Password ── */}
+      {step === 'password' && (
+        <div style={{ animation: 'fadeUp 0.3s ease both' }}>
+          <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+            Buat Master Password
+          </h3>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)', marginBottom: 'var(--space-5)', lineHeight: 1.6 }}>
+            Password ini mengenkripsi semua data vault kamu. Pilih yang kuat dan mudah diingat.
           </p>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-outfit)', margin: 0 }}>
-            Selamat datang — mari siapkan vault Anda
-          </p>
-        </div>
 
-        {/* Step Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          {steps.map((label, i) => {
-            const stepNum = i + 1;
-            const isDone = step > stepNum;
-            const isCurrent = step === stepNum;
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : 'none', gap: 'var(--space-2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-                  <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    background: isDone || isCurrent ? 'var(--gold)' : 'var(--bg-hover)',
-                    border: `1px solid ${isDone || isCurrent ? 'var(--gold)' : 'var(--border-subtle)'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '11px',
-                    fontFamily: 'var(--font-outfit)',
-                    fontWeight: 'var(--fw-semibold)',
-                    color: isDone || isCurrent ? 'var(--text-inverse)' : 'var(--text-muted)',
-                    transition: 'all var(--transition-base)',
-                  }}>
-                    {isDone ? '✓' : stepNum}
-                  </div>
-                  <span style={{ fontSize: 'var(--text-xs)', color: isCurrent ? 'var(--text-primary)' : 'var(--text-muted)', fontFamily: 'var(--font-outfit)', whiteSpace: 'nowrap' }}>
-                    {label}
-                  </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPw ? 'text' : 'password'}
+                value={pw}
+                onChange={(e) => { setPw(e.target.value); setError(''); }}
+                placeholder="Master password…"
+                autoFocus
+                style={inputStyle(!!error && pw.length > 0)}
+              />
+              <ToggleEye show={showPw} onToggle={() => setShowPw(s => !s)} />
+            </div>
+
+            {/* Strength bar */}
+            {pw && (
+              <div style={{ animation: 'fadeIn 0.2s ease' }}>
+                <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
+                  {Array.from({ length: 7 }, (_, i) => (
+                    <div key={i} style={{
+                      flex: 1, height: 3, borderRadius: 2,
+                      background: i < pwStrength.level ? pwStrength.color : 'var(--border)',
+                      transition: 'background 0.2s ease',
+                    }} />
+                  ))}
                 </div>
-                {i < steps.length - 1 && (
-                  <div style={{ flex: 1, height: '1px', background: isDone ? 'var(--gold)' : 'var(--border-subtle)', transition: 'background var(--transition-base)' }} />
-                )}
+                <span style={{ fontSize: 10, color: pwStrength.color }}>{pwStrength.label}</span>
               </div>
-            );
-          })}
-        </div>
+            )}
 
-        {/* Card */}
-        <div style={{
-          background: 'var(--bg-card)',
-          borderRadius: 'var(--radius-2xl)',
-          border: '1px solid var(--border-subtle)',
-          padding: 'var(--space-8)',
-          boxShadow: 'var(--shadow-card)',
-        }}>
-          {step === 1 && <StepSetupPIN onNext={handlePINNext} />}
-          {step === 2 && <StepSetupMasterPW onNext={handlePWNext} />}
-          {step === 3 && <StepShowSeed seedPhrase={seedPhrase} isLoading={isLoading} onConfirm={handleConfirmSeed} />}
-        </div>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPwC ? 'text' : 'password'}
+                value={pwConfirm}
+                onChange={(e) => { setPwConfirm(e.target.value); setError(''); }}
+                placeholder="Konfirmasi password…"
+                onKeyDown={(e) => e.key === 'Enter' && handlePasswordNext()}
+                style={inputStyle(!!error && pwConfirm.length > 0 && pw !== pwConfirm)}
+              />
+              <ToggleEye show={showPwC} onToggle={() => setShowPwC(s => !s)} />
+            </div>
 
-        {error && (
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--status-danger)', textAlign: 'center', fontFamily: 'var(--font-outfit)' }}>
-            {error}
+            {error && <ErrMsg msg={error} />}
+
+            <button
+              onClick={handlePasswordNext}
+              disabled={!pw || !pwConfirm}
+              className="btn btn-gold"
+              style={{ width: '100%', justifyContent: 'center', gap: 8, marginTop: 'var(--space-2)', opacity: !pw || !pwConfirm ? 0.5 : 1 }}
+            >
+              Lanjut <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step: Hint ── */}
+      {step === 'hint' && (
+        <div style={{ animation: 'fadeUp 0.3s ease both' }}>
+          <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+            Petunjuk Password <span style={{ color: 'var(--muted2)', fontWeight: 400, fontSize: 'var(--text-sm)' }}>(opsional)</span>
+          </h3>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)', marginBottom: 'var(--space-5)', lineHeight: 1.6 }}>
+            Petunjuk ini akan muncul di halaman login. <strong style={{ color: 'var(--text2)' }}>Jangan tulis password-nya langsung.</strong>
           </p>
-        )}
-      </div>
+          <input
+            type="text"
+            value={hint}
+            onChange={(e) => setHint(e.target.value)}
+            placeholder="Contoh: nama hewan peliharaan + tahun lahir"
+            maxLength={100}
+            autoFocus
+            style={{ ...inputStyle(false), marginBottom: 'var(--space-5)' }}
+          />
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <button onClick={() => setStep('password')} className="btn btn-ghost" style={{ gap: 6 }}>
+              <ArrowLeft size={14} /> Kembali
+            </button>
+            <button onClick={handleHintNext} className="btn btn-gold" style={{ flex: 1, justifyContent: 'center', gap: 8 }}>
+              Lanjut <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step: Recovery ── */}
+      {step === 'recovery' && (
+        <div style={{ animation: 'fadeUp 0.3s ease both' }}>
+          <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+            Recovery Phrase <span style={{ color: 'var(--muted2)', fontWeight: 400, fontSize: 'var(--text-sm)' }}>(opsional)</span>
+          </h3>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)', marginBottom: 'var(--space-5)', lineHeight: 1.6 }}>
+            Jika kamu lupa master password, recovery phrase ini bisa digunakan untuk memulihkan akses.
+            Simpan di tempat yang aman dan rahasia.
+          </p>
+          <textarea
+            value={recovery}
+            onChange={(e) => setRecovery(e.target.value)}
+            placeholder="Ketikkan recovery phrase kamu… (boleh dikosongkan)"
+            rows={3}
+            autoFocus
+            style={{
+              ...inputStyle(false),
+              resize: 'none',
+              fontFamily: 'var(--font-mono)',
+              lineHeight: 1.7,
+              marginBottom: 'var(--space-5)',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <button onClick={() => setStep('hint')} className="btn btn-ghost" style={{ gap: 6 }}>
+              <ArrowLeft size={14} /> Kembali
+            </button>
+            <button onClick={handleRecoveryNext} className="btn btn-gold" style={{ flex: 1, justifyContent: 'center', gap: 8 }}>
+              Lanjut <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step: Done ── */}
+      {step === 'done' && (
+        <div style={{ animation: 'fadeUp 0.3s ease both', textAlign: 'center' }}>
+          <div style={{
+            width: 64, height: 64,
+            borderRadius: '50%',
+            background: 'rgba(0,212,170,0.1)',
+            border: '1.5px solid rgba(0,212,170,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto var(--space-4)',
+          }}>
+            <ShieldCheck size={28} style={{ color: 'var(--teal)' }} />
+          </div>
+          <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
+            Vault siap dibuat!
+          </h3>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 'var(--space-6)' }}>
+            Data kamu akan dienkripsi dengan <strong style={{ color: 'var(--text2)' }}>AES-256-GCM + PBKDF2 dua lapis</strong>.
+            Tidak ada server — semua tersimpan di perangkat ini.
+          </p>
+
+          {/* Summary */}
+          <div style={{
+            textAlign: 'left',
+            background: 'var(--bg-s1)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-4)',
+            marginBottom: 'var(--space-5)',
+          }}>
+            {[
+              { label: 'Password', value: '••••••' + (pw.length > 6 ? '•'.repeat(pw.length - 6) : '') },
+              { label: 'Petunjuk', value: hint || '(tidak diset)' },
+              { label: 'Recovery', value: recovery ? `${recovery.length} karakter` : '(tidak diset)' },
+            ].map((item) => (
+              <div key={item.label} style={{
+                display: 'flex', justifyContent: 'space-between',
+                padding: '6px 0',
+                fontSize: 'var(--text-xs)',
+                borderBottom: '1px solid var(--border)',
+              }}>
+                <span style={{ color: 'var(--muted2)' }}>{item.label}</span>
+                <span style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{item.value}</span>
+              </div>
+            ))}
+          </div>
+
+          {error && <ErrMsg msg={error} />}
+
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <button onClick={() => setStep('recovery')} className="btn btn-ghost" style={{ gap: 6 }}>
+              <ArrowLeft size={14} />
+            </button>
+            <button
+              onClick={handleFinish}
+              disabled={loading}
+              className="btn btn-gold"
+              style={{ flex: 1, justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? (
+                <>
+                  <span style={{
+                    width: 14, height: 14,
+                    border: '2px solid var(--gold)',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 0.6s linear infinite',
+                    display: 'inline-block',
+                  }} />
+                  Membuat Vault…
+                </>
+              ) : (
+                <>
+                  <KeyRound size={15} />
+                  Buat Vault Sekarang
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function inputStyle(hasError: boolean): React.CSSProperties {
+  return {
+    width: '100%',
+    padding: '13px 40px 13px 14px',
+    background: 'var(--bg-s1)',
+    border: `1px solid ${hasError ? 'var(--danger)' : 'var(--border)'}`,
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontSize: 'var(--text-sm)',
+    outline: 'none',
+    transition: 'border-color var(--transition-fast)',
+    boxSizing: 'border-box' as const,
+  };
+}
+
+function ToggleEye({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{
+        position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: 'var(--muted2)', padding: 4, display: 'flex',
+      }}
+    >
+      {show ? <EyeOff size={16} /> : <Eye size={16} />}
+    </button>
+  );
+}
+
+function ErrMsg({ msg }: { msg: string }) {
+  return (
+    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--danger)', animation: 'fadeIn 0.2s ease', textAlign: 'center' }}>
+      {msg}
+    </div>
+  );
+}
+
+function getStrength(pw: string) {
+  let score = 0;
+  if (pw.length >= 8)  score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (pw.length >= 16) score++;
+
+  const levels = [
+    { label: 'Sangat Lemah', color: 'var(--str-1)' },
+    { label: 'Lemah',        color: 'var(--str-2)' },
+    { label: 'Biasa',        color: 'var(--str-3)' },
+    { label: 'Cukup',        color: 'var(--str-4)' },
+    { label: 'Kuat',         color: 'var(--str-5)' },
+    { label: 'Sangat Kuat',  color: 'var(--str-6)' },
+    { label: 'Tak Tertandingi', color: 'var(--str-7)' },
+  ];
+  return { level: Math.min(score + 1, 7), ...levels[Math.min(score, 6)] };
 }
