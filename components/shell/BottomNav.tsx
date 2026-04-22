@@ -2,26 +2,28 @@
 
 /**
  * Vault Next — BottomNav
- * Tab bar mobile (≤768px). Sesi 6B: semua emoji → Lucide icons.
+ * Sesi 6C: Setiap tab punya handler sendiri — bisa switch langsung dari Settings.
  */
 
 import { Lock, Star, LayoutGrid, Settings } from 'lucide-react';
 import { useAppStore } from '@/lib/store/appStore';
-import type { FilterType } from '@/lib/store/appStore';
 
 interface BottomNavProps {
-  onCategoryTab:  () => void;
-  onSettingsTab:  () => void;
-  settingsActive?: boolean;   // AppShell pass ini saat shellView === 'settings'
+  onVaultTab:    () => void;
+  onFavTab:      () => void;
+  onCategoryTab: () => void;
+  onSettingsTab: () => void;
+  settingsActive?: boolean;
 }
 
-export function BottomNav({ onCategoryTab, onSettingsTab, settingsActive }: BottomNavProps) {
+export function BottomNav({
+  onVaultTab, onFavTab, onCategoryTab, onSettingsTab, settingsActive,
+}: BottomNavProps) {
   const currentFilter = useAppStore((s) => s.currentFilter);
-  const setFilter     = useAppStore((s) => s.setFilter);
 
   const activeTab: 'vault' | 'fav' | 'cats' | 'settings' = (() => {
-    if (settingsActive)  return 'settings';
-    if (currentFilter === 'fav') return 'fav';
+    if (settingsActive)              return 'settings';
+    if (currentFilter === 'fav')     return 'fav';
     if (currentFilter !== 'all' && currentFilter !== 'bin') return 'cats';
     return 'vault';
   })();
@@ -52,10 +54,10 @@ export function BottomNav({ onCategoryTab, onSettingsTab, settingsActive }: Bott
 
   return (
     <nav className="bottom-nav" aria-label="Navigasi bawah">
-      <Tab id="vault"    icon={<Lock size={20} />}        label="Vault"      onClick={() => setFilter('all')} />
-      <Tab id="fav"      icon={<Star size={20} />}        label="Favorit"    onClick={() => setFilter('fav')} />
-      <Tab id="cats"     icon={<LayoutGrid size={20} />}  label="Kategori"   onClick={onCategoryTab} />
-      <Tab id="settings" icon={<Settings size={20} />}    label="Pengaturan" onClick={onSettingsTab} />
+      <Tab id="vault"    icon={<Lock size={20} />}       label="Vault"      onClick={onVaultTab} />
+      <Tab id="fav"      icon={<Star size={20} />}       label="Favorit"    onClick={onFavTab} />
+      <Tab id="cats"     icon={<LayoutGrid size={20} />} label="Kategori"   onClick={onCategoryTab} />
+      <Tab id="settings" icon={<Settings size={20} />}   label="Pengaturan" onClick={onSettingsTab} />
     </nav>
   );
 }

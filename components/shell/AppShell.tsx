@@ -2,26 +2,12 @@
 
 /**
  * Vault Next — AppShell
- * Layout utama saat vault terbuka.
- *
- * Desktop (≥769px):
- *   ┌─────────────────────────────────────────────────┐
- *   │  Header (full width)                            │
- *   ├───────────┬─────────────────────────────────────┤
- *   │  Sidebar  │  Main content (view aktif)          │
- *   └───────────┴─────────────────────────────────────┘
- *
- * Mobile (≤768px):
- *   ┌─────────────────────────────────────────────────┐
- *   │  Header                                         │
- *   ├─────────────────────────────────────────────────┤
- *   │  Main content                                   │
- *   ├─────────────────────────────────────────────────┤
- *   │  BottomNav                                      │
- *   └─────────────────────────────────────────────────┘
+ * Sesi 6C fixes:
+ * - Bug 3: BottomNav bisa switch langsung dari Settings ke Vault/Favorit/Kategori
+ * - Bug 2: view transition smooth tanpa jumpy
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { AutoLockManager }      from '@/components/shell/AutoLockManager';
 import { Sidebar }               from '@/components/shell/Sidebar';
 import { BottomNav }             from '@/components/shell/BottomNav';
@@ -37,66 +23,79 @@ import { useAppStore }           from '@/lib/store/appStore';
 type ShellView = 'vault' | 'settings';
 
 export function AppShell() {
-  const [shellView,        setShellView]        = useState<ShellView>('vault');
-  const [catDrawerOpen,    setCatDrawerOpen]     = useState(false);
-  const [showBackup,       setShowBackup]        = useState(false);
+  const [shellView,     setShellView]     = useState<ShellView>('vault');
+  const [catDrawerOpen, setCatDrawerOpen] = useState(false);
+  const [showBackup,    setShowBackup]    = useState(false);
   const vaultListRef = useRef<VaultListViewRef>(null);
 
   const autoLockMinutes = useAppStore((s) => s.autoLockMinutes);
   const lastActivityAt  = useAppStore((s) => s.lastActivityAt);
+  const setFilter       = useAppStore((s) => s.setFilter);
 
-  const handleAddEntry = () => {
-    // Switch to vault view first, then open form
+  // Buka form tambah entri — selalu switch ke vault dulu
+  const handleAddEntry = useCallback(() => {
     setShellView('vault');
-    // Small delay to ensure VaultListView is mounted
     setTimeout(() => vaultListRef.current?.openAddForm(), 50);
-  };
+  }, []);
+
+  // Navigasi dari BottomNav — bisa switch dari settings langsung ke vault/fav
+  const handleNavVault = useCallback(() => {
+    setFilter('all');
+    setShellView('vault');
+  }, [setFilter]);
+
+  const handleNavFav = useCallback(() => {
+    setFilter('fav');
+    setShellView('vault');
+  }, [setFilter]);
+
+  const handleNavCategory = useCallback(() => {
+    setShellView('vault');
+    setCatDrawerOpen(true);
+  }, []);
+
+  const handleNavSettings = useCallback(() => {
+    setShellView('settings');
+  }, []);
 
   return (
     <div className="app-shell">
-      {/* Auto-lock invisible component */}
       <AutoLockManager />
 
-      {/* ── Header (full width) ── */}
       <Header
         onAddEntry={handleAddEntry}
         autoLockMinutes={autoLockMinutes}
         lastActivityAt={lastActivityAt}
       />
 
-      {/* ── Body (sidebar + main) ── */}
       <div className="app-body">
-        {/* Sidebar — hanya desktop */}
-        <Sidebar onSettingsClick={() => setShellView('settings')} />
+        <Sidebar onSettingsClick={handleNavSettings} />
 
-        {/* Main content */}
         <main className="app-main" id="main-content" tabIndex={-1}>
-          <div key={shellView} className="view-transition">
-            {shellView === 'vault' && <VaultListView ref={vaultListRef} />}
-            {shellView === 'settings' && (
-              <SettingsView onClose={() => setShellView('vault')} />
-            )}
+          {/* Kedua view di-render sekaligus, visibility dikontrol CSS — tidak ada mount/unmount */}
+          <div className={`shell-view ${shellView === 'vault' ? 'shell-view--active' : 'shell-view--hidden'}`}>
+            <VaultListView ref={vaultListRef} />
+          </div>
+          <div className={`shell-view ${shellView === 'settings' ? 'shell-view--active' : 'shell-view--hidden'}`}>
+            <SettingsView onClose={() => setShellView('vault')} />
           </div>
         </main>
       </div>
 
-      {/* ── BottomNav — hanya mobile ── */}
       <BottomNav
-        onCategoryTab={() => setCatDrawerOpen(true)}
-        onSettingsTab={() => setShellView('settings')}
+        onVaultTab={handleNavVault}
+        onFavTab={handleNavFav}
+        onCategoryTab={handleNavCategory}
+        onSettingsTab={handleNavSettings}
         settingsActive={shellView === 'settings'}
       />
 
-      {/* ── Category Drawer — mobile ── */}
       <CategoryDrawer
         open={catDrawerOpen}
         onClose={() => setCatDrawerOpen(false)}
       />
 
-      {/* ── Backup Reminder — auto popup ── */}
       <BackupReminderModal onOpenBackup={() => setShowBackup(true)} />
-
-      {/* ── Backup Modal (manual open) ── */}
       {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
     </div>
   );

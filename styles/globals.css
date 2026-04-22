@@ -3691,3 +3691,96 @@ button:active:not(:disabled),
   align-items: center;
   gap: 4px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SESI 6C — BUG FIXES CSS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Bug 1 FIX: Drawer close animation (slideDown ke bawah, bukan dari kiri) ── */
+@keyframes drawerSlideOut {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes drawerSlideIn {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.drawer {
+  animation: drawerSlideIn 0.28s cubic-bezier(0.32, 0.72, 0, 1) both !important;
+}
+
+.drawer[data-closing="true"] {
+  animation: drawerSlideOut 0.22s cubic-bezier(0.4, 0, 1, 1) both !important;
+}
+
+.drawer-overlay {
+  animation: fadeIn 0.22s ease both !important;
+}
+
+.drawer-overlay[data-closing="true"] {
+  animation: fadeOut 0.22s ease both !important;
+}
+
+/* ── Bug 2 FIX: Shell view switch — smooth fade tanpa jumpy ── */
+/* Ganti key-based remount dengan visibility toggle */
+.shell-view {
+  width: 100%;
+  height: 100%;
+}
+
+.shell-view--active {
+  display: block;
+  animation: shellFadeIn 0.18s ease both;
+}
+
+.shell-view--hidden {
+  display: none;
+}
+
+@keyframes shellFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Bug 4 FIX: Modal overlay — solid background, z-index cukup tinggi ── */
+/* Override semua modal-overlay agar tidak tembus ke konten di belakang */
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.72) !important;
+  z-index: 800 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: var(--space-4) !important;
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+}
+
+[data-theme="light"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Modal sendiri harus solid */
+.modal {
+  background: var(--bg-s2) !important;
+  position: relative !important;
+  z-index: 801 !important;
+}
+
+/* Entry form modal (dipakai dari VaultListView) */
+.entry-form-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.72) !important;
+  z-index: 800 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: var(--space-4) !important;
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+  animation: fadeIn 0.18s ease both;
+}

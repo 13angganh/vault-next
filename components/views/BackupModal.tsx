@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef }  from 'react';
-import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Package } from 'lucide-react';
+import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Package, Plus } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { exportBackup, importBackup, saveVault } from '@/lib/vaultService';
 import { lsSet, LS_BACKUP }  from '@/lib/storage';
@@ -249,8 +249,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
           )}
 
           {/* ── IMPORT ── */}
-          {tab === 'import' && (
-            <div className="backup-section">
+          <div className="backup-section" style={{ display: tab === 'import' ? 'block' : 'none' }}>
               <div className="backup-info-box backup-info-box--warn">
                 <p><AlertTriangle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> Import akan memuat data dari file backup.</p>
                 <p>Pilih mode <strong>Ganti</strong> atau <strong>Gabungkan</strong>.</p>
@@ -268,7 +267,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                   className={`backup-mode-btn ${importMode === 'merge' ? 'backup-mode-btn--active' : ''}`}
                   onClick={() => setImportMode('merge')}
                 >
-                  ➕ Gabungkan
+                  <Plus size={14} /> Gabungkan
                 </button>
               </div>
               <p className="backup-mode-desc">
@@ -302,7 +301,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 </div>
               </div>
 
-              {/* Password */}
+              {/* Password — ALWAYS rendered (bukan conditional) agar keyboard tidak hilang */}
               <div className="form-group">
                 <label className="form-label" htmlFor="import-pw">Master Password (file backup)</label>
                 <div className="pw-input-row">
@@ -334,10 +333,9 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 onClick={handleImport}
                 disabled={importing}
               >
-                {importing ? '⏳ Mengimpor…' : '<Download size={14} /> Import Backup'}
+                {importing ? '⏳ Mengimpor…' : <><Download size={14} /> Import Backup</>}
               </button>
             </div>
-          )}
 
           {/* ── SYNC ── */}
           {tab === 'sync' && (

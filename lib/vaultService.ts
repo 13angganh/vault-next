@@ -9,7 +9,7 @@
  * - Seed phrase login langsung (bukan hanya reset)
  */
 
-import { encrypt, decrypt, sha256, hashStr } from '@/lib/crypto';
+import { encrypt, decrypt, decryptLegacy, sha256, hashStr } from '@/lib/crypto';
 import {
   lsGet, lsSet, lsRemove, lsGetJson, lsSetJson,
   saveVaultData, loadVaultData, hasVaultData,
@@ -243,11 +243,18 @@ export async function importBackup(
     throw new Error(`Format tidak dikenal: ${(backup as { format?: string }).format ?? 'unknown'}`);
   }
 
-  let plain: string;
+  let plain: string | null = null;
+
+  // Coba format baru (Vault Next) dulu
   try {
     plain = await decrypt(backup.data, masterPw);
   } catch {
-    throw new Error('Password salah atau file rusak');
+    // Format baru gagal — coba format lama (vault-private-offline)
+    try {
+      plain = await decryptLegacy(backup.data, masterPw);
+    } catch {
+      throw new Error('Password salah. Pastikan password yang kamu masukkan sama dengan saat backup dibuat.');
+    }
   }
 
   const data = JSON.parse(plain) as VaultBackupPayload;
