@@ -3784,3 +3784,73 @@ button:active:not(:disabled),
   -webkit-backdrop-filter: blur(2px) !important;
   animation: fadeIn 0.18s ease both;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SESI 6E — BUG FIXES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── BackupModal: modal-overlay align top agar modal tidak loncat naik-turun ── */
+.modal-overlay.backup-modal-overlay {
+  align-items: flex-start !important;
+  padding-top: max(env(safe-area-inset-top), 24px) !important;
+}
+
+@media (max-width: 768px) {
+  .modal-overlay.backup-modal-overlay {
+    align-items: flex-start !important;
+    padding-top: max(env(safe-area-inset-top), 12px) !important;
+  }
+}
+
+/* ── BackupModal: tab content fixed container agar tidak naik-turun saat switch ── */
+.backup-tabs-content {
+  position: relative;
+  /* min-height cukup untuk tab terpanjang agar tidak reflow */
+  min-height: 320px;
+}
+
+.backup-section {
+  /* semua tab section pakai visibility bukan conditional render */
+  padding: 16px 0 4px;
+  transition: opacity 0.15s ease;
+}
+
+.backup-section[style*="none"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── EntryCard expand/collapse: smooth dengan grid-template-rows ── */
+.entry-card__body-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.entry-card__body-wrap--open {
+  grid-template-rows: 1fr;
+}
+
+.entry-card__body-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Animasi perpindahan tab backup: fade smooth ── */
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.backup-section--visible {
+  animation: tabFadeIn 0.18s ease both;
+}
+
+/* ── Input focus: pastikan tidak ada yang intercept focus saat ketik ── */
+.backup-section input,
+.backup-section textarea {
+  /* Hindari re-focus dari focus trap saat nilai berubah */
+  -webkit-user-select: text;
+  user-select: text;
+}

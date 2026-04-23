@@ -190,7 +190,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown} tabIndex={-1}>
+    <div className="modal-overlay backup-modal-overlay" onClick={onClose} onKeyDown={handleKeyDown} tabIndex={-1}>
       <div className="modal backup-modal" ref={trapRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Backup & Sync" aria-labelledby="backup-modal-title">
         <div className="modal__header">
           <h2 className="modal__title" id="backup-modal-title"><Cloud size={18} style={{ display:'inline', verticalAlign:'middle', marginRight:6 }} />Backup & Sync</h2>
@@ -211,10 +211,10 @@ export function BackupModal({ onClose }: BackupModalProps) {
         </div>
 
         <div className="modal__body">
+          <div className="backup-tabs-content">
 
-          {/* ── EXPORT ── */}
-          {tab === 'export' && (
-            <div className="backup-section">
+          {/* ── EXPORT — always rendered ── */}
+          <div className="backup-section backup-section--visible" style={{ display: tab === 'export' ? 'block' : 'none' }}>
               <div className="backup-info-box">
                 <p>Export semua entri ke file <code>.vault</code> yang terenkripsi.</p>
                 <p>File ini bisa diimport kembali di perangkat lain atau sebagai backup.</p>
@@ -246,9 +246,8 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 {exporting ? '⏳ Mengekspor…' : <><Download size={14} /> Download Backup (.vault)</>}
               </button>
             </div>
-          )}
 
-          {/* ── IMPORT ── */}
+          {/* ── IMPORT — always rendered ── */}
           <div className="backup-section" style={{ display: tab === 'import' ? 'block' : 'none' }}>
               <div className="backup-info-box backup-info-box--warn">
                 <p><AlertTriangle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> Import akan memuat data dari file backup.</p>
@@ -337,9 +336,8 @@ export function BackupModal({ onClose }: BackupModalProps) {
               </button>
             </div>
 
-          {/* ── SYNC ── */}
-          {tab === 'sync' && (
-            <div className="backup-section">
+          {/* ── SYNC — always rendered ── */}
+          <div className="backup-section" style={{ display: tab === 'sync' ? 'block' : 'none' }}>
               <div className="backup-info-box">
                 <p>Sync manual via copy-paste teks terenkripsi.</p>
                 <p>Tidak butuh internet — 100% offline & aman.</p>
@@ -446,7 +444,8 @@ export function BackupModal({ onClose }: BackupModalProps) {
               {syncError  && <p className="backup-error">{syncError}</p>}
               {syncResult && <p className="backup-success">{syncResult}</p>}
             </div>
-          )}
+
+          </div>{/* end backup-tabs-content */}
         </div>
       </div>
     </div>

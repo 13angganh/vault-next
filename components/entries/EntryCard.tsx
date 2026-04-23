@@ -345,8 +345,9 @@ export function EntryCard({
         </span>
       </div>
 
-      {/* ── Expanded body ── */}
-      {isExpanded && (
+      {/* ── Expanded body — always rendered, animated with grid ── */}
+      <div className={`entry-card__body-wrap ${isExpanded ? 'entry-card__body-wrap--open' : ''}`}>
+        <div className="entry-card__body-inner">
         <div className="entry-card__body">
           {/* Fields */}
           <div className="entry-card__fields">
@@ -395,7 +396,8 @@ export function EntryCard({
             </button>
           </div>
         </div>
-      )}
+        </div>{/* entry-card__body-inner */}
+      </div>{/* entry-card__body-wrap */}
 
       {/* ── Unlock prompt overlay ── */}
       {showUnlockPrompt && (

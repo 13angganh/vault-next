@@ -5,7 +5,7 @@
  */
 
 import { useState }            from 'react';
-import { Settings, ArrowLeft, Cloud } from 'lucide-react';
+import { Settings, ArrowLeft, Cloud, LayoutGrid, Lock, Shield } from 'lucide-react';
 import { useAppStore }         from '@/lib/store/appStore';
 import { useTheme }            from '@/components/providers/ThemeProvider';
 import { PINSettingsPanel }    from '@/components/views/PINSettingsPanel';
@@ -166,7 +166,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
               <span className="settings-row__desc">{customCats.length} custom · 8 bawaan</span>
             </div>
             <button className="btn btn-ghost settings-row__action" onClick={() => setSubView('categories')}>
-              🗂️ Buka
+              <LayoutGrid size={14} /> Buka
             </button>
           </div>
         </section>
@@ -198,35 +198,15 @@ export function SettingsView({ onClose }: SettingsViewProps) {
         <section className="settings-section">
           <h3 className="settings-section-title">Sesi</h3>
           <button className="btn btn-ghost settings-lock-btn" onClick={lock}>
-            🔒 Kunci Vault Sekarang
+            <Lock size={15} /> Kunci Vault Sekarang
           </button>
         </section>
 
-        {/* Install Guide */}
-        <section className="settings-section">
-          <h3 className="settings-section-title">Install Aplikasi (PWA)</h3>
-          <div className="settings-install-guide">
-            <div className="install-guide__item">
-              <span className="install-guide__platform">📱 Android</span>
-              <span className="install-guide__step">Chrome → ⋮ → &quot;Tambahkan ke layar utama&quot;</span>
-            </div>
-            <div className="install-guide__item">
-              <span className="install-guide__platform">🍎 iOS</span>
-              <span className="install-guide__step">Safari → Share → &quot;Tambahkan ke Layar Utama&quot;</span>
-            </div>
-            <div className="install-guide__item">
-              <span className="install-guide__platform">💻 Desktop</span>
-              <span className="install-guide__step">Klik ikon ⊕ di address bar browser</span>
-            </div>
-          </div>
-        </section>
-
         <div className="settings-signature">
-          <span>🔐 Vault Next v1.0</span>
+          <Shield size={13} />
+          <span>Vault Next v1.0</span>
           <span>·</span>
-          <span>100% Offline</span>
-          <span>·</span>
-          <span>AES-256-GCM · PBKDF2</span>
+          <span>100% Offline · AES-256-GCM · PBKDF2</span>
         </div>
       </div>
 
