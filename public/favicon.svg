@@ -1,12 +1,13 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Perisai background -->
-  <path d="M16 2L4 7V16C4 22.6 9.2 28.1 16 30C22.8 28.1 28 22.6 28 16V7L16 2Z" fill="#f0a500" opacity="0.15"/>
-  <path d="M16 2L4 7V16C4 22.6 9.2 28.1 16 30C22.8 28.1 28 22.6 28 16V7L16 2Z" stroke="#f0a500" stroke-width="1.5" fill="none"/>
-  <!-- Kunci badan -->
-  <rect x="10" y="15" width="12" height="10" rx="2.5" fill="#f0a500"/>
-  <!-- Kunci busur -->
-  <path d="M12 15V12C12 9.8 13.8 8 16 8C18.2 8 20 9.8 20 12V15" stroke="#f0a500" stroke-width="2" stroke-linecap="round" fill="none"/>
-  <!-- Lubang kunci -->
-  <circle cx="16" cy="19.5" r="1.8" fill="#07080f" opacity="0.8"/>
-  <rect x="15.1" y="20.5" width="1.8" height="2.5" rx="0.9" fill="#07080f" opacity="0.8"/>
+  <rect width="32" height="32" rx="6" fill="#07080f"/>
+  <svg x="2" y="2" width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    
+  <path d='M16 2L4 7V16C4 22.6 9.2 28.1 16 30C22.8 28.1 28 22.6 28 16V7L16 2Z' fill='#f0a500' opacity='0.15'/>
+  <path d='M16 2L4 7V16C4 22.6 9.2 28.1 16 30C22.8 28.1 28 22.6 28 16V7L16 2Z' stroke='#f0a500' stroke-width='1.5' fill='none'/>
+  <rect x='10' y='15' width='12' height='10' rx='2.5' fill='#f0a500'/>
+  <path d='M12 15V12C12 9.8 13.8 8 16 8C18.2 8 20 9.8 20 12V15' stroke='#f0a500' stroke-width='2' stroke-linecap='round' fill='none'/>
+  <circle cx='16' cy='19.5' r='1.8' fill='#07080f' opacity='0.8'/>
+  <rect x='15.1' y='20.5' width='1.8' height='2.5' rx='0.9' fill='#07080f' opacity='0.8'/>
+
+  </svg>
 </svg>
