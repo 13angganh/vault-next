@@ -1803,7 +1803,6 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 
 .modal__body {
-  flex: 1;
   overflow-y: auto;
   padding: 16px 18px;
   overscroll-behavior: contain;
@@ -2607,8 +2606,10 @@ select option { background: var(--bg-s2); color: var(--text); }
 
 .backup-modal {
   width: min(520px, 96vw);
-  max-height: 90vh;
+  max-height: 88dvh;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .backup-tabs {
@@ -3605,8 +3606,8 @@ button:active:not(:disabled),
 }
 
 @keyframes viewFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3805,8 +3806,6 @@ button:active:not(:disabled),
 /* ── BackupModal: tab content fixed container agar tidak naik-turun saat switch ── */
 .backup-tabs-content {
   position: relative;
-  /* min-height cukup untuk tab terpanjang agar tidak reflow */
-  min-height: 320px;
 }
 
 .backup-section {
@@ -3820,16 +3819,13 @@ button:active:not(:disabled),
   pointer-events: none;
 }
 
-/* ── EntryCard expand/collapse: smooth dengan grid-template-rows ── */
+/* ── EntryCard expand/collapse: opacity fade saja, tidak ada gerak ── */
 .entry-card__body-wrap {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
 .entry-card__body-wrap--open {
-  grid-template-rows: 1fr;
+  /* terbuka normal */
 }
 
 .entry-card__body-inner {
@@ -3837,10 +3833,19 @@ button:active:not(:disabled),
   min-height: 0;
 }
 
+.entry-card__body {
+  animation: entryBodyFadeIn 0.15s ease both;
+}
+
+@keyframes entryBodyFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* ── Animasi perpindahan tab backup: fade smooth ── */
 @keyframes tabFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .backup-section--visible {
