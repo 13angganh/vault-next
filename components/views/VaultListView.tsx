@@ -44,8 +44,8 @@ export const VaultListView = forwardRef<VaultListViewRef>(function VaultListView
 
   const filterLabel = useMemo(() => {
     if (currentFilter === 'all')  return 'Semua Entri';
-    if (currentFilter === 'fav')  return '⭐ Favorit';
-    if (currentFilter === 'bin')  return '🗑️ Recycle Bin';
+    if (currentFilter === 'fav')  return 'Favorit';
+    if (currentFilter === 'bin')  return 'Recycle Bin';
     const cat = allCats.find((c) => c.id === currentFilter);
     return cat ? `${cat.emoji} ${cat.label}` : currentFilter;
   }, [currentFilter, allCats]);
@@ -100,7 +100,7 @@ export const VaultListView = forwardRef<VaultListViewRef>(function VaultListView
       {entries.length === 0 ? (
         <div className="vault-empty">
           <div className="vault-empty__icon">
-            {searchQuery ? '🔍' : currentFilter === 'bin' ? '🗑️' : '🔐'}
+            
           </div>
           <p className="vault-empty__title">
             {searchQuery ? 'Tidak ada hasil'

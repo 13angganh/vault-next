@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef }  from 'react';
-import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Package, Plus } from 'lucide-react';
+import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Package, Plus, FolderOpen, ShieldCheck } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { exportBackup, importBackup, saveVault } from '@/lib/vaultService';
 import { lsSet, LS_BACKUP }  from '@/lib/storage';
@@ -292,7 +292,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                     onClick={() => fileRef.current?.click()}
                     type="button"
                   >
-                    📁 Pilih File
+                    <FolderOpen size={14} /> Pilih File
                   </button>
                   <span className="backup-file-name">
                     {importFile ? importFile.name : 'Belum ada file dipilih'}
@@ -371,7 +371,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                       onClick={handleSyncGenerate}
                       disabled={syncing}
                     >
-                      {syncing ? '⏳ Membuat…' : '🔐 Generate Teks Sync'}
+                      {syncing ? '⏳ Membuat…' : <><ShieldCheck size={14} /> Generate Teks Sync</>}
                     </button>
                   ) : (
                     <>

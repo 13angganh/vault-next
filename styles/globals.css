@@ -974,9 +974,11 @@ select option { background: var(--bg-s2); color: var(--text); }
   flex-direction: row;
   align-items: stretch;
   flex-shrink: 0;
-  position: sticky;
+  position: fixed;
   bottom: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  z-index: 200;
 }
 
 .bottom-nav__tab {
@@ -3558,11 +3560,10 @@ button:active:not(:disabled),
 
   .app-main {
     overflow-y: auto;
-    /* Tinggi dihitung dari viewport dikurangi header dan bottom nav */
-    height: calc(100dvh - var(--appbar-height) - 60px - env(safe-area-inset-bottom) - env(safe-area-inset-top));
+    height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top));
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
-    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    padding-bottom: calc(60px + env(safe-area-inset-bottom) + var(--space-4));
   }
 }
 
@@ -3733,7 +3734,6 @@ button:active:not(:disabled),
 
 .shell-view--active {
   display: block;
-  animation: shellFadeIn 0.18s ease both;
 }
 
 .shell-view--hidden {
@@ -3793,13 +3793,15 @@ button:active:not(:disabled),
 /* ── BackupModal: modal-overlay align top agar modal tidak loncat naik-turun ── */
 .modal-overlay.backup-modal-overlay {
   align-items: flex-start !important;
-  padding-top: max(env(safe-area-inset-top), 24px) !important;
+  padding-top: max(env(safe-area-inset-top), 64px) !important;
+  overflow-y: auto !important;
 }
 
 @media (max-width: 768px) {
   .modal-overlay.backup-modal-overlay {
     align-items: flex-start !important;
-    padding-top: max(env(safe-area-inset-top), 12px) !important;
+    padding-top: max(env(safe-area-inset-top), 56px) !important;
+    overflow-y: auto !important;
   }
 }
 
@@ -3834,12 +3836,7 @@ button:active:not(:disabled),
 }
 
 .entry-card__body {
-  animation: entryBodyFadeIn 0.15s ease both;
-}
-
-@keyframes entryBodyFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  /* no animation - instant show */
 }
 
 /* ── Animasi perpindahan tab backup: fade smooth ── */

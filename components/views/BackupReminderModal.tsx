@@ -84,7 +84,7 @@ export function BackupReminderModal({ onOpenBackup }: BackupReminderModalProps) 
         aria-describedby="backup-reminder-desc"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="backup-reminder__icon" aria-hidden="true">📦</div>
+        
         <h3 className="backup-reminder__title" id="backup-reminder-title">Sudah waktunya backup!</h3>
         <p className="backup-reminder__desc" id="backup-reminder-desc">
           Backup terakhir: <strong>{lastBackupStr}</strong>
@@ -98,7 +98,7 @@ export function BackupReminderModal({ onOpenBackup }: BackupReminderModalProps) 
             Nanti saja
           </button>
           <button className="btn btn-primary" onClick={handleBackupNow} autoFocus>
-            📤 Backup Sekarang
+            Backup Sekarang
           </button>
         </div>
       </div>

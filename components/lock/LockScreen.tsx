@@ -287,7 +287,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
               <button className="btn btn-primary lock-submit-btn"
                 onClick={handleMasterSubmit} disabled={loading || !masterInput}>
-                {loading ? '⏳ Membuka...' : '🔓 Buka Vault'}
+                {loading ? '⏳ Membuka...' : 'Buka Vault'}
               </button>
 
               <div className="lock-panel__links">
@@ -318,7 +318,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
               </div>
 
               <div className="lock-seed-info">
-                ✅ Masukkan seed phrase → vault langsung terbuka dengan semua data utuh.
+                Masukkan seed phrase → vault langsung terbuka dengan semua data utuh.
               </div>
 
               <div className="lock-field">
@@ -340,7 +340,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
               <button className="btn btn-primary lock-submit-btn"
                 onClick={handleSeedLogin} disabled={loading || !seedInput.trim()}>
-                {loading ? '⏳ Membuka...' : '🔓 Buka Vault'}
+                {loading ? '⏳ Membuka...' : 'Buka Vault'}
               </button>
 
               <div className="lock-panel__links">

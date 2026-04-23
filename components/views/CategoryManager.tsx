@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Pencil, Plus, LayoutGrid, X } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, LayoutGrid, X, Trash2, AlertTriangle } from 'lucide-react';
 import { useAppStore }         from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES }  from '@/lib/types';
 import type { CustomCategory } from '@/lib/types';
@@ -233,7 +233,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                   aria-label={deleteConfirm === cat.id ? `Konfirmasi hapus ${cat.label}` : `Hapus ${cat.label}`}
                   title={deleteConfirm === cat.id ? 'Tap sekali lagi untuk konfirmasi' : 'Hapus'}
                 >
-                  {deleteConfirm === cat.id ? '⚠️' : '🗑️'}
+                  {deleteConfirm === cat.id ? <AlertTriangle size={14} /> : <Trash2 size={14} />}
                 </button>
               </div>
             </div>
