@@ -84,73 +84,73 @@ export function Sidebar({ open, onClose, onSettingsClick }: SidebarProps) {
           </button>
         </div>
 
-        {/* ── Navigasi utama ── */}
-        <nav className="sidebar-section">
-          <NavItem
-            id="all"
-            icon={<LayoutGrid size={16} />}
-            label="Semua"
-            count={vault.length}
-            active={currentFilter === 'all'}
-            onClick={() => handleNav('all')}
-          />
-          <NavItem
-            id="fav"
-            icon={<Star size={16} />}
-            label="Favorit"
-            count={favCount}
-            active={currentFilter === 'fav'}
-            onClick={() => handleNav('fav')}
-          />
-          <NavItem
-            id="bin"
-            icon={<Trash2 size={16} />}
-            label="Tong Sampah"
-            count={recycleBin.length}
-            active={currentFilter === 'bin'}
-            onClick={() => handleNav('bin')}
-          />
-        </nav>
-
-        <div className="sidebar-divider" />
-
-        {/* ── Kategori: dropdown toggle ── */}
-        <button
-          className={`sidebar-section-label${catsOpen ? ' sidebar-section-label--open' : ''}`}
-          onClick={() => setCatsOpen((v) => !v)}
-          aria-expanded={catsOpen}
-          aria-controls="sidebar-cats"
-        >
-          <span>Kategori</span>
-          <ChevronDown size={14} className="sidebar-section-label__chevron" />
-        </button>
-
-        <nav
-          id="sidebar-cats"
-          className={`sidebar-section sidebar-cats${catsOpen ? ' sidebar-cats--open' : ''}`}
-        >
-          {allCats.map((cat) => (
+        {/* ── Scrollable area: nav + kategori ── */}
+        <div className="sidebar-scroll-area">
+          <nav className="sidebar-section">
             <NavItem
-              key={cat.id}
-              id={cat.id}
-              icon={
-                <CategoryIcon
-                  catId={cat.id}
-                  customCats={customCats}
-                  size="sm"
-                />
-              }
-              label={cat.label}
-              count={countFor(cat.id)}
-              active={currentFilter === cat.id}
-              onClick={() => handleNav(cat.id as FilterType)}
+              id="all"
+              icon={<LayoutGrid size={16} />}
+              label="Semua"
+              count={vault.length}
+              active={currentFilter === 'all'}
+              onClick={() => handleNav('all')}
             />
-          ))}
-        </nav>
+            <NavItem
+              id="fav"
+              icon={<Star size={16} />}
+              label="Favorit"
+              count={favCount}
+              active={currentFilter === 'fav'}
+              onClick={() => handleNav('fav')}
+            />
+            <NavItem
+              id="bin"
+              icon={<Trash2 size={16} />}
+              label="Tong Sampah"
+              count={recycleBin.length}
+              active={currentFilter === 'bin'}
+              onClick={() => handleNav('bin')}
+            />
+          </nav>
 
-        <div style={{ flex: 1 }} />
+          <div className="sidebar-divider" />
 
-        {/* ── Footer: Pengaturan ── */}
+          {/* Kategori: dropdown toggle */}
+          <button
+            className={`sidebar-section-label${catsOpen ? ' sidebar-section-label--open' : ''}`}
+            onClick={() => setCatsOpen((v) => !v)}
+            aria-expanded={catsOpen}
+            aria-controls="sidebar-cats"
+          >
+            <span>Kategori</span>
+            <ChevronDown size={14} className="sidebar-section-label__chevron" />
+          </button>
+
+          <nav
+            id="sidebar-cats"
+            className={`sidebar-section sidebar-cats${catsOpen ? ' sidebar-cats--open' : ''}`}
+          >
+            {allCats.map((cat) => (
+              <NavItem
+                key={cat.id}
+                id={cat.id}
+                icon={
+                  <CategoryIcon
+                    catId={cat.id}
+                    customCats={customCats}
+                    size="sm"
+                  />
+                }
+                label={cat.label}
+                count={countFor(cat.id)}
+                active={currentFilter === cat.id}
+                onClick={() => handleNav(cat.id as FilterType)}
+              />
+            ))}
+          </nav>
+        </div>
+
+        {/* ── Footer: Pengaturan — fixed di bawah ── */}
         <div className="sidebar-divider" />
         <div className="sidebar-footer">
           <NavItem
