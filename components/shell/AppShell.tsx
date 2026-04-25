@@ -53,7 +53,7 @@ export function AppShell() {
     setGlobalLoading(v);
   }, []);
 
-  const viewTitle = shellView === 'settings' ? 'Pengaturan' : 'Vault';
+  const viewTitle = shellView === 'settings' ? 'Pengaturan' : 'Vault Next';
 
   return (
     <div className="app-shell">

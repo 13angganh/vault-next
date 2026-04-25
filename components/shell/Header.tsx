@@ -75,7 +75,9 @@ export function Header({
 
       {/* Nama view aktif — tengah */}
       <div className="app-header__view-title" aria-live="polite">
-        {activeView}
+        {activeView === 'Vault Next' ? (
+          <>Vault<span className="app-header__title-gold"> Next</span></>
+        ) : activeView}
       </div>
 
       {/* Search — tengah melebar */}

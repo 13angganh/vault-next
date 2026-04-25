@@ -150,7 +150,7 @@ export function LoadingScreen({ onComplete, duration = 2200 }: LoadingScreenProp
         letterSpacing: 'var(--ls-tight)',
         animation: 'loadingFadeUp 0.6s ease 0.3s both',
       }}>
-        Vault<span style={{ color: 'var(--gold)' }}>.</span>
+        Vault<span style={{ color: 'var(--gold)', fontWeight: 800 }}> Next</span>
       </div>
 
       {/* Subtitle */}

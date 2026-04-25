@@ -65,7 +65,7 @@
   --transition-spring: 350ms var(--ease-spring);
 
   /* ── Layout ────────────────────────────────────────────────── */
-  --sidebar-width:    280px;
+  --sidebar-width:    260px;
   --appbar-height:    56px;
   --content-max:      960px;
   --modal-width:      480px;

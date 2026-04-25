@@ -5,15 +5,15 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 type Theme = 'dark' | 'light';
 
 interface ThemeContextValue {
-  theme: Theme;
+  theme:       Theme;
   toggleTheme: () => void;
-  setTheme: (t: Theme) => void;
+  setTheme:    (t: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
+  theme:       'dark',
   toggleTheme: () => {},
-  setTheme: () => {},
+  setTheme:    () => {},
 });
 
 export function useTheme() {
@@ -24,17 +24,13 @@ const STORAGE_KEY = 'vault_theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Baca preferensi dari localStorage setelah mount (SSR-safe)
-    const saved = typeof window !== 'undefined'
-      ? (localStorage.getItem(STORAGE_KEY) as Theme | null)
-      : null;
-    const resolved = saved === 'light' ? 'light' : 'dark';
-    setThemeState(resolved);
-    document.documentElement.setAttribute('data-theme', resolved);
-    setMounted(true);
+    // Baca dari data-theme yang sudah di-set oleh anti-flash script di layout.tsx
+    const current = document.documentElement.getAttribute('data-theme') as Theme;
+    if (current === 'light' || current === 'dark') {
+      setThemeState(current);
+    }
   }, []);
 
   const setTheme = (t: Theme) => {
@@ -45,9 +41,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
-  // Hindari flash saat SSR
-  if (!mounted) return null;
-
+  // TIDAK return null — langsung render children
+  // Tema awal sudah ditangani anti-flash script di layout.tsx
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
