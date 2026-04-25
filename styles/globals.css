@@ -1955,6 +1955,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 .entry-form-modal {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   max-height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top, 0px) - 24px);
 }
 
@@ -2040,9 +2041,14 @@ select option { background: var(--bg-s2); color: var(--text); }
 /* ── EntryForm specific ──────────────────────────────────────── */
 
 .entry-form-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: block;
+}
+
+.entry-form-body > .form-group {
+  margin-bottom: 14px;
+}
+.entry-form-body > .form-group:last-child {
+  margin-bottom: 0;
 }
 
 .form-group {
@@ -3963,6 +3969,7 @@ button:active:not(:disabled),
   border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* border-radius clipping */
 }
 
 /* duplikat dihapus */
