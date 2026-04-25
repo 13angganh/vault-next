@@ -31,12 +31,16 @@ import {
   getVaultHint,
 } from '@/lib/vaultService';
 import type { UnlockPayload } from '@/lib/vaultService';
-/* Helper: cek apakah biometrik sudah pernah didaftarkan */
-function hasBiometricRegistered(): boolean {
+/* Helper: cek apakah biometrik credential sudah terdaftar di perangkat */
+function hasBiometricCredential(): boolean {
   if (typeof window === 'undefined') return false;
-  return !!localStorage.getItem('vault_bio_cred') &&
-    !!sessionStorage.getItem('vault_ss_mpw') &&
-    !!window.PublicKeyCredential;
+  return !!localStorage.getItem('vault_bio_cred') && !!window.PublicKeyCredential;
+}
+
+/* Helper: apakah session aktif (master pw tersimpan sementara) */
+function hasBiometricSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!sessionStorage.getItem('vault_ss_mpw');
 }
 
 type Panel = 'pin' | 'master' | 'seed' | 'recovery' | 'setup';
@@ -202,7 +206,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
         {/* Logo */}
         <div className="lock-logo-wrap">
-          <VaultIcon size={64} />
+          <VaultIcon size={52} />
           <h1 className="lock-title">
             Vault <span className="lock-title__accent">Next</span>
           </h1>
@@ -241,12 +245,13 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 error={error}
               />
 
-              <div className="lock-panel__links">
+              <div className="lock-panel__links lock-panel__links--row">
                 <button className="lock-link" onClick={() => goPanel('master')}>
-                  <KeyRound size={13} /> Gunakan Master Password
+                  Master Password
                 </button>
+                <span className="lock-link-dot">·</span>
                 <button className="lock-link" onClick={() => goPanel('seed')}>
-                  <KeyRound size={13} /> Masuk via Seed Phrase
+                  Seed Phrase
                 </button>
               </div>
             </div>
@@ -385,7 +390,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
               <button className="lock-link lock-link--muted" onClick={() => goPanel('setup')}>
                 <Plus size={13} /> Setup Vault Baru
               </button>
-              {hasBiometricRegistered() && (
+              {hasBiometricCredential() && (
                 <button
                   className="lock-bio-btn"
                   onClick={() => setShowBiometric(true)}
@@ -395,7 +400,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   <span>Sidik Jari</span>
                 </button>
               )}
-              {!hasBiometricRegistered() && (
+              {!hasBiometricCredential() && (
                 <button className="lock-link lock-link--muted"
                   onClick={() => setShowBiometric(true)} aria-label="Info biometrik">
                   <Fingerprint size={13} /> Biometrik

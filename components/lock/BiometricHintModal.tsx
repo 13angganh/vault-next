@@ -57,7 +57,7 @@ export function BiometricHintModal({
   masterPw,
   onSuccess,
 }: BiometricHintModalProps) {
-  const [step,    setStep]    = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [step,    setStep]    = useState<'idle' | 'loading' | 'success' | 'error' | 'session_expired'>('idle');
   const [errMsg,  setErrMsg]  = useState('');
   const supported = isWebAuthnSupported();
 
@@ -139,7 +139,11 @@ export function BiometricHintModal({
 
       /* Ambil master password dari sessionStorage */
       const pw = sessionStorage.getItem(SS_KEY);
-      if (!pw) throw new Error('Sesi berakhir. Masuk dengan PIN atau master password sekali lagi untuk mengaktifkan biometrik.');
+      if (!pw) {
+        // Session habis — credential ada tapi master pw belum di-cache
+        // Ini normal terjadi saat browser/tab baru dibuka
+        throw new Error('session_expired');
+      }
 
       setStep('success');
       setTimeout(() => {
@@ -150,6 +154,10 @@ export function BiometricHintModal({
       const e = err as Error;
       if (e.name === 'NotAllowedError') {
         setErrMsg('Verifikasi biometrik ditolak atau dibatalkan.');
+      } else if (e.message === 'session_expired') {
+        setErrMsg('Sesi biometrik belum aktif. Masuk sekali dengan PIN atau master password terlebih dahulu — sidik jari akan aktif kembali setelahnya.');
+        setStep('session_expired');
+        return;
       } else {
         setErrMsg(e.message || 'Verifikasi gagal.');
       }
@@ -309,6 +317,28 @@ export function BiometricHintModal({
                 Selesai
               </button>
             )}
+          </div>
+        )}
+
+
+        {/* Session expired — informatif, arahkan ke master pw */}
+        {step === 'session_expired' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 8,
+              padding: '12px 14px',
+              background: 'rgba(245,158,11,0.07)',
+              border: '1px solid rgba(245,158,11,0.25)',
+              borderRadius: 'var(--radius-md)',
+            }}>
+              <Fingerprint size={16} style={{ color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)', lineHeight: 1.7 }}>
+                {errMsg}
+              </span>
+            </div>
+            <button className="btn btn-gold" style={{ width: '100%' }} onClick={onClose}>
+              Masuk dengan PIN / Password
+            </button>
           </div>
         )}
 
