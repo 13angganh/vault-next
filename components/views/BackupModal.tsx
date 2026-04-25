@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef }  from 'react';
-import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Package, Plus, FolderOpen, ShieldCheck } from 'lucide-react';
+import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Package, Plus, FolderOpen, ShieldCheck , Loader2 } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { exportBackup, importBackup, saveVault } from '@/lib/vaultService';
 import { lsSet, LS_BACKUP }  from '@/lib/storage';
@@ -227,7 +227,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 </div>
                 <div className="backup-stat">
                   <span className="backup-stat__val">{store.recycleBin.length}</span>
-                  <span className="backup-stat__label">Recycle Bin</span>
+                  <span className="backup-stat__label">Tong Sampah</span>
                 </div>
                 <div className="backup-stat">
                   <span className="backup-stat__val">{store.customCats.length}</span>
@@ -243,7 +243,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 onClick={handleExport}
                 disabled={exporting || !store.vaultMeta}
               >
-                {exporting ? '⏳ Mengekspor…' : <><Download size={14} /> Download Backup (.vault)</>}
+                {exporting ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Mengekspor…</> : <><Download size={14} /> Download Backup (.vault)</>}
               </button>
             </div>
 
@@ -332,7 +332,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 onClick={handleImport}
                 disabled={importing}
               >
-                {importing ? '⏳ Mengimpor…' : <><Download size={14} /> Import Backup</>}
+                {importing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Mengimpor…</> : <><Download size={14} /> Import Backup</>}
               </button>
             </div>
 
@@ -371,7 +371,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                       onClick={handleSyncGenerate}
                       disabled={syncing}
                     >
-                      {syncing ? '⏳ Membuat…' : <><ShieldCheck size={14} /> Generate Teks Sync</>}
+                      {syncing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Membuat…</> : <><ShieldCheck size={14} /> Generate Teks Sync</>}
                     </button>
                   ) : (
                     <>
@@ -436,7 +436,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                     onClick={handleSyncReceive}
                     disabled={syncing}
                   >
-                    {syncing ? '⏳ Menyinkronkan…' : <><RefreshCw size={14} /> Terapkan Sync</>}
+                    {syncing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Menyinkronkan…</> : <><RefreshCw size={14} /> Terapkan Sync</>}
                   </button>
                 </>
               )}

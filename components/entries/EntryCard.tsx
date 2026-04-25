@@ -184,7 +184,7 @@ export function EntryCard({
                 aria-label={isVisible ? 'Sembunyikan' : 'Tampilkan'}
                 title={isVisible ? 'Sembunyikan' : 'Tampilkan'}
               >
-                {isVisible ? '🙈' : '👁'}
+                {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             )}
             <button
@@ -225,7 +225,7 @@ export function EntryCard({
             onClick={() => store.toggleSeedVisible(entry.id)}
             aria-label={seedShow ? 'Sembunyikan seed' : 'Tampilkan seed'}
           >
-            {seedShow ? '🙈' : '👁'}
+            {seedShow ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
           {seedShow && (
             <button

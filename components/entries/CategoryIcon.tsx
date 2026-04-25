@@ -2,36 +2,63 @@
 
 /**
  * Vault Next — CategoryIcon
- * Emoji + background color per kategori.
- * Ukuran: sm (24px) | md (32px) | lg (44px)
+ * Lucide icons per kategori (tidak ada emoji).
+ * Ukuran: sm (28px box) | md (36px box) | lg (48px box)
  */
 
-import { DEFAULT_CATEGORIES } from '@/lib/types';
+import {
+  Share2, Mail, Landmark, Gamepad2, Bitcoin, CreditCard,
+  Wifi, MoreHorizontal, Tag, LucideIcon,
+} from 'lucide-react';
 import type { CustomCategory } from '@/lib/types';
 
-// Warna background per kategori default
+/* ── Icon map per kategori default ── */
+const CAT_ICONS: Record<string, LucideIcon> = {
+  sosmed:  Share2,
+  email:   Mail,
+  bank:    Landmark,
+  game:    Gamepad2,
+  crypto:  Bitcoin,
+  kartu:   CreditCard,
+  wifi:    Wifi,
+  lainnya: MoreHorizontal,
+};
+
+/* ── Warna background per kategori ── */
 const CAT_COLORS: Record<string, string> = {
-  sosmed:  'rgba(99,102,241,0.18)',  // indigo
-  email:   'rgba(59,130,246,0.18)',  // blue
-  bank:    'rgba(16,185,129,0.18)',  // emerald
-  game:    'rgba(239,68,68,0.18)',   // red
-  crypto:  'rgba(245,158,11,0.20)',  // amber/gold
-  kartu:   'rgba(14,165,233,0.18)',  // sky
-  wifi:    'rgba(168,85,247,0.18)',  // purple
-  lainnya: 'rgba(156,163,175,0.18)', // gray
+  sosmed:  'rgba(99,102,241,0.15)',
+  email:   'rgba(59,130,246,0.15)',
+  bank:    'rgba(16,185,129,0.15)',
+  game:    'rgba(239,68,68,0.15)',
+  crypto:  'rgba(245,158,11,0.18)',
+  kartu:   'rgba(14,165,233,0.15)',
+  wifi:    'rgba(168,85,247,0.15)',
+  lainnya: 'rgba(156,163,175,0.15)',
+};
+
+/* ── Warna icon per kategori ── */
+const CAT_ICON_COLORS: Record<string, string> = {
+  sosmed:  '#818cf8',
+  email:   '#60a5fa',
+  bank:    '#34d399',
+  game:    '#f87171',
+  crypto:  '#f0a500',
+  kartu:   '#38bdf8',
+  wifi:    '#c084fc',
+  lainnya: '#9ca3af',
 };
 
 const SIZE_MAP = {
-  sm: { box: 28, font: 14 },
-  md: { box: 36, font: 18 },
-  lg: { box: 48, font: 24 },
+  sm: { box: 28, icon: 13 },
+  md: { box: 36, icon: 17 },
+  lg: { box: 48, icon: 22 },
 };
 
 interface CategoryIconProps {
-  catId:      string;
+  catId:       string;
   customCats?: CustomCategory[];
-  size?:      'sm' | 'md' | 'lg';
-  className?: string;
+  size?:       'sm' | 'md' | 'lg';
+  className?:  string;
 }
 
 export function CategoryIcon({
@@ -40,35 +67,84 @@ export function CategoryIcon({
   size = 'md',
   className = '',
 }: CategoryIconProps) {
-  const allCats = [
-    ...DEFAULT_CATEGORIES,
-    ...customCats,
-  ];
+  const { box, icon: iconSize } = SIZE_MAP[size];
 
-  const cat = allCats.find((c) => c.id === catId);
-  const emoji = cat?.emoji ?? '🔑';
-  const bg = CAT_COLORS[catId] ?? 'rgba(156,163,175,0.18)';
-  const { box, font } = SIZE_MAP[size];
+  /* Cek apakah kategori custom */
+  const customCat = customCats.find((c) => c.id === catId);
 
+  /* Warna */
+  const bg        = CAT_COLORS[catId]      ?? 'rgba(156,163,175,0.15)';
+  const iconColor = CAT_ICON_COLORS[catId] ?? '#9ca3af';
+  const radius    = Math.round(box * 0.28);
+
+  /* Kategori default → Lucide icon */
+  const Icon = CAT_ICONS[catId];
+
+  /* Kategori custom → tampilkan emoji jika masih ada, atau fallback Tag */
+  if (customCat) {
+    if (customCat.emoji) {
+      return (
+        <span
+          className={`cat-icon cat-icon--${size} ${className}`}
+          style={{
+            width: box, height: box,
+            fontSize: iconSize + 2,
+            backgroundColor: 'rgba(156,163,175,0.15)',
+            borderRadius: radius,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            userSelect: 'none',
+            lineHeight: 1,
+          }}
+          aria-hidden="true"
+        >
+          {customCat.emoji}
+        </span>
+      );
+    }
+    /* Custom tanpa emoji → Tag icon */
+    return (
+      <span
+        className={`cat-icon cat-icon--${size} ${className}`}
+        style={{
+          width: box, height: box,
+          backgroundColor: 'rgba(156,163,175,0.15)',
+          borderRadius: radius,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          lineHeight: 1,
+        }}
+        aria-hidden="true"
+      >
+        <Tag size={iconSize} color="#9ca3af" />
+      </span>
+    );
+  }
+
+  /* Default kategori dengan Lucide icon */
   return (
     <span
       className={`cat-icon cat-icon--${size} ${className}`}
       style={{
-        width:            box,
-        height:           box,
-        fontSize:         font,
-        backgroundColor:  bg,
-        borderRadius:     box * 0.28,
-        display:          'inline-flex',
-        alignItems:       'center',
-        justifyContent:   'center',
-        flexShrink:       0,
-        userSelect:       'none',
-        lineHeight:       1,
+        width: box, height: box,
+        backgroundColor: bg,
+        borderRadius: radius,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        lineHeight: 1,
       }}
       aria-hidden="true"
     >
-      {emoji}
+      {Icon
+        ? <Icon size={iconSize} color={iconColor} strokeWidth={1.8} />
+        : <MoreHorizontal size={iconSize} color="#9ca3af" />
+      }
     </span>
   );
 }

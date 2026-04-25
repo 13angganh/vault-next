@@ -72,18 +72,18 @@ export interface VaultBackupPayload {
 export interface CategoryDef {
   id:    string;
   label: string;
-  emoji: string;
+  emoji?: string; // opsional — default cat pakai Lucide via CategoryIcon
 }
 
 export const DEFAULT_CATEGORIES: CategoryDef[] = [
-  { id: 'sosmed',  label: 'Sosmed',  emoji: '💬' },
-  { id: 'email',   label: 'Email',   emoji: '📧' },
-  { id: 'bank',    label: 'Bank',    emoji: '🏦' },
-  { id: 'game',    label: 'Game',    emoji: '🎮' },
-  { id: 'crypto',  label: 'Crypto',  emoji: '₿'  },
-  { id: 'kartu',   label: 'Kartu',   emoji: '💳' },
-  { id: 'wifi',    label: 'Wi-Fi',   emoji: '📶' },
-  { id: 'lainnya', label: 'Lainnya', emoji: '🔑' },
+  { id: 'sosmed',  label: 'Sosmed'  },
+  { id: 'email',   label: 'Email'   },
+  { id: 'bank',    label: 'Bank'    },
+  { id: 'game',    label: 'Game'    },
+  { id: 'crypto',  label: 'Crypto'  },
+  { id: 'kartu',   label: 'Kartu'   },
+  { id: 'wifi',    label: 'Wi-Fi'   },
+  { id: 'lainnya', label: 'Lainnya' },
 ];
 
 // ─── Lock Screen State ────────────────────────────────────────────────────────

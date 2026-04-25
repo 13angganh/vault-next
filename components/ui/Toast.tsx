@@ -2,16 +2,17 @@
 
 /**
  * Vault Next — Toast
- * Notifikasi ringan untuk clipboard feedback dll.
- * Auto-dismiss setelah `duration` ms (default 2000).
+ * Notifikasi ringan dengan slide-in animation dan Lucide icons.
+ * Auto-dismiss setelah `duration` ms (default 2200).
  *
  * Usage:
  *   const { showToast, ToastContainer } = useToast();
  *   showToast('Password disalin!');
- *   return <ToastContainer />;
+ *   showToast('Gagal menyimpan', 'error');
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { CheckCircle2, XCircle, Info } from 'lucide-react';
 
 interface ToastItem {
   id:      number;
@@ -19,8 +20,14 @@ interface ToastItem {
   type?:   'success' | 'error' | 'info';
 }
 
-export function useToast(duration = 2000) {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
+const ICONS = {
+  success: <CheckCircle2 size={15} />,
+  error:   <XCircle size={15} />,
+  info:    <Info size={15} />,
+};
+
+export function useToast(duration = 2200) {
+  const [toasts,  setToasts]  = useState<ToastItem[]>([]);
   const counterRef = useRef(0);
 
   const showToast = useCallback(
@@ -39,7 +46,7 @@ export function useToast(duration = 2000) {
       {toasts.map((t) => (
         <div key={t.id} className={`toast toast--${t.type ?? 'success'}`}>
           <span className="toast__icon">
-            {t.type === 'error' ? '✕' : t.type === 'info' ? 'ℹ' : '✓'}
+            {ICONS[t.type ?? 'success']}
           </span>
           <span className="toast__msg">{t.message}</span>
         </div>

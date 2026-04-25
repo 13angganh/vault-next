@@ -86,7 +86,7 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
         <h3 className="pw-gen__title">Generator Password</h3>
         {onClose && (
           <button className="pw-gen__close btn-icon" onClick={onClose} aria-label="Tutup">
-            ✕
+            <X size={14} />
           </button>
         )}
       </div>
@@ -100,7 +100,7 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
           aria-label="Salin password"
           title="Salin"
         >
-          {copied ? '✓' : '⎘'}
+          {copied ? <Check size={14} /> : <Copy size={14} />}
         </button>
         <button
           className="pw-gen__regen btn-icon"

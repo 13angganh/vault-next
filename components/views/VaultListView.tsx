@@ -7,6 +7,7 @@
  */
 
 import { useState, forwardRef, useImperativeHandle, useMemo, useCallback } from 'react';
+import { ShieldOff, Search as SearchIcon, Trash2 } from 'lucide-react';
 import { useAppStore }    from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import { EntryCard }      from '@/components/entries/EntryCard';
@@ -19,7 +20,11 @@ export interface VaultListViewRef {
   openAddForm: () => void;
 }
 
-export const VaultListView = forwardRef<VaultListViewRef>(function VaultListView(_props, ref) {
+interface VaultListViewProps {
+  onGlobalLoading?: (v: boolean) => void;
+}
+
+export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(function VaultListView({ onGlobalLoading }, ref) {
   const vault         = useAppStore((s) => s.vault);
   const recycleBin    = useAppStore((s) => s.recycleBin);
   const customCats    = useAppStore((s) => s.customCats);
@@ -45,9 +50,9 @@ export const VaultListView = forwardRef<VaultListViewRef>(function VaultListView
   const filterLabel = useMemo(() => {
     if (currentFilter === 'all')  return 'Semua Entri';
     if (currentFilter === 'fav')  return 'Favorit';
-    if (currentFilter === 'bin')  return 'Recycle Bin';
+    if (currentFilter === 'bin')  return 'Tong Sampah';
     const cat = allCats.find((c) => c.id === currentFilter);
-    return cat ? `${cat.emoji} ${cat.label}` : currentFilter;
+    return cat ? cat.label : currentFilter;
   }, [currentFilter, allCats]);
 
   const isRecycleBin = currentFilter === 'bin';
@@ -83,7 +88,7 @@ export const VaultListView = forwardRef<VaultListViewRef>(function VaultListView
   }, []);
 
   const handleSaved = useCallback(() => {
-    showToast('Entri disimpan ✓');
+    showToast('Entri disimpan');
   }, [showToast]);
 
   return (
@@ -100,11 +105,15 @@ export const VaultListView = forwardRef<VaultListViewRef>(function VaultListView
       {entries.length === 0 ? (
         <div className="vault-empty">
           <div className="vault-empty__icon">
-            
+            {searchQuery
+              ? <SearchIcon size={40} strokeWidth={1.3} />
+              : currentFilter === 'bin'
+                ? <Trash2 size={40} strokeWidth={1.3} />
+                : <ShieldOff size={40} strokeWidth={1.3} />}
           </div>
           <p className="vault-empty__title">
             {searchQuery ? 'Tidak ada hasil'
-              : currentFilter === 'bin' ? 'Recycle Bin kosong'
+              : currentFilter === 'bin' ? 'Tong Sampah kosong'
               : 'Belum ada entri'}
           </p>
           <p className="vault-empty__desc">

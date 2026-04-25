@@ -8,7 +8,7 @@ import { create } from 'zustand';
 import type { VaultEntry, VaultMeta, CustomCategory } from '@/lib/types';
 import {
   lsGet, lsSet, lsGetNum, lsSetNum, lsGetBool, lsSetBool, lsGetJson, lsSetJson,
-  LS_AUTOLOCK, LS_AUTOSAVE, LS_BKPIVL, LS_CATS,
+  LS_AUTOLOCK, LS_AUTOSAVE, LS_BKPIVL, LS_CATS, LS_BIO_ENABLED, LS_BIO_CRED_ID,
 } from '@/lib/storage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -49,6 +49,10 @@ interface AppState {
   // ── Settings ──
   backupIntervalHrs: number;
   autoSaveEnabled:   boolean;
+
+  // ── Biometrik ──
+  biometricEnabled:  boolean;
+  biometricCredId:   string | null;
 
   // ── Actions: Auth ──
   unlock: (pw: string) => void;
@@ -92,6 +96,10 @@ interface AppState {
   setAutoLockMinutes:   (m: number) => void;
   setBackupIntervalHrs: (h: number) => void;
   setAutoSaveEnabled:   (v: boolean) => void;
+
+  // ── Actions: Biometrik ──
+  setBiometricEnabled: (v: boolean) => void;
+  setBiometricCredId:  (id: string | null) => void;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -125,6 +133,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   backupIntervalHrs: lsGetNum(LS_BKPIVL, 24),
   autoSaveEnabled:   lsGetBool(LS_AUTOSAVE, true),
+  biometricEnabled:  lsGetBool(LS_BIO_ENABLED, false),
+  biometricCredId:   lsGet(LS_BIO_CRED_ID),
 
   // ── Actions: Auth ──────────────────────────────────────────────────────────
 
@@ -246,6 +256,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAutoSaveEnabled: (v) => {
     lsSetBool(LS_AUTOSAVE, v);
     set({ autoSaveEnabled: v });
+  },
+
+  // ── Actions: Biometrik ──────────────────────────────────────────────────────
+
+  setBiometricEnabled: (v) => {
+    lsSetBool(LS_BIO_ENABLED, v);
+    set({ biometricEnabled: v });
+  },
+  setBiometricCredId: (id) => {
+    if (id) lsSet(LS_BIO_CRED_ID, id);
+    set({ biometricCredId: id });
   },
 }));
 

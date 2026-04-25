@@ -92,7 +92,7 @@ export function CategoryDrawer({ open, onClose }: CategoryDrawerProps) {
           {[
             { id: 'all' as FilterType, icon: <LayoutGrid size={18} />, label: 'Semua',       count: vault.length },
             { id: 'fav' as FilterType, icon: <Star size={18} />,       label: 'Favorit',     count: vault.filter((e) => e.fav).length },
-            { id: 'bin' as FilterType, icon: <Trash2 size={18} />,     label: 'Recycle Bin', count: recycleBin.length },
+            { id: 'bin' as FilterType, icon: <Trash2 size={18} />,     label: 'Tong Sampah', count: recycleBin.length },
           ].map((item) => (
             <button key={item.id} className="drawer-item"
               data-active={currentFilter === item.id} onClick={() => pick(item.id)}>

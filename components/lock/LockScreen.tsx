@@ -12,7 +12,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { Sun, Moon, KeyRound, Lock, Fingerprint, RefreshCw, ArrowLeft, Plus } from 'lucide-react';
+import { Sun, Moon, KeyRound, Lock, Fingerprint, RefreshCw, ArrowLeft, Plus, Loader2, Eye, EyeOff } from 'lucide-react';
 
 import { VaultIcon }          from '@/components/LoadingScreen';
 import { useTheme }           from '@/components/providers/ThemeProvider';
@@ -31,6 +31,13 @@ import {
   getVaultHint,
 } from '@/lib/vaultService';
 import type { UnlockPayload } from '@/lib/vaultService';
+/* Helper: cek apakah biometrik sudah pernah didaftarkan */
+function hasBiometricRegistered(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!localStorage.getItem('vault_bio_cred') &&
+    !!sessionStorage.getItem('vault_ss_mpw') &&
+    !!window.PublicKeyCredential;
+}
 
 type Panel = 'pin' | 'master' | 'seed' | 'recovery' | 'setup';
 
@@ -199,7 +206,6 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
           <h1 className="lock-title">
             Vault <span className="lock-title__accent">Next</span>
           </h1>
-          <p className="lock-subtitle">Pencatat akun terenkripsi · Sepenuhnya offline</p>
         </div>
 
         {/* Card */}
@@ -279,7 +285,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   <button className="lock-pw-toggle" type="button"
                     onClick={() => setMasterShow((v) => !v)}
                     aria-label={masterShow ? 'Sembunyikan' : 'Tampilkan'}>
-                    {masterShow ? '🙈' : '👁️'}
+                    {masterShow ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
                 {error && <p className="lock-error">{error}</p>}
@@ -287,7 +293,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
               <button className="btn btn-primary lock-submit-btn"
                 onClick={handleMasterSubmit} disabled={loading || !masterInput}>
-                {loading ? '⏳ Membuka...' : 'Buka Vault'}
+                {loading ? <><Loader2 size={15} style={{animation:'spin 1s linear infinite'}} /> Membuka…</> : 'Buka Vault'}
               </button>
 
               <div className="lock-panel__links">
@@ -340,7 +346,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
               <button className="btn btn-primary lock-submit-btn"
                 onClick={handleSeedLogin} disabled={loading || !seedInput.trim()}>
-                {loading ? '⏳ Membuka...' : 'Buka Vault'}
+                {loading ? <><Loader2 size={15} style={{animation:'spin 1s linear infinite'}} /> Membuka…</> : 'Buka Vault'}
               </button>
 
               <div className="lock-panel__links">
@@ -379,16 +385,37 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
               <button className="lock-link lock-link--muted" onClick={() => goPanel('setup')}>
                 <Plus size={13} /> Setup Vault Baru
               </button>
-              <button className="lock-link lock-link--muted"
-                onClick={() => setShowBiometric(true)} aria-label="Info biometrik">
-                <Fingerprint size={13} /> Biometrik
-              </button>
+              {hasBiometricRegistered() && (
+                <button
+                  className="lock-bio-btn"
+                  onClick={() => setShowBiometric(true)}
+                  aria-label="Buka dengan sidik jari"
+                >
+                  <Fingerprint size={22} />
+                  <span>Sidik Jari</span>
+                </button>
+              )}
+              {!hasBiometricRegistered() && (
+                <button className="lock-link lock-link--muted"
+                  onClick={() => setShowBiometric(true)} aria-label="Info biometrik">
+                  <Fingerprint size={13} /> Biometrik
+                </button>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {showBiometric && <BiometricHintModal onClose={() => setShowBiometric(false)} />}
+      {showBiometric && (
+        <BiometricHintModal
+          mode="auth"
+          onClose={() => setShowBiometric(false)}
+          onSuccess={async (pw) => {
+            setShowBiometric(false);
+            await doUnlockWithMaster(pw);
+          }}
+        />
+      )}
     </>
   );
 }

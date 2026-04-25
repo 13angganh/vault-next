@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react';
-import { Lock, Unlock, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Lock, Unlock, Plus, Pencil, Trash2, AlertTriangle , Loader2 } from 'lucide-react';
 import { setupPin, verifyPin, removePin, hasPinSetup } from '@/lib/vaultService';
 import { useAppStore } from '@/lib/store/appStore';
 
@@ -176,7 +176,7 @@ export function PINSettingsPanel() {
           <div className="pin-settings__form-actions">
             <button className="btn btn-ghost btn--sm" onClick={reset} disabled={loading}>Batal</button>
             <button className="btn btn-primary btn--sm" onClick={handleSetupSubmit} disabled={loading}>
-              {loading ? '⏳' : 'Buat PIN'}
+              {loading ? <Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> : 'Buat PIN'}
             </button>
           </div>
         </>
@@ -189,7 +189,7 @@ export function PINSettingsPanel() {
           <div className="pin-settings__form-actions">
             <button className="btn btn-ghost btn--sm" onClick={reset} disabled={loading}>Batal</button>
             <button className="btn btn-primary btn--sm" onClick={handleChangeVerify} disabled={loading}>
-              {loading ? '⏳' : 'Lanjut'}
+              {loading ? <Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> : 'Lanjut'}
             </button>
           </div>
         </>
@@ -202,7 +202,7 @@ export function PINSettingsPanel() {
           <div className="pin-settings__form-actions">
             <button className="btn btn-ghost btn--sm" onClick={reset} disabled={loading}>Batal</button>
             <button className="btn btn-primary btn--sm" onClick={handleChangeNew} disabled={loading}>
-              {loading ? '⏳' : 'Simpan PIN Baru'}
+              {loading ? <Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> : 'Simpan PIN Baru'}
             </button>
           </div>
         </>
@@ -216,7 +216,7 @@ export function PINSettingsPanel() {
           <div className="pin-settings__form-actions">
             <button className="btn btn-ghost btn--sm" onClick={reset} disabled={loading}>Batal</button>
             <button className="btn btn--sm btn--danger" onClick={handleRemoveVerify} disabled={loading}>
-              {loading ? '⏳' : <><Trash2 size={14} /> Hapus PIN</>}
+              {loading ? <Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> : <><Trash2 size={14} /> Hapus PIN</>}
             </button>
           </div>
         </>

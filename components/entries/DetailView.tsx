@@ -48,7 +48,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
   }, [onClose]);
 
   const allCats  = [...DEFAULT_CATEGORIES, ...customCats];
-  const catInfo  = allCats.find((c) => c.id === entry.cat) ?? { emoji: '🔑', label: entry.cat };
+  const catInfo  = allCats.find((c) => c.id === entry.cat) ?? { id: entry.cat, label: entry.cat };
 
   const copy = (text: string | undefined, label: string) => {
     if (!text) return;
