@@ -348,7 +348,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
                   onClick={() => { setCat(c.id); setValues({}); setSeedWords(Array(12).fill('')); }}
                   title={c.label}
                 >
-                  <span className="cat-picker__emoji">{c.emoji}</span>
+                  <CategoryIcon catId={c.id} customCats={customCats} size="sm" />
                   <span className="cat-picker__label">{c.label}</span>
                 </button>
               ))}

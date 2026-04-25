@@ -1,46 +1,25 @@
 'use client';
 
-/**
- * Vault Next — LockScreen (Sesi 6B — rewrite bersih)
- *
- * Panel:
- *  pin      — PIN pad, standalone unlock vault (FIX utama)
- *  master   — master password
- *  seed     — masuk via seed phrase TANPA reset (seperti app lama)
- *  recovery — recovery / reset password
- *  setup    — buat vault baru
- */
-
 import { useState, useCallback, useEffect } from 'react';
-import { Sun, Moon, KeyRound, Lock, Fingerprint, RefreshCw, ArrowLeft, Plus, Loader2, Eye, EyeOff } from 'lucide-react';
-
+import {
+  Sun, Moon, KeyRound, Lock, Fingerprint,
+  RefreshCw, ArrowLeft, Plus, Loader2, Eye, EyeOff,
+} from 'lucide-react';
 import { VaultIcon }          from '@/components/LoadingScreen';
 import { useTheme }           from '@/components/providers/ThemeProvider';
 import { PINPad }             from './PINPad';
 import { RecoveryPanel }      from './RecoveryPanel';
 import { SetupFlow }          from './SetupFlow';
 import { BiometricHintModal } from './BiometricHintModal';
-
 import {
-  unlockVault,
-  setupVault,
-  verifyPinAndGetMaster,
-  hasPinSetup,
-  recoverMasterPw,
-  hasVaultData,
-  getVaultHint,
+  unlockVault, setupVault, verifyPinAndGetMaster,
+  hasPinSetup, recoverMasterPw, hasVaultData, getVaultHint,
 } from '@/lib/vaultService';
 import type { UnlockPayload } from '@/lib/vaultService';
-/* Helper: cek apakah biometrik credential sudah terdaftar di perangkat */
+
 function hasBiometricCredential(): boolean {
   if (typeof window === 'undefined') return false;
   return !!localStorage.getItem('vault_bio_cred') && !!window.PublicKeyCredential;
-}
-
-/* Helper: apakah session aktif (master pw tersimpan sementara) */
-function hasBiometricSession(): boolean {
-  if (typeof window === 'undefined') return false;
-  return !!sessionStorage.getItem('vault_ss_mpw');
 }
 
 type Panel = 'pin' | 'master' | 'seed' | 'recovery' | 'setup';
@@ -61,28 +40,23 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     return 'master';
   };
 
-  const [panel,          setPanel]          = useState<Panel>(initialPanel);
-  const [loading,        setLoading]        = useState(false);
-  const [error,          setError]          = useState('');
-  const [showBiometric,  setShowBiometric]  = useState(false);
+  const [panel,         setPanel]         = useState<Panel>(initialPanel);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState('');
+  const [showBiometric, setShowBiometric] = useState(false);
 
-  // PIN state
   const [pinBuf,         setPinBuf]         = useState('');
   const [pinAttempts,    setPinAttempts]    = useState(0);
   const [pinLockedUntil, setPinLockedUntil] = useState(0);
   const [lockRemain,     setLockRemain]     = useState(0);
 
-  // Master password state
-  const [masterInput,    setMasterInput]    = useState('');
-  const [masterShow,     setMasterShow]     = useState(false);
-
-  // Seed phrase state
-  const [seedInput,      setSeedInput]      = useState('');
+  const [masterInput, setMasterInput] = useState('');
+  const [masterShow,  setMasterShow]  = useState(false);
+  const [seedInput,   setSeedInput]   = useState('');
 
   const hint      = getVaultHint();
   const pinLocked = Date.now() < pinLockedUntil;
 
-  // Countdown timer
   useEffect(() => {
     if (!pinLocked) { setLockRemain(0); return; }
     const tick = () => {
@@ -95,25 +69,18 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
   }, [pinLockedUntil, pinLocked]);
 
   const goPanel = (p: Panel) => {
-    setPanel(p);
-    setError('');
-    setPinBuf('');
-    setMasterInput('');
-    setSeedInput('');
+    setPanel(p); setError('');
+    setPinBuf(''); setMasterInput(''); setSeedInput('');
   };
 
-  // ── Unlock via master password ─────────────────────────────────────────────
   const doUnlockWithMaster = useCallback(async (masterPw: string) => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const payload = await unlockVault(masterPw);
       onUnlocked(payload, masterPw);
     } catch (e) {
       setError((e as Error).message ?? 'Password salah');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, [onUnlocked]);
 
   const handleMasterSubmit = () => {
@@ -121,16 +88,10 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     doUnlockWithMaster(masterInput);
   };
 
-  // ── Unlock via PIN (standalone — langsung buka vault) ──────────────────────
   const handlePinSubmit = useCallback(async () => {
-    if (pinLocked) {
-      setError(`PIN dikunci. Coba lagi dalam ${lockRemain} detik.`);
-      return;
-    }
+    if (pinLocked) { setError(`PIN dikunci. Coba lagi dalam ${lockRemain} detik.`); return; }
     if (pinBuf.length < 4) { setError('PIN minimal 4 digit'); return; }
-
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const masterPw = await verifyPinAndGetMaster(pinBuf);
       setPinBuf('');
@@ -138,9 +99,8 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     } catch (e) {
       setPinBuf('');
       const msg = (e as Error).message ?? 'PIN salah';
-
       if (msg.includes('Format PIN lama')) {
-        setError('Format PIN lama terdeteksi. Masuk dengan master password, lalu setup ulang PIN di Pengaturan.');
+        setError('Format PIN lama. Masuk dengan master password, lalu setup ulang PIN.');
         goPanel('master');
       } else {
         const next = pinAttempts + 1;
@@ -157,11 +117,9 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     }
   }, [pinBuf, pinLocked, lockRemain, pinAttempts, doUnlockWithMaster]);
 
-  // ── Seed phrase login (masuk langsung tanpa reset) ─────────────────────────
   const handleSeedLogin = async () => {
     if (!seedInput.trim()) { setError('Masukkan recovery phrase'); return; }
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const masterPw = await recoverMasterPw(seedInput.trim());
       const payload  = await unlockVault(masterPw);
@@ -172,10 +130,8 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     }
   };
 
-  // ── Recovery panel submit ──────────────────────────────────────────────────
   const handleRecoverySubmit = async (phrase: string) => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const masterPw = await recoverMasterPw(phrase);
       const payload  = await unlockVault(masterPw);
@@ -186,41 +142,50 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     }
   };
 
-  // ── Setup vault baru ───────────────────────────────────────────────────────
   const handleSetupComplete = async (masterPw: string, hintStr: string, recovery: string) => {
     await setupVault({ masterPw, hint: hintStr, recoveryPhrase: recovery });
     const payload = await unlockVault(masterPw);
     onUnlocked(payload, masterPw);
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const S = { // inline style helpers untuk konsistensi
+    link: {
+      background: 'none', border: 'none', cursor: 'pointer',
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      fontSize: 'var(--text-xs)', color: 'var(--muted2)',
+      fontFamily: 'var(--font-sans)', fontWeight: 500,
+      padding: '4px 0', transition: 'color 0.15s ease',
+    } as React.CSSProperties,
+  };
+
   return (
     <>
-      <div className="lock-screen">
+      <div className="ls">
 
-        {/* Theme toggle */}
-        <button className="lock-theme-btn" onClick={toggleTheme}
+        {/* Tema toggle */}
+        <button className="ls-theme-btn" onClick={toggleTheme}
           aria-label={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}>
-          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
 
         {/* Logo */}
-        <div className="lock-logo-wrap">
+        <div className="ls-logo">
           <VaultIcon size={44} />
-          <h1 className="lock-title">
-            Vault <span className="lock-title__accent">Next</span>
+          <h1 className="ls-title">
+            Vault <span className="ls-title__gold">Next</span>
           </h1>
         </div>
 
         {/* Card */}
-        <div className="lock-card">
+        <div className="ls-card">
 
           {/* ── PIN ── */}
           {panel === 'pin' && (
-            <div className="lock-panel">
+            <div className="ls-panel">
               {pinLocked && (
-                <div className="lock-locked-notice">
-                  <Lock size={13} /> Dikunci {lockRemain} detik lagi…
+                <div className="ls-notice ls-notice--warn">
+                  <Lock size={12} />
+                  <span>Dikunci {lockRemain} detik lagi…</span>
                 </div>
               )}
 
@@ -241,13 +206,13 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 error={error}
               />
 
-              <div className="lock-panel__links lock-panel__links--row">
-                <button className="lock-link" onClick={() => goPanel('master')}>
-                  Master Password
+              {/* Link navigasi — inline, tanpa titik pemisah, konsisten */}
+              <div className="ls-links">
+                <button style={S.link} onClick={() => goPanel('master')}>
+                  <KeyRound size={11} /> Master Password
                 </button>
-                <span className="lock-link-dot">·</span>
-                <button className="lock-link" onClick={() => goPanel('seed')}>
-                  Seed Phrase
+                <button style={S.link} onClick={() => goPanel('seed')}>
+                  <KeyRound size={11} /> Seed Phrase
                 </button>
               </div>
             </div>
@@ -255,70 +220,72 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
           {/* ── Master Password ── */}
           {panel === 'master' && (
-            <div className="lock-panel">
-
+            <div className="ls-panel">
+              <div className="ls-section-title">Master Password</div>
 
               {hint && (
-                <div className="lock-hint">
-                  <span className="lock-hint__label">Petunjuk:</span> {hint}
+                <div className="ls-hint">
+                  <span className="ls-hint__label">Petunjuk:</span> {hint}
                 </div>
               )}
 
-              <div className="lock-field">
-                <div className="lock-pw-wrap">
+              <div className="ls-field">
+                <div className="ls-pw-wrap">
                   <input
-                    className="lock-input"
+                    className="ls-input"
                     type={masterShow ? 'text' : 'password'}
                     value={masterInput}
                     onChange={(e) => { setMasterInput(e.target.value); setError(''); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleMasterSubmit()}
-                    placeholder="Masukkan master password..."
+                    placeholder="Masukkan master password…"
                     autoFocus
                     autoComplete="current-password"
                     disabled={loading}
                   />
-                  <button className="lock-pw-toggle" type="button"
+                  <button className="ls-pw-toggle" type="button"
                     onClick={() => setMasterShow((v) => !v)}
                     aria-label={masterShow ? 'Sembunyikan' : 'Tampilkan'}>
                     {masterShow ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {error && <p className="lock-error">{error}</p>}
+                {error && <p className="ls-error">{error}</p>}
               </div>
 
-              <button className="btn btn-primary lock-submit-btn"
-                onClick={handleMasterSubmit} disabled={loading || !masterInput}>
-                {loading ? <><Loader2 size={15} style={{animation:'spin 1s linear infinite'}} /> Membuka…</> : 'Buka Vault'}
+              <button className="btn btn-gold ls-submit" onClick={handleMasterSubmit}
+                disabled={loading || !masterInput}>
+                {loading
+                  ? <><Loader2 size={14} className="spin" /> Membuka…</>
+                  : 'Buka Vault'}
               </button>
 
-              <div className="lock-panel__links">
+              <div className="ls-links">
                 {hasPinSetup() && (
-                  <button className="lock-link" onClick={() => goPanel('pin')}>
-                    <ArrowLeft size={13} /> Kembali ke PIN
+                  <button style={S.link} onClick={() => goPanel('pin')}>
+                    <ArrowLeft size={11} /> Kembali ke PIN
                   </button>
                 )}
-                <button className="lock-link" onClick={() => goPanel('seed')}>
-                  <KeyRound size={13} /> Masuk via Seed Phrase
+                <button style={S.link} onClick={() => goPanel('seed')}>
+                  <KeyRound size={11} /> Seed Phrase
                 </button>
-                <button className="lock-link lock-link--muted" onClick={() => goPanel('recovery')}>
-                  <RefreshCw size={12} /> Lupa password?
+                <button style={S.link} onClick={() => goPanel('recovery')}>
+                  <RefreshCw size={11} /> Lupa password?
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── Seed Phrase Login ── */}
+          {/* ── Seed Phrase ── */}
           {panel === 'seed' && (
-            <div className="lock-panel">
+            <div className="ls-panel">
+              <div className="ls-section-title">Masuk via Seed Phrase</div>
 
-
-<div className="lock-field">
-                <label className="lock-label">Recovery Phrase (pisahkan spasi)</label>
+              <div className="ls-field">
+                <label className="ls-label">Recovery Phrase (pisahkan spasi)</label>
                 <textarea
-                  className="lock-textarea"
+                  className="ls-textarea"
                   value={seedInput}
                   onChange={(e) => { setSeedInput(e.target.value); setError(''); }}
-                  placeholder="kata1 kata2 kata3 kata4 kata5..."
+                  placeholder="kata1 kata2 kata3 kata4 kata5…"
                   rows={3}
                   autoFocus
                   autoCorrect="off"
@@ -326,20 +293,22 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   spellCheck={false}
                   disabled={loading}
                 />
-                {error && <p className="lock-error">{error}</p>}
+                {error && <p className="ls-error">{error}</p>}
               </div>
 
-              <button className="btn btn-primary lock-submit-btn"
+              <button className="btn btn-gold ls-submit"
                 onClick={handleSeedLogin} disabled={loading || !seedInput.trim()}>
-                {loading ? <><Loader2 size={15} style={{animation:'spin 1s linear infinite'}} /> Membuka…</> : 'Buka Vault'}
+                {loading
+                  ? <><Loader2 size={14} className="spin" /> Membuka…</>
+                  : 'Buka Vault'}
               </button>
 
-              <div className="lock-panel__links">
-                <button className="lock-link" onClick={() => goPanel(hasPinSetup() ? 'pin' : 'master')}>
-                  <ArrowLeft size={13} /> Kembali
+              <div className="ls-links">
+                <button style={S.link} onClick={() => goPanel(hasPinSetup() ? 'pin' : 'master')}>
+                  <ArrowLeft size={11} /> Kembali
                 </button>
-                <button className="lock-link lock-link--muted" onClick={() => goPanel('recovery')}>
-                  <RefreshCw size={12} /> Reset password
+                <button style={S.link} onClick={() => goPanel('recovery')}>
+                  <RefreshCw size={11} /> Reset password
                 </button>
               </div>
             </div>
@@ -347,7 +316,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
           {/* ── Recovery ── */}
           {panel === 'recovery' && (
-            <div className="lock-panel">
+            <div className="ls-panel">
               <RecoveryPanel
                 onSubmit={handleRecoverySubmit}
                 onBack={() => goPanel(hasPinSetup() ? 'pin' : 'master')}
@@ -359,33 +328,24 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
           {/* ── Setup Baru ── */}
           {panel === 'setup' && (
-            <div className="lock-panel">
+            <div className="ls-panel">
               <SetupFlow onComplete={handleSetupComplete} />
             </div>
           )}
 
-          {/* ── Footer ── */}
+          {/* ── Footer: biometrik + setup baru ── */}
           {panel !== 'setup' && panel !== 'recovery' && (
-            <div className="lock-footer">
-              <button className="lock-link lock-link--muted" onClick={() => goPanel('setup')}>
-                <Plus size={13} /> Setup Vault Baru
-              </button>
+            <div className="ls-footer">
               {hasBiometricCredential() && (
-                <button
-                  className="lock-bio-btn"
-                  onClick={() => setShowBiometric(true)}
-                  aria-label="Buka dengan sidik jari"
-                >
-                  <Fingerprint size={22} />
+                <button className="ls-bio-btn" onClick={() => setShowBiometric(true)}
+                  aria-label="Buka dengan sidik jari">
+                  <Fingerprint size={20} />
                   <span>Sidik Jari</span>
                 </button>
               )}
-              {!hasBiometricCredential() && (
-                <button className="lock-link lock-link--muted"
-                  onClick={() => setShowBiometric(true)} aria-label="Info biometrik">
-                  <Fingerprint size={13} /> Biometrik
-                </button>
-              )}
+              <button style={S.link} onClick={() => goPanel('setup')}>
+                <Plus size={11} /> Vault Baru
+              </button>
             </div>
           )}
         </div>

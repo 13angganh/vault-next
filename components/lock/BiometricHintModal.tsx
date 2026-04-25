@@ -63,9 +63,15 @@ export function BiometricHintModal({
 
   /* Auto-trigger auth saat modal dibuka dalam mode auth */
   useEffect(() => {
-    if (mode === 'auth' && supported) {
-      handleAuth();
+    if (mode !== 'auth' || !supported) return;
+    // Cek session dulu sebelum trigger WebAuthn
+    const hasSS = !!sessionStorage.getItem('vault_ss_mpw');
+    if (!hasSS) {
+      setErrMsg('Sesi biometrik belum aktif. Masuk sekali dengan PIN atau master password — sidik jari aktif kembali setelahnya.');
+      setStep('session_expired');
+      return;
     }
+    handleAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
