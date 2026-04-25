@@ -489,19 +489,7 @@ select option { background: var(--bg-s2); color: var(--text); }
   padding: var(--space-4);
   animation: fadeIn 200ms var(--ease-default) both;
 }
-.modal {
-  background: var(--bg-s2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-modal);
-  width: 100%;
-  max-width: var(--modal-width);
-  max-height: 90dvh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  animation: scaleUp 250ms var(--ease-spring) both;
-}
+/* .modal utama — lihat definisi di section MODAL di bawah */
 .modal-sm { max-width: var(--modal-width-sm); }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -664,9 +652,13 @@ select option { background: var(--bg-s2); color: var(--text); }
   .modal-overlay { padding: var(--space-2); align-items: flex-end; }
   .modal { border-radius: var(--radius-xl) var(--radius-xl) 0 0; max-height: 92dvh; }
   .modal.modal-center { border-radius: var(--radius-xl); }
-  /* Entry form selalu center di semua ukuran layar */
-  .entry-form-overlay { align-items: center; padding: var(--space-4); }
-  .entry-form-overlay .modal { border-radius: var(--radius-xl); max-height: calc(100dvh - 80px); }
+  /* Entry form: selalu center, card muncul di bawah header */
+  .entry-form-overlay { align-items: flex-start; padding: 12px; }
+  .entry-form-overlay .modal {
+    border-radius: var(--radius-xl);
+    max-height: calc(100dvh - var(--appbar-height) - 24px - env(safe-area-inset-top));
+    margin-top: 0;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -906,13 +898,16 @@ select option { background: var(--bg-s2); color: var(--text); }
   top: 0;
   left: 0;
   bottom: 0;
-  width: var(--sidebar-width);
+  /* Lebar dinamis: cukup untuk konten terpanjang, tidak lebih dari 75vw */
+  width: auto;
+  min-width: 200px;
+  max-width: min(280px, 75vw);
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
   z-index: 500;
   display: flex;
   flex-direction: column;
-  overflow: hidden;          /* sidebar sendiri tidak scroll */
+  overflow: hidden;
   box-shadow: var(--shadow-sidebar);
   transform: translateX(-100%);
   transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -957,7 +952,7 @@ select option { background: var(--bg-s2); color: var(--text); }
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding: var(--space-2) var(--space-2) var(--space-2);
+  padding: 6px 8px 8px;
 }
 
 .sidebar-close {
@@ -3888,8 +3883,7 @@ button:active:not(:disabled),
 /* ── Bug 4 FIX: Modal overlay — solid background, z-index cukup tinggi ── */
 /* Override semua modal-overlay agar tidak tembus ke konten di belakang */
 /* Modal overlay — satu definisi bersih (sesi 7) */
-.modal-overlay,
-.entry-form-overlay {
+.modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.65);
@@ -3903,9 +3897,41 @@ button:active:not(:disabled),
   animation: fadeIn 0.18s ease both;
 }
 
-[data-theme="light"] .modal-overlay,
-[data-theme="light"] .entry-form-overlay {
+[data-theme="light"] .modal-overlay {
   background: rgba(0,0,0,0.45);
+}
+
+/* Entry form overlay: mulai dari bawah header, bukan full screen */
+.entry-form-overlay {
+  position: fixed;
+  top: calc(var(--appbar-height) + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 800;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12px 16px;
+  animation: fadeIn 0.18s ease both;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+[data-theme="light"] .entry-form-overlay {
+  background: rgba(0,0,0,0.35);
+}
+
+/* Modal di dalam entry-form-overlay: scroll mandiri */
+.entry-form-overlay .modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top) - 24px);
+  border-radius: var(--radius-xl);
+  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════

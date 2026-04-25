@@ -86,7 +86,7 @@ export function Header({
         <input
           type="search"
           className="app-header__search"
-          placeholder="Cari entri…"
+          placeholder=""
           value={localQuery}
           onChange={(e) => handleSearch(e.target.value)}
           aria-label="Cari entri"
