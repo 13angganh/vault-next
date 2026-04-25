@@ -1995,16 +1995,19 @@ select option { background: var(--bg-s2); color: var(--text); }
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding: 16px 18px 20px;
+  padding: 16px 18px;
 }
 
 .modal__footer {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  align-items: center;
   padding: 12px 18px;
   border-top: 1px solid var(--border);
-  flex-shrink: 0;
+  flex-shrink: 0;           /* tidak ikut scroll */
+  background: var(--bg-s2); /* solid, tidak transparan */
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }
 
 /* ── EntryForm specific ──────────────────────────────────────── */
@@ -3925,6 +3928,16 @@ button:active:not(:disabled),
   background: rgba(0,0,0,0.35);
 }
 
+/* Modal di dalam entry-form-overlay: scroll mandiri, footer selalu terlihat */
+.entry-form-overlay .modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top, 0px) - 24px);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+}
+
 /* Modal di dalam entry-form-overlay: scroll mandiri */
 .entry-form-overlay .modal {
   width: 100%;
@@ -4219,4 +4232,9 @@ button:active:not(:disabled),
   opacity: 0.45;
   transform: none;
   cursor: not-allowed;
+}
+
+/* ── Sidebar: "Next" warna gold — konsisten dengan header dan loading screen ── */
+.sidebar-logo__name--gold {
+  color: var(--gold);
 }
