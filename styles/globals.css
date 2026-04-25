@@ -1945,10 +1945,38 @@ select option { background: var(--bg-s2); color: var(--text); }
   display: flex;
   flex-direction: column;
   animation: fadeScaleIn 0.22s cubic-bezier(0.34, 1.2, 0.64, 1) both;
-  overflow: hidden;
+  overflow: hidden; /* perlu untuk border-radius, tapi body & footer handle scroll */
   position: relative;
   z-index: 801;
   box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+}
+
+/* entry-form-modal: flex column agar footer selalu terlihat */
+.entry-form-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top, 0px) - 24px);
+}
+
+.entry-form-modal .modal__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: 14px 16px;
+}
+
+.entry-form-modal .modal__footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-s2);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }
 
 .modal__header {
