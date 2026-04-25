@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { RefreshCw, Copy, Check, X } from 'lucide-react';
 import { PasswordStrengthMeter } from '@/components/ui/PasswordStrengthMeter';
 
 const CHARS = {
