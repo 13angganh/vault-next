@@ -673,26 +673,25 @@ select option { background: var(--bg-s2); color: var(--text); }
 .app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
-  min-height: calc(var(--vh, 1vh) * 100); /* iOS fallback */
+  height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
   background: var(--bg);
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  overflow: hidden; /* parent tidak scroll — hanya app-main yang scroll */
 }
 
-.app-body {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top));
-  position: relative;
-}
+/* app-body tidak dipakai di AppShell baru — sidebar kini overlay */
+.app-body { display: contents; }
 
 .app-main {
   flex: 1;
   width: 100%;
+  /* Kunci scroll: height = total tinggi dikurangi header */
+  height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top, 0px));
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   padding: var(--space-5) var(--space-4);
@@ -3109,12 +3108,6 @@ select option { background: var(--bg-s2); color: var(--text); }
     gap: var(--space-3);
   }
 
-  .app-main {
-    padding: var(--space-3);
-    /* Tambah padding bawah agar konten tidak tertutup bottom nav */
-    padding-bottom: calc(var(--space-3) + 60px + env(safe-area-inset-bottom));
-  }
-
   /* Modal full-screen di mobile sangat kecil */
   .modal {
     max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px);
@@ -3617,25 +3610,7 @@ button:active:not(:disabled),
    FIX: Settings View — scroll & layout
    ═══════════════════════════════════════════════════════════════ */
 
-/* app-main sudah punya overflow-y: auto tapi app-body overflow: hidden
-   menyebabkan height calculation salah di mobile */
-@media (max-width: 768px) {
-  .app-body {
-    /* Biarkan content flow natural, jangan fix height ketat */
-    height: auto;
-    flex: 1;
-    min-height: 0;
-    overflow: visible;
-  }
-
-  .app-main {
-    overflow-y: auto;
-    height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top));
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    padding-bottom: calc(60px + env(safe-area-inset-bottom) + var(--space-4));
-  }
-}
+/* Scroll fix sesi 7: app-body = display:contents, app-main handle scroll sendiri */
 
 /* Settings view sendiri tidak boleh overflow hidden */
 .settings-view {
@@ -4092,7 +4067,10 @@ button:active:not(:disabled),
 
 /* ── Responsive mobile ── */
 @media (max-width: 768px) {
-  .app-main { padding: var(--space-4) var(--space-3); }
+  .app-main {
+    padding: var(--space-4) var(--space-3);
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  }
   .app-header__add-label { display: none; }
   .app-header__add-btn { width: 44px; padding: 0; justify-content: center; border-radius: var(--radius-md); }
   .app-header__view-title { font-size: var(--text-sm); }
