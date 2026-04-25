@@ -233,7 +233,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
               className="form-pw-gen-link"
               onClick={() => { setPwGenTarget(fd.key); setShowPwGen(true); }}
             >
-              🎲 Generator
+              Generator
             </button>
           )}
         </div>
@@ -311,7 +311,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         {/* Header */}
         <div className="modal__header">
           <h2 className="modal__title">{isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}</h2>
-          <button className="btn-icon modal__close" onClick={onClose} aria-label="Tutup"><X size={16} /></button>
+          <button className="modal__close" onClick={onClose} aria-label="Tutup"><X size={16} /></button>
         </div>
 
         {/* Scrollable body */}

@@ -206,7 +206,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
         {/* Logo */}
         <div className="lock-logo-wrap">
-          <VaultIcon size={52} />
+          <VaultIcon size={44} />
           <h1 className="lock-title">
             Vault <span className="lock-title__accent">Next</span>
           </h1>
@@ -218,15 +218,11 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
           {/* ── PIN ── */}
           {panel === 'pin' && (
             <div className="lock-panel">
-              <div className="lock-panel__header">
-                <Lock size={20} className="lock-panel__icon" />
-                <div>
-                  <div className="lock-panel__title">Masukkan PIN</div>
-                  <div className="lock-panel__sub">
-                    {pinLocked ? `Dikunci ${lockRemain} detik lagi…` : 'PIN untuk membuka Vault'}
-                  </div>
+              {pinLocked && (
+                <div className="lock-locked-notice">
+                  <Lock size={13} /> Dikunci {lockRemain} detik lagi…
                 </div>
-              </div>
+              )}
 
               <PINPad
                 value={pinBuf}
@@ -260,13 +256,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
           {/* ── Master Password ── */}
           {panel === 'master' && (
             <div className="lock-panel">
-              <div className="lock-panel__header">
-                <KeyRound size={20} className="lock-panel__icon" />
-                <div>
-                  <div className="lock-panel__title">Master Password</div>
-                  <div className="lock-panel__sub">Gunakan master password untuk membuka vault</div>
-                </div>
-              </div>
+
 
               {hint && (
                 <div className="lock-hint">
@@ -320,19 +310,9 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
           {/* ── Seed Phrase Login ── */}
           {panel === 'seed' && (
             <div className="lock-panel">
-              <div className="lock-panel__header">
-                <KeyRound size={20} className="lock-panel__icon" />
-                <div>
-                  <div className="lock-panel__title">Masuk via Seed Phrase</div>
-                  <div className="lock-panel__sub">Vault terbuka langsung, data tidak terhapus</div>
-                </div>
-              </div>
 
-              <div className="lock-seed-info">
-                Masukkan seed phrase → vault langsung terbuka dengan semua data utuh.
-              </div>
 
-              <div className="lock-field">
+<div className="lock-field">
                 <label className="lock-label">Recovery Phrase (pisahkan spasi)</label>
                 <textarea
                   className="lock-textarea"

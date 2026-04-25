@@ -4,16 +4,16 @@ import { useEffect } from 'react';
 import { Delete } from 'lucide-react';
 
 interface PINPadProps {
-  value: string;           // digit sudah diketik (max 6)
-  maxLen?: number;
-  onDigit: (d: string) => void;
-  onDelete: () => void;
-  onSubmit?: () => void;
-  disabled?: boolean;
-  label?: string;
-  sublabel?: string;
-  error?: string;
-  locked?: boolean;
+  value:        string;
+  maxLen?:      number;
+  onDigit:      (d: string) => void;
+  onDelete:     () => void;
+  onSubmit?:    () => void;
+  disabled?:    boolean;
+  label?:       string;
+  sublabel?:    string;
+  error?:       string;
+  locked?:      boolean;
   lockedLabel?: string;
 }
 
@@ -33,7 +33,6 @@ export function PINPad({
   lockedLabel,
 }: PINPadProps) {
 
-  // Keyboard support
   useEffect(() => {
     if (disabled || locked) return;
     const handler = (e: KeyboardEvent) => {
@@ -45,7 +44,6 @@ export function PINPad({
     return () => window.removeEventListener('keydown', handler);
   }, [disabled, locked, value, maxLen, onDigit, onDelete, onSubmit]);
 
-  // Auto-submit saat sudah maxLen
   useEffect(() => {
     if (value.length === maxLen && onSubmit) {
       const t = setTimeout(onSubmit, 80);
@@ -56,59 +54,53 @@ export function PINPad({
   const dots = Array.from({ length: maxLen }, (_, i) => i);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-6)' }}>
-      {/* Label */}
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text)', letterSpacing: 'var(--ls-wide)' }}>
-          {locked ? lockedLabel ?? 'PIN Terkunci' : label}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}>
+
+      {/* Label + error */}
+      <div style={{ textAlign: 'center', minHeight: 36 }}>
+        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text)', letterSpacing: '0.04em' }}>
+          {locked ? (lockedLabel ?? 'PIN Terkunci') : label}
         </div>
         {sublabel && !error && (
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)', marginTop: 4 }}>{sublabel}</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)', marginTop: 2 }}>{sublabel}</div>
         )}
         {error && (
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--danger)', marginTop: 4, animation: 'shake 0.3s ease' }}>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--red)', marginTop: 2, animation: 'shake 0.3s ease' }}>
             {error}
           </div>
         )}
       </div>
 
       {/* Dots */}
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 10 }}>
         {dots.map((i) => {
           const filled = i < value.length;
           return (
-            <div
-              key={i}
-              style={{
-                width: 14,
-                height: 14,
-                borderRadius: '50%',
-                border: `2px solid ${filled ? 'var(--gold)' : 'var(--border2)'}`,
-                background: filled ? 'var(--gold)' : 'transparent',
-                transition: 'all 0.15s ease',
-                transform: filled ? 'scale(1.15)' : 'scale(1)',
-              }}
-            />
+            <div key={i} style={{
+              width: 12, height: 12,
+              borderRadius: '50%',
+              border: `2px solid ${filled ? 'var(--gold)' : 'var(--border2)'}`,
+              background: filled ? 'var(--gold)' : 'transparent',
+              transition: 'all 0.15s ease',
+              transform: filled ? 'scale(1.2)' : 'scale(1)',
+            }} />
           );
         })}
       </div>
 
-      {/* Keypad */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 10,
-          width: '100%',
-          maxWidth: 280,
-          opacity: locked ? 0.4 : disabled ? 0.6 : 1,
-          pointerEvents: locked || disabled ? 'none' : 'auto',
-        }}
-      >
+      {/* Keypad — kompak, 52px per tombol */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 8,
+        width: '100%',
+        maxWidth: 260,
+        opacity: locked ? 0.4 : disabled ? 0.6 : 1,
+        pointerEvents: locked || disabled ? 'none' : 'auto',
+      }}>
         {KEYS.map((k, idx) => {
           const isEmpty = k === '';
-          const isDel = k === '⌫';
-
+          const isDel   = k === '⌫';
           return (
             <button
               key={idx}
@@ -119,53 +111,51 @@ export function PINPad({
               }}
               disabled={isEmpty}
               style={{
-                height: 64,
-                borderRadius: 'var(--radius-lg)',
+                height: 52,
+                borderRadius: 'var(--radius-md)',
                 border: isEmpty ? 'none' : '1px solid var(--pin-key-border)',
                 background: isEmpty ? 'transparent' : 'var(--pin-key-bg)',
                 color: isDel ? 'var(--muted2)' : 'var(--text)',
-                fontSize: isDel ? 16 : 'var(--text-xl)',
+                fontSize: isDel ? 16 : 'var(--text-lg)',
                 fontFamily: 'var(--font-sans)',
                 fontWeight: 500,
                 cursor: isEmpty ? 'default' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'all var(--transition-fast)',
+                transition: 'all 0.12s ease',
                 userSelect: 'none',
                 WebkitTapHighlightColor: 'transparent',
+                touchAction: 'manipulation',
               }}
               onMouseDown={(e) => {
                 if (isEmpty) return;
                 const el = e.currentTarget;
                 el.style.background = 'var(--gold-soft)';
-                el.style.borderColor = 'var(--gold-border)';
-                el.style.transform = 'scale(0.95)';
+                el.style.transform = 'scale(0.93)';
               }}
               onMouseUp={(e) => {
                 const el = e.currentTarget;
                 el.style.background = 'var(--pin-key-bg)';
-                el.style.borderColor = 'var(--pin-key-border)';
                 el.style.transform = 'scale(1)';
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget;
                 el.style.background = 'var(--pin-key-bg)';
-                el.style.borderColor = 'var(--pin-key-border)';
                 el.style.transform = 'scale(1)';
               }}
               onTouchStart={(e) => {
                 const el = e.currentTarget;
                 el.style.background = 'var(--gold-soft)';
-                el.style.borderColor = 'var(--gold-border)';
+                el.style.transform = 'scale(0.93)';
               }}
               onTouchEnd={(e) => {
                 const el = e.currentTarget;
                 el.style.background = 'var(--pin-key-bg)';
-                el.style.borderColor = 'var(--pin-key-border)';
+                el.style.transform = 'scale(1)';
               }}
             >
-              {isDel ? <Delete size={20} /> : k}
+              {isDel ? <Delete size={18} /> : k}
             </button>
           );
         })}
