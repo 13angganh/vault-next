@@ -144,16 +144,7 @@ export function PINPad({
                 el.style.background = 'var(--pin-key-bg)';
                 el.style.transform = 'scale(1)';
               }}
-              onTouchStart={(e) => {
-                const el = e.currentTarget;
-                el.style.background = 'var(--gold-soft)';
-                el.style.transform = 'scale(0.93)';
-              }}
-              onTouchEnd={(e) => {
-                const el = e.currentTarget;
-                el.style.background = 'var(--pin-key-bg)';
-                el.style.transform = 'scale(1)';
-              }}
+
             >
               {isDel ? <Delete size={18} /> : k}
             </button>

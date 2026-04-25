@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 
 export function useRipple() {
   useEffect(() => {
-    function createRipple(e: MouseEvent | TouchEvent) {
+    function createRipple(e: PointerEvent) {
       const target = (e.target as HTMLElement).closest<HTMLElement>('.btn, .icon-btn, .sidebar-item, .lock-bio-btn');
       if (!target) return;
 
@@ -16,13 +16,10 @@ export function useRipple() {
 
       let clientX: number;
       let clientY: number;
-      if (e instanceof TouchEvent) {
-        clientX = e.touches[0]?.clientX ?? rect.left + rect.width / 2;
-        clientY = e.touches[0]?.clientY ?? rect.top  + rect.height / 2;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
+      // Aman di desktop dan mobile — hindari instanceof TouchEvent
+      const pe = e as PointerEvent;
+      clientX = pe.clientX ?? rect.left + rect.width / 2;
+      clientY = pe.clientY ?? rect.top  + rect.height / 2;
 
       const x    = clientX - rect.left;
       const y    = clientY - rect.top;

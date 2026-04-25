@@ -1956,12 +1956,10 @@ select option { background: var(--bg-s2); color: var(--text); }
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  max-height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top, 0px) - 24px);
 }
 
 .entry-form-modal .modal__body {
-  flex: 1;
-  min-height: 0;
+  max-height: calc(100dvh - var(--appbar-height) - 56px - 56px - 32px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
@@ -2128,6 +2126,11 @@ select option { background: var(--bg-s2); color: var(--text); }
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  max-height: 112px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-bottom: 2px;
 }
 
 .cat-picker__item {
@@ -3940,18 +3943,15 @@ button:active:not(:disabled),
 /* Entry form overlay: mulai dari bawah header, bukan full screen */
 .entry-form-overlay {
   position: fixed;
-  top: calc(var(--appbar-height) + env(safe-area-inset-top));
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.55);
+  inset: 0;
+  background: rgba(0,0,0,0.6);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   z-index: 800;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 12px 16px;
+  padding: calc(var(--appbar-height) + 12px) 16px 16px;
   animation: fadeIn 0.18s ease both;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -3965,11 +3965,12 @@ button:active:not(:disabled),
 .entry-form-overlay .modal {
   width: 100%;
   max-width: 480px;
-  max-height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top, 0px) - 24px);
   border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* border-radius clipping */
+  overflow: hidden;
+  flex-shrink: 0; /* tidak dikompres oleh overlay */
+  margin: auto 0; /* vertikal center jika konten pendek */
 }
 
 /* duplikat dihapus */
