@@ -652,13 +652,7 @@ select option { background: var(--bg-s2); color: var(--text); }
   .modal-overlay { padding: var(--space-2); align-items: flex-end; }
   .modal { border-radius: var(--radius-xl) var(--radius-xl) 0 0; max-height: 92dvh; }
   .modal.modal-center { border-radius: var(--radius-xl); }
-  /* Entry form: selalu center, card muncul di bawah header */
-  .entry-form-overlay { align-items: flex-start; padding: 12px; }
-  .entry-form-overlay .modal {
-    border-radius: var(--radius-xl);
-    max-height: calc(100dvh - var(--appbar-height) - 24px - env(safe-area-inset-top));
-    margin-top: 0;
-  }
+  /* entry-form-overlay: lihat base rule di bawah */
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -994,9 +988,14 @@ select option { background: var(--bg-s2); color: var(--text); }
   font-family: var(--font-sans);
   font-weight: 800;
   font-size: var(--text-md);
-  color: var(--gold);
+  color: var(--text);
   letter-spacing: -0.02em;
   line-height: 1;
+  white-space: nowrap;
+}
+
+.sidebar-logo__name--gold {
+  color: var(--gold);
 }
 
 .sidebar-logo__version {
@@ -3938,14 +3937,7 @@ button:active:not(:disabled),
   flex-direction: column;
 }
 
-/* Modal di dalam entry-form-overlay: scroll mandiri */
-.entry-form-overlay .modal {
-  width: 100%;
-  max-width: 480px;
-  max-height: calc(100dvh - var(--appbar-height) - env(safe-area-inset-top) - 24px);
-  border-radius: var(--radius-xl);
-  flex-shrink: 0;
-}
+/* duplikat dihapus */
 
 /* ═══════════════════════════════════════════════════════════════
    SESI 6E — BUG FIXES
@@ -4234,7 +4226,3 @@ button:active:not(:disabled),
   cursor: not-allowed;
 }
 
-/* ── Sidebar: "Next" warna gold — konsisten dengan header dan loading screen ── */
-.sidebar-logo__name--gold {
-  color: var(--gold);
-}
