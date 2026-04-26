@@ -1913,12 +1913,14 @@ select option { background: var(--bg-s2); color: var(--text); }
   background: var(--surface-raised);
   border: 1px solid var(--border-focus);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 24px 20px;
   width: min(320px, 90%);
+  max-height: 85dvh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-align: center;
 }
 
@@ -1977,7 +1979,8 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 
 .entry-form-modal .modal__body {
-  max-height: calc(100dvh - var(--appbar-height) - 56px - 56px - 32px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
@@ -2144,10 +2147,6 @@ select option { background: var(--bg-s2); color: var(--text); }
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  max-height: 112px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
   padding-bottom: 2px;
 }
 
@@ -3967,15 +3966,10 @@ button:active:not(:disabled),
   -webkit-backdrop-filter: blur(4px);
   z-index: 900;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: calc(var(--appbar-height) + env(safe-area-inset-top, 0px) + 8px);
-  padding-left: 16px;
-  padding-right: 16px;
-  padding-bottom: 16px;
+  padding: 16px;
   animation: fadeIn 0.18s ease both;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 [data-theme="light"] .entry-form-overlay {
