@@ -1912,16 +1912,35 @@ select option { background: var(--bg-s2); color: var(--text); }
 .entry-unlock-card {
   background: var(--surface-raised);
   border: 1px solid var(--border-focus);
-  border-radius: var(--radius-lg);
-  padding: 24px 20px;
-  width: min(320px, 90%);
-  max-height: 85dvh;
-  overflow-y: auto;
+  border-radius: var(--radius-xl);
+  padding: 32px 24px 28px;
+  width: 100%;
+  max-width: 380px;
+  max-height: 88dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   text-align: center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+/* Pastikan tombol unlock selalu terlihat */
+.entry-unlock-actions {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.entry-unlock-actions .btn {
+  flex: 1;
+  height: 48px;
+  font-size: var(--text-base);
+  font-weight: 600;
 }
 
 .entry-unlock-icon { font-size: 32px; }
@@ -1973,18 +1992,38 @@ select option { background: var(--bg-s2); color: var(--text); }
 
 /* entry-form-modal: flex column agar footer selalu terlihat */
 .entry-form-modal {
+  background: var(--surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  width: 100%;
+  max-width: 480px;
+  height: 92dvh;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
   overflow: hidden;
 }
 
-.entry-form-modal .modal__body {
+.entry-form-modal .modal__body,
+.entry-form-modal .form-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding: 20px 24px 12px;
   overscroll-behavior-y: contain;
-  padding: 14px 16px;
+}
+
+/* PASTIKAN FOOTER SELALU DI BAWAH */
+.entry-form-modal .modal__footer,
+.entry-form-modal .form-footer,
+.entry-form-modal .form-actions {
+  flex-shrink: 0;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
 .entry-form-modal .modal__footer {
@@ -3961,15 +4000,14 @@ button:active:not(:disabled),
 .entry-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 900;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(12px);
+  z-index: 1000;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 16px;
-  animation: fadeIn 0.18s ease both;
+  padding: 12px 12px 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 [data-theme="light"] .entry-form-overlay {
