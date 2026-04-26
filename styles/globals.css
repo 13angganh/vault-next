@@ -678,14 +678,11 @@ select option { background: var(--bg-s2); color: var(--text); }
 
 .app-main {
   flex: 1;
-  min-height: 0;        /* kunci flex scroll — tanpa ini flex child tidak bisa scroll */
+  min-height: 0;
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-  padding: var(--space-5) var(--space-4);
-  padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;        /* app-main tidak scroll — vault-entries-scroll yang scroll */
+  display: flex;
+  flex-direction: column;
   outline: none;
 }
 
@@ -1307,11 +1304,14 @@ select option { background: var(--bg-s2); color: var(--text); }
    ═══════════════════════════════════════════════════════════════ */
 
 .vault-list-view {
-  max-width: var(--content-max);
+  display: contents; /* tidak perlu wrapper — header dan scroll-area langsung di app-main */
 }
 
 .vault-list-header {
-  margin-bottom: var(--space-5);
+  flex-shrink: 0;
+  padding: var(--space-5) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 
 .vault-list-title {
@@ -1455,7 +1455,15 @@ select option { background: var(--bg-s2); color: var(--text); }
    ═══════════════════════════════════════════════════════════════ */
 
 .settings-view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: var(--space-5) var(--space-4);
+  padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
   max-width: 600px;
+  width: 100%;
 }
 
 .settings-header {
@@ -3954,14 +3962,17 @@ button:active:not(:disabled),
 .entry-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  z-index: 800;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 900;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: calc(var(--appbar-height) + 12px) 16px 16px;
+  padding-top: calc(var(--appbar-height) + env(safe-area-inset-top, 0px) + 8px);
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 16px;
   animation: fadeIn 0.18s ease both;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -4064,6 +4075,10 @@ button:active:not(:disabled),
 .shell-view-anim {
   animation: fadeScaleIn 0.22s cubic-bezier(0.34, 1.1, 0.64, 1) both;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Linear progress bar — global loading ── */
@@ -4222,11 +4237,7 @@ button:active:not(:disabled),
 
 /* ── Responsive mobile ── */
 @media (max-width: 768px) {
-  .app-main {
-    padding: var(--space-4) var(--space-3);
-    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
-    /* min-height: 0 sudah di-set di base rule */
-  }
+  /* app-main tidak perlu padding — vault-entries-scroll yang handle */
   .app-header__add-label { display: none; }
   .app-header__add-btn { width: 44px; padding: 0; justify-content: center; border-radius: var(--radius-md); }
   .app-header__view-title { font-size: var(--text-sm); }
@@ -4276,3 +4287,15 @@ button:active:not(:disabled),
 .entry-field__btn { width:28px;height:28px;background:none;border:1px solid var(--border);cursor:pointer;color:var(--muted2);display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);transition:all var(--transition-fast);flex-shrink:0;position:relative;z-index:1;touch-action:manipulation; }
 .entry-field__btn > svg { position:relative;z-index:2; }
 .entry-field__btn:hover { color:var(--text);background:var(--bg-s3);border-color:var(--border2); }
+
+/* ── Vault entries scroll area — mandiri, tidak ikut header ── */
+.vault-entries-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: var(--space-4) var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+}
