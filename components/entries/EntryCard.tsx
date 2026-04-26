@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useRef, memo } from 'react';
-import { Pencil, Lock, Unlock, Star, RotateCcw, Trash2, X, Copy, Eye, EyeOff } from 'lucide-react';
+import { Pencil, Lock, Unlock, Star, RotateCcw, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
 import { useAppStore }      from '@/lib/store/appStore';
 import { saveVault }         from '@/lib/vaultService';
 import { CategoryIcon }      from '@/components/entries/CategoryIcon';
@@ -179,7 +179,7 @@ export function EntryCard({
           <div className="entry-field__actions">
             {sensitive && (
               <button
-                className="entry-field__btn btn-icon"
+                className="entry-field__btn"
                 onClick={onToggleVisible}
                 aria-label={isVisible ? 'Sembunyikan' : 'Tampilkan'}
                 title={isVisible ? 'Sembunyikan' : 'Tampilkan'}
@@ -188,12 +188,12 @@ export function EntryCard({
               </button>
             )}
             <button
-              className="entry-field__btn btn-icon"
+              className="entry-field__btn"
               onClick={() => copy(value, label)}
               aria-label={`Salin ${label}`}
               title={`Salin ${label}`}
             >
-              ⎘
+              <Copy size={14} />
             </button>
           </div>
         </div>
@@ -221,7 +221,7 @@ export function EntryCard({
         )}
         <div className="entry-field__actions entry-field__actions--seed">
           <button
-            className="entry-field__btn btn-icon"
+            className="entry-field__btn"
             onClick={() => store.toggleSeedVisible(entry.id)}
             aria-label={seedShow ? 'Sembunyikan seed' : 'Tampilkan seed'}
           >
@@ -229,11 +229,11 @@ export function EntryCard({
           </button>
           {seedShow && (
             <button
-              className="entry-field__btn btn-icon"
+              className="entry-field__btn"
               onClick={() => copy(words.join(' '), 'Seed Phrase')}
               aria-label="Salin seed phrase"
             >
-              ⎘
+              <Copy size={14} />
             </button>
           )}
         </div>
@@ -401,9 +401,9 @@ export function EntryCard({
         </div>
       )}
 
-      {/* ── Unlock prompt overlay ── */}
+      {/* ── Unlock prompt overlay — fixed di atas semua konten ── */}
       {showUnlockPrompt && (
-        <div className="entry-unlock-overlay" role="dialog" aria-modal="true" aria-label="Verifikasi untuk membuka entri">
+        <div className="entry-unlock-overlay entry-unlock-overlay--fixed" role="dialog" aria-modal="true" aria-label="Verifikasi untuk membuka entri" onClick={() => { setShowUnlockPrompt(false); setUnlockInput(''); }}>
           <div className="entry-unlock-card" onClick={(e) => e.stopPropagation()}>
             <div className="entry-unlock-icon"><Lock size={28} /></div>
             <p className="entry-unlock-title">Entri Terkunci</p>

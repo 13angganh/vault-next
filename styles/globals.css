@@ -650,6 +650,7 @@ select option { background: var(--bg-s2); color: var(--text); }
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .modal-overlay { padding: var(--space-2); align-items: flex-end; }
+  .entry-form-overlay { align-items: center; padding: 12px 16px; }
   .modal { border-radius: var(--radius-xl) var(--radius-xl) 0 0; max-height: 92dvh; }
   .modal.modal-center { border-radius: var(--radius-xl); }
   /* entry-form-overlay: lihat base rule di bawah */
@@ -1885,6 +1886,15 @@ select option { background: var(--bg-s2); color: var(--text); }
   z-index: 10;
   border-radius: var(--radius-lg);
   animation: fadeIn 0.15s ease;
+}
+
+/* Fixed variant: tidak terpotong oleh overflow:hidden card */
+.entry-unlock-overlay--fixed {
+  position: fixed;
+  inset: 0;
+  border-radius: 0;
+  z-index: 900;
+  padding: 16px;
 }
 
 .entry-card {
@@ -4262,3 +4272,7 @@ button:active:not(:disabled),
   cursor: not-allowed;
 }
 
+
+.entry-field__btn { width:28px;height:28px;background:none;border:1px solid var(--border);cursor:pointer;color:var(--muted2);display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);transition:all var(--transition-fast);flex-shrink:0;position:relative;z-index:1;touch-action:manipulation; }
+.entry-field__btn > svg { position:relative;z-index:2; }
+.entry-field__btn:hover { color:var(--text);background:var(--bg-s3);border-color:var(--border2); }
