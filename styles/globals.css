@@ -1910,68 +1910,35 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 
 .entry-unlock-card {
-  background: var(--surface-raised);
-  border: 1px solid var(--border-focus);
-  border-radius: var(--radius-xl);
-  padding: 32px 24px 28px;
-  width: 100%;
-  max-width: 380px;
-  max-height: 92dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  text-align: center;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.6);
-  margin-bottom: env(safe-area-inset-bottom, 20px);
+  background: var(--surface-raised) !important;
+  border: 1px solid var(--border-focus) !important;
+  border-radius: var(--radius-xl) !important;
+  padding: 36px 24px 32px !important;
+  width: 100% !important;
+  max-width: 380px !important;
+  max-height: 92dvh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 24px !important;
+  text-align: center !important;
+  overflow-y: auto !important;
+  box-shadow: 0 30px 70px -20px rgb(0 0 0 / 0.7) !important;
+  margin-bottom: env(safe-area-inset-bottom, 24px) !important;
 }
 
 .entry-unlock-actions {
-  width: 100%;
-  display: flex;
-  gap: 12px;
-  margin-top: auto;
+  width: 100% !important;
+  display: flex !important;
+  gap: 12px !important;
+  margin-top: auto !important;
 }
 
 .entry-unlock-actions .btn {
-  flex: 1;
-  height: 52px;
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-/* Tombol unlock selalu terlihat & besar */
-.entry-unlock-actions {
-  width: 100%;
-  display: flex;
-  gap: 12px;
-  margin-top: auto;
-  padding-top: 12px;
-}
-
-.entry-unlock-actions .btn {
-  flex: 1;
-  height: 52px;
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-/* Pastikan tombol unlock selalu terlihat */
-.entry-unlock-actions {
-  width: 100%;
-  display: flex;
-  gap: 12px;
-  margin-top: auto;
-  padding-top: 8px;
-}
-
-.entry-unlock-actions .btn {
-  flex: 1;
-  height: 48px;
-  font-size: var(--text-base);
-  font-weight: 600;
+  flex: 1 !important;
+  height: 54px !important;
+  font-size: var(--text-base) !important;
+  font-weight: 600 !important;
 }
 
 .entry-unlock-icon { font-size: 32px; }
@@ -2023,14 +1990,14 @@ select option { background: var(--bg-s2); color: var(--text); }
 
 /* entry-form-modal: flex column agar footer selalu terlihat */
 .entry-form-modal {
-  background: var(--surface);
+  background: var(--surface) !important;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   width: 100%;
   max-width: 480px;
-  height: 94dvh;
+  height: 96dvh !important;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+  box-shadow: 0 30px 60px -15px rgb(0 0 0 / 0.6) !important;
   overflow: hidden;
 }
 
@@ -4031,10 +3998,10 @@ button:active:not(:disabled),
 .entry-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(7, 8, 15, 0.98);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  z-index: 1100;
+  background: rgba(7, 8, 15, 0.98) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  z-index: 1200 !important;
   display: flex;
   align-items: flex-end;
   justify-content: center;
