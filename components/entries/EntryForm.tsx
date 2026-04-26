@@ -1,26 +1,13 @@
 'use client';
 
-/**
- * Vault Next — EntryForm
- * Modal form tambah / edit entri.
- *
- * - Field dinamis per kategori
- * - Category picker dengan emoji
- * - Favorit toggle
- * - Password generator built-in
- * - Strength meter real-time
- * - Validasi: nama wajib
- * - Escape key dismiss
- */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X } from 'lucide-react';
-import { useAppStore }             from '@/lib/store/appStore';
-import { saveVault }                from '@/lib/vaultService';
-import { CategoryIcon }             from '@/components/entries/CategoryIcon';
-import { PasswordStrengthMeter }    from '@/components/ui/PasswordStrengthMeter';
-import { PasswordGenerator }        from '@/components/ui/PasswordGenerator';
-import { DEFAULT_CATEGORIES }       from '@/lib/types';
+import { X, ArrowLeft } from 'lucide-react';
+import { useAppStore }           from '@/lib/store/appStore';
+import { saveVault }              from '@/lib/vaultService';
+import { CategoryIcon }           from '@/components/entries/CategoryIcon';
+import { PasswordStrengthMeter }  from '@/components/ui/PasswordStrengthMeter';
+import { PasswordGenerator }      from '@/components/ui/PasswordGenerator';
+import { DEFAULT_CATEGORIES }     from '@/lib/types';
 import type { VaultEntry, CustomCategory } from '@/lib/types';
 
 function generateId(): string {
@@ -28,23 +15,21 @@ function generateId(): string {
 }
 
 interface EntryFormProps {
-  entry?:   VaultEntry;      // jika undefined → mode tambah
+  entry?:   VaultEntry;
   onClose:  () => void;
   onSaved:  (entry: VaultEntry) => void;
 }
 
-// ── Field definitions per category ───────────────────────────────────────────
-
 type FieldKey = keyof VaultEntry;
 
 interface FieldDef {
-  key:         FieldKey;
-  label:       string;
-  type?:       'text' | 'password' | 'url' | 'email' | 'textarea';
+  key:          FieldKey;
+  label:        string;
+  type?:        'text' | 'password' | 'url' | 'email' | 'textarea';
   placeholder?: string;
-  sensitive?:  boolean;      // tampilkan strength meter jika true
-  mono?:       boolean;
-  hint?:       string;
+  sensitive?:   boolean;
+  mono?:        boolean;
+  hint?:        string;
 }
 
 const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
@@ -79,7 +64,7 @@ const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
     { key: 'network',    label: 'Jaringan (Network)', placeholder: 'Ethereum, Solana…' },
     { key: 'walletAddr', label: 'Alamat Wallet', mono: true },
     { key: 'walletPw',   label: 'Password Wallet', type: 'password', mono: true },
-    { key: 'note',       label: 'Catatan / Seed Phrase (teks)', type: 'textarea', hint: 'Atau masukkan seed phrase di bawah (word-by-word)' },
+    { key: 'note',       label: 'Catatan', type: 'textarea' },
     { key: 'url',        label: 'URL', type: 'url' },
   ],
   kartu: [
@@ -105,21 +90,16 @@ const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
 
 function getFieldsForCat(catId: string, customCats: CustomCategory[]): FieldDef[] {
   if (FIELDS_BY_CAT[catId]) return FIELDS_BY_CAT[catId];
-  // Custom kategori → gunakan template lainnya
-  const _ = customCats; // suppress lint
+  void customCats;
   return FIELDS_BY_CAT['lainnya'];
 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const store      = useAppStore();
   const customCats = store.customCats;
   const allCats    = [...DEFAULT_CATEGORIES, ...customCats];
+  const isEdit     = !!entry;
 
-  const isEdit = !!entry;
-
-  // Form state
   const [cat,         setCat]         = useState(entry?.cat ?? 'sosmed');
   const [name,        setName]        = useState(entry?.name ?? '');
   const [fav,         setFav]         = useState(entry?.fav ?? false);
@@ -128,17 +108,12 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [saving,      setSaving]      = useState(false);
   const [showPwGen,   setShowPwGen]   = useState(false);
   const [pwGenTarget, setPwGenTarget] = useState<FieldKey>('pass');
-
-  // Seed phrase (crypto) — manage as array
-  const [seedWords, setSeedWords] = useState<string[]>(entry?.seedPhrase ?? Array(12).fill(''));
+  const [seedWords,   setSeedWords]   = useState<string[]>(entry?.seedPhrase ?? Array(12).fill(''));
 
   const nameRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    nameRef.current?.focus();
-  }, []);
+  useEffect(() => { nameRef.current?.focus(); }, []);
 
-  // Escape key dismiss
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !showPwGen) onClose();
@@ -157,7 +132,6 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
       nameRef.current?.focus();
       return;
     }
-
     setSaving(true);
     try {
       const newEntry: VaultEntry = {
@@ -172,14 +146,12 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           ? { seedPhrase: seedWords.map((w) => w.trim()).filter(Boolean) }
           : {}),
       };
-
       let newVault: VaultEntry[];
       if (isEdit) {
         newVault = store.vault.map((e) => (e.id === newEntry.id ? newEntry : e));
       } else {
         newVault = [newEntry, ...store.vault];
       }
-
       store.setVault(newVault);
       await saveVault(store.masterPw, newVault, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds);
       onSaved(newEntry);
@@ -191,19 +163,11 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     }
   };
 
-  const handlePwGenUse = (pw: string) => {
-    setField(pwGenTarget, pw);
-    setShowPwGen(false);
-  };
-
   const currentFields = getFieldsForCat(cat, customCats);
-
-  // ── Render field ───────────────────────────────────────────────────────
 
   const renderField = (fd: FieldDef) => {
     const val = (values[fd.key] as string) ?? '';
     const id  = `form-field-${fd.key}`;
-
     if (fd.type === 'textarea') {
       return (
         <div key={fd.key} className="form-group">
@@ -220,26 +184,21 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         </div>
       );
     }
-
-    const isPasswordField = fd.type === 'password';
-
+    const isPw = fd.type === 'password';
     return (
       <div key={fd.key} className="form-group">
         <div className="form-label-row">
           <label htmlFor={id} className="form-label">{fd.label}</label>
-          {isPasswordField && (
-            <button
-              type="button"
-              className="form-pw-gen-link"
-              onClick={() => { setPwGenTarget(fd.key); setShowPwGen(true); }}
-            >
+          {isPw && (
+            <button type="button" className="form-pw-gen-link"
+              onClick={() => { setPwGenTarget(fd.key); setShowPwGen(true); }}>
               Generator
             </button>
           )}
         </div>
         <input
           id={id}
-          type={isPasswordField ? 'text' : (fd.type ?? 'text')}
+          type={isPw ? 'text' : (fd.type ?? 'text')}
           className={`input ${fd.mono ? 'mono' : ''}`}
           value={val}
           placeholder={fd.placeholder}
@@ -247,21 +206,17 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           autoComplete="off"
           spellCheck={false}
         />
-        {fd.sensitive && isPasswordField && val && (
-          <PasswordStrengthMeter password={val} />
-        )}
+        {fd.sensitive && isPw && val && <PasswordStrengthMeter password={val} />}
       </div>
     );
   };
-
-  // ── Seed phrase section (crypto only) ─────────────────────────────────
 
   const renderSeedSection = () => {
     if (cat !== 'crypto') return null;
     return (
       <div className="form-group">
         <label className="form-label">Seed Phrase (12 atau 24 kata)</label>
-        <p className="form-hint">Isi satu kata per kotak, atau kosongkan jika tidak ada</p>
+        <p className="form-hint">Isi satu kata per kotak</p>
         <div className="seed-grid">
           {seedWords.map((w, i) => (
             <div key={i} className="seed-grid__item">
@@ -283,41 +238,39 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           ))}
         </div>
         <div className="seed-grid__actions">
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={() => setSeedWords(Array(12).fill(''))}
-          >
-            Reset 12 kata
-          </button>
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={() => setSeedWords(Array(24).fill(''))}
-          >
-            Ganti ke 24 kata
-          </button>
+          <button type="button" className="btn btn--ghost btn--sm"
+            onClick={() => setSeedWords(Array(12).fill(''))}>Reset 12 kata</button>
+          <button type="button" className="btn btn--ghost btn--sm"
+            onClick={() => setSeedWords(Array(24).fill(''))}>Ganti ke 24 kata</button>
         </div>
       </div>
     );
   };
 
-  // ── Main render ────────────────────────────────────────────────────────
-
+  // ── Render sebagai HALAMAN PENUH, bukan overlay ──
+  // Menggantikan vault-list, bukan di atas konten
   return (
-    <div className="modal-overlay entry-form-overlay" role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}>
-      <div className="modal entry-form-modal" onClick={(e) => e.stopPropagation()}>
+    <>
+      {/* Full-page form — menggantikan list view */}
+      <div className="entry-form-page">
 
-        {/* Header */}
-        <div className="modal__header">
-          <h2 className="modal__title">{isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}</h2>
-          <button className="modal__close" onClick={onClose} aria-label="Tutup"><X size={16} /></button>
+        {/* Header sticky */}
+        <div className="entry-form-page__header">
+          <button className="entry-form-page__back" onClick={onClose} aria-label="Kembali">
+            <ArrowLeft size={18} />
+          </button>
+          <h2 className="entry-form-page__title">
+            {isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}
+          </h2>
+          <button className="entry-form-page__close" onClick={onClose} aria-label="Tutup">
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Scrollable body */}
-        <div className="modal__body entry-form-body">
+        {/* Scrollable content */}
+        <div className="entry-form-page__body">
 
-          {/* Nama (selalu ada) */}
+          {/* Nama */}
           <div className="form-group">
             <label htmlFor="form-name" className="form-label">
               Nama <span className="form-required">*</span>
@@ -336,10 +289,10 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             {nameError && <p className="form-error">{nameError}</p>}
           </div>
 
-          {/* Category picker */}
+          {/* Kategori — tampil full, tidak scroll sendiri */}
           <div className="form-group">
             <label className="form-label">Kategori</label>
-            <div className="cat-picker">
+            <div className="cat-picker cat-picker--full">
               {allCats.map((c) => (
                 <button
                   key={c.id}
@@ -355,7 +308,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             </div>
           </div>
 
-          {/* Favorit toggle */}
+          {/* Favorit */}
           <div className="form-group form-group--inline">
             <label htmlFor="form-fav" className="form-label">Tandai Favorit</label>
             <button
@@ -368,15 +321,15 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             />
           </div>
 
-          {/* Dynamic fields */}
           <div className="form-divider" />
+
+          {/* Dynamic fields */}
           {currentFields.map(renderField)}
           {renderSeedSection()}
-
         </div>
 
-        {/* Footer */}
-        <div className="modal__footer entry-form-footer">
+        {/* Footer sticky — selalu terlihat */}
+        <div className="entry-form-page__footer">
           <button className="btn btn--ghost" onClick={onClose} disabled={saving}>
             Batal
           </button>
@@ -386,17 +339,18 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         </div>
       </div>
 
-      {/* Password Generator sub-modal */}
+      {/* Password Generator */}
       {showPwGen && (
-        <div className="modal-overlay pw-gen-overlay" role="dialog" aria-modal="true">
-          <div className="modal pw-gen-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" role="dialog" aria-modal="true"
+          onClick={() => setShowPwGen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <PasswordGenerator
-              onUse={handlePwGenUse}
+              onUse={(pw) => { setField(pwGenTarget, pw); setShowPwGen(false); }}
               onClose={() => setShowPwGen(false)}
             />
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

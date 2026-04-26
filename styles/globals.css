@@ -1910,35 +1910,16 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 
 .entry-unlock-card {
-  background: var(--surface-raised) !important;
-  border: 1px solid var(--border-focus) !important;
-  border-radius: var(--radius-xl) !important;
-  padding: 36px 24px 32px !important;
-  width: 100% !important;
-  max-width: 380px !important;
-  max-height: 92dvh !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 24px !important;
-  text-align: center !important;
-  overflow-y: auto !important;
-  box-shadow: 0 30px 70px -20px rgb(0 0 0 / 0.7) !important;
-  margin-bottom: env(safe-area-inset-bottom, 24px) !important;
-}
-
-.entry-unlock-actions {
-  width: 100% !important;
-  display: flex !important;
-  gap: 12px !important;
-  margin-top: auto !important;
-}
-
-.entry-unlock-actions .btn {
-  flex: 1 !important;
-  height: 54px !important;
-  font-size: var(--text-base) !important;
-  font-weight: 600 !important;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  width: min(320px, 90%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
 }
 
 .entry-unlock-icon { font-size: 32px; }
@@ -1990,38 +1971,17 @@ select option { background: var(--bg-s2); color: var(--text); }
 
 /* entry-form-modal: flex column agar footer selalu terlihat */
 .entry-form-modal {
-  background: var(--surface) !important;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  width: 100%;
-  max-width: 480px;
-  height: 96dvh !important;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 30px 60px -15px rgb(0 0 0 / 0.6) !important;
   overflow: hidden;
 }
 
-.entry-form-modal .modal__body,
-.entry-form-modal .form-body {
-  flex: 1;
-  min-height: 0;
+.entry-form-modal .modal__body {
+  max-height: calc(100dvh - var(--appbar-height) - 56px - 56px - 32px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 20px 24px 12px;
   overscroll-behavior-y: contain;
-}
-
-/* PASTIKAN FOOTER SELALU DI BAWAH */
-.entry-form-modal .modal__footer,
-.entry-form-modal .form-footer,
-.entry-form-modal .form-actions {
-  flex-shrink: 0;
-  padding: 16px 24px;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+  padding: 14px 16px;
 }
 
 .entry-form-modal .modal__footer {
@@ -2184,6 +2144,10 @@ select option { background: var(--bg-s2); color: var(--text); }
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  max-height: 112px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   padding-bottom: 2px;
 }
 
@@ -3995,23 +3959,9 @@ button:active:not(:disabled),
 }
 
 /* Entry form overlay: mulai dari bawah header, bukan full screen */
-.entry-form-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(7, 8, 15, 0.98) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  z-index: 1200 !important;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 12px 12px 0;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
+/* entry-form-overlay dihapus — pakai entry-form-page */
 
-[data-theme="light"] .entry-form-overlay {
-  background: rgba(0,0,0,0.35);
-}
+/* entry-form-overlay dihapus — pakai entry-form-page */
 
 /* Modal di dalam entry-form-overlay: scroll mandiri, footer selalu terlihat */
 .entry-form-overlay .modal {
@@ -4329,4 +4279,117 @@ button:active:not(:disabled),
   overscroll-behavior-y: contain;
   padding: var(--space-4) var(--space-4);
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENTRY FORM PAGE — full page, menggantikan list view
+   ═══════════════════════════════════════════════════════════════ */
+
+.entry-form-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+  animation: fadeScaleIn 0.2s ease both;
+}
+
+/* Header sticky */
+.entry-form-page__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.entry-form-page__back {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--muted2);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+  touch-action: manipulation;
+}
+.entry-form-page__back:hover { color: var(--text); }
+
+.entry-form-page__title {
+  flex: 1;
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.entry-form-page__close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+}
+.entry-form-page__close:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(255,77,109,0.08);
+}
+
+/* Scrollable body */
+.entry-form-page__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Footer sticky — selalu terlihat */
+.entry-form-page__footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border);
+  background: var(--bg-s1);
+}
+
+.entry-form-page__footer .btn {
+  min-width: 100px;
+  justify-content: center;
+}
+
+/* Cat picker full — tidak scroll sendiri */
+.cat-picker--full {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: none !important;
+  overflow: visible !important;
 }

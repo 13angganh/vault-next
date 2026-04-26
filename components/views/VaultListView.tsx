@@ -76,6 +76,25 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     const handleEdit    = useCallback((entry: VaultEntry) => { setDetailEntry(null); setEditEntry(entry); }, []);
     const handleSaved   = useCallback(() => showToast('Entri disimpan'), [showToast]);
 
+    // Jika form aktif → tampilkan form penuh, menggantikan list
+    if (showAddForm) {
+      return (
+        <EntryForm
+          onClose={() => setShowAddForm(false)}
+          onSaved={handleSaved}
+        />
+      );
+    }
+    if (editEntry) {
+      return (
+        <EntryForm
+          entry={editEntry}
+          onClose={() => setEditEntry(null)}
+          onSaved={handleSaved}
+        />
+      );
+    }
+
     return (
       <>
         {/* ── Header: sticky, tidak ikut scroll ── */}
@@ -139,20 +158,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           />
         )}
 
-        {editEntry && (
-          <EntryForm
-            entry={editEntry}
-            onClose={() => setEditEntry(null)}
-            onSaved={handleSaved}
-          />
-        )}
 
-        {showAddForm && (
-          <EntryForm
-            onClose={() => setShowAddForm(false)}
-            onSaved={handleSaved}
-          />
-        )}
       </>
     );
   }
