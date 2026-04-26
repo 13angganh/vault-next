@@ -2,15 +2,8 @@
 
 /**
  * Vault Next — EntryForm
- * Modal form tambah / edit entri.
- *
- * - Field dinamis per kategori
- * - Category picker dengan emoji
- * - Favorit toggle
- * - Password generator built-in
- * - Strength meter real-time
- * - Validasi: nama wajib
- * - Escape key dismiss
+ * Diperbaiki: Struktur Flexbox ketat untuk memastikan Card Form memiliki scroll independen
+ * dan Background Body terkunci.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -28,12 +21,10 @@ function generateId(): string {
 }
 
 interface EntryFormProps {
-  entry?:   VaultEntry;      // jika undefined → mode tambah
+  entry?:   VaultEntry;
   onClose:  () => void;
   onSaved:  (entry: VaultEntry) => void;
 }
-
-// ── Field definitions per category ───────────────────────────────────────────
 
 type FieldKey = keyof VaultEntry;
 
@@ -42,7 +33,7 @@ interface FieldDef {
   label:       string;
   type?:       'text' | 'password' | 'url' | 'email' | 'textarea';
   placeholder?: string;
-  sensitive?:  boolean;      // tampilkan strength meter jika true
+  sensitive?:  boolean;
   mono?:       boolean;
   hint?:       string;
 }
@@ -105,12 +96,8 @@ const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
 
 function getFieldsForCat(catId: string, customCats: CustomCategory[]): FieldDef[] {
   if (FIELDS_BY_CAT[catId]) return FIELDS_BY_CAT[catId];
-  // Custom kategori → gunakan template lainnya
-  const _ = customCats; // suppress lint
   return FIELDS_BY_CAT['lainnya'];
 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const store      = useAppStore();
@@ -119,7 +106,6 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
   const isEdit = !!entry;
 
-  // Form state
   const [cat,         setCat]         = useState(entry?.cat ?? 'sosmed');
   const [name,        setName]        = useState(entry?.name ?? '');
   const [fav,         setFav]         = useState(entry?.fav ?? false);
@@ -129,16 +115,22 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [showPwGen,   setShowPwGen]   = useState(false);
   const [pwGenTarget, setPwGenTarget] = useState<FieldKey>('pass');
 
-  // Seed phrase (crypto) — manage as array
   const [seedWords, setSeedWords] = useState<string[]>(entry?.seedPhrase ?? Array(12).fill(''));
 
   const nameRef = useRef<HTMLInputElement>(null);
+
+  // Kunci Scroll Layar Belakang saat Form Muncul
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   useEffect(() => {
     nameRef.current?.focus();
   }, []);
 
-  // Escape key dismiss
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !showPwGen) onClose();
@@ -198,8 +190,6 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
   const currentFields = getFieldsForCat(cat, customCats);
 
-  // ── Render field ───────────────────────────────────────────────────────
-
   const renderField = (fd: FieldDef) => {
     const val = (values[fd.key] as string) ?? '';
     const id  = `form-field-${fd.key}`;
@@ -225,14 +215,10 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
     return (
       <div key={fd.key} className="form-group">
-        <div className="form-label-row">
-          <label htmlFor={id} className="form-label">{fd.label}</label>
+        <div className="form-label-row flex justify-between items-center mb-1">
+          <label htmlFor={id} className="form-label mb-0">{fd.label}</label>
           {isPasswordField && (
-            <button
-              type="button"
-              className="form-pw-gen-link"
-              onClick={() => { setPwGenTarget(fd.key); setShowPwGen(true); }}
-            >
+            <button type="button" className="text-xs text-yellow-500 font-medium hover:text-yellow-400" onClick={() => { setPwGenTarget(fd.key); setShowPwGen(true); }}>
               Generator
             </button>
           )}
@@ -254,23 +240,20 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     );
   };
 
-  // ── Seed phrase section (crypto only) ─────────────────────────────────
-
   const renderSeedSection = () => {
     if (cat !== 'crypto') return null;
     return (
       <div className="form-group">
         <label className="form-label">Seed Phrase (12 atau 24 kata)</label>
-        <p className="form-hint">Isi satu kata per kotak, atau kosongkan jika tidak ada</p>
-        <div className="seed-grid">
+        <p className="form-hint mb-2">Isi satu kata per kotak, atau kosongkan jika tidak ada</p>
+        <div className="seed-grid grid grid-cols-2 sm:grid-cols-3 gap-2">
           {seedWords.map((w, i) => (
-            <div key={i} className="seed-grid__item">
-              <span className="seed-grid__num">{i + 1}</span>
+            <div key={i} className="seed-grid__item relative flex items-center">
+              <span className="seed-grid__num absolute left-3 text-xs text-gray-500 font-mono">{i + 1}</span>
               <input
                 type="text"
-                className="input seed-grid__input mono"
+                className="input seed-grid__input mono w-full pl-8 pr-2 py-2 bg-[#0d1017] border border-gray-800 rounded-md text-sm"
                 value={w}
-                placeholder={`kata ${i + 1}`}
                 onChange={(e) => {
                   const updated = [...seedWords];
                   updated[i] = e.target.value;
@@ -282,19 +265,11 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             </div>
           ))}
         </div>
-        <div className="seed-grid__actions">
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={() => setSeedWords(Array(12).fill(''))}
-          >
+        <div className="seed-grid__actions flex gap-2 mt-3">
+          <button type="button" className="btn btn--ghost btn--sm text-xs py-1 px-3" onClick={() => setSeedWords(Array(12).fill(''))}>
             Reset 12 kata
           </button>
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={() => setSeedWords(Array(24).fill(''))}
-          >
+          <button type="button" className="btn btn--ghost btn--sm text-xs py-1 px-3" onClick={() => setSeedWords(Array(24).fill(''))}>
             Ganti ke 24 kata
           </button>
         </div>
@@ -302,98 +277,91 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     );
   };
 
-  // ── Main render ────────────────────────────────────────────────────────
-
   return (
-    <div className="modal-overlay entry-form-overlay" role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}>
-      <div className="modal entry-form-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}>
+      {/* Wrapper Utama Modal: Flex-Col dan Max-Height untuk mengunci scroll mandiri */}
+      <div className="w-full max-w-md bg-[#07080f] border border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
 
-        {/* Header */}
-        <div className="modal__header">
-          <h2 className="modal__title">{isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}</h2>
-          <button className="modal__close" onClick={onClose} aria-label="Tutup"><X size={16} /></button>
+        {/* Header - Tidak ikut terscroll (shrink-0) */}
+        <div className="flex-none p-4 border-b border-gray-800 flex justify-between items-center bg-[#07080f] z-10">
+          <h2 className="text-lg font-bold text-white m-0">{isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}</h2>
+          <button className="text-gray-400 hover:text-white transition-colors" onClick={onClose} aria-label="Tutup"><X size={20} /></button>
         </div>
 
-        {/* Scrollable body */}
-        <div className="modal__body entry-form-body">
-
-          {/* Nama (selalu ada) */}
+        {/* Body - Memiliki scroll independen (flex-1 overflow-y-auto) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar">
           <div className="form-group">
-            <label htmlFor="form-name" className="form-label">
-              Nama <span className="form-required">*</span>
-            </label>
+            <label htmlFor="form-name" className="form-label flex gap-1">Nama <span className="text-red-500">*</span></label>
             <input
               ref={nameRef}
               id="form-name"
               type="text"
-              className={`input ${nameError ? 'input--error' : ''}`}
+              className={`input ${nameError ? 'border-red-500' : ''}`}
               value={name}
               placeholder="Contoh: Gmail Utama"
               onChange={(e) => { setName(e.target.value); setNameError(''); }}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
               autoComplete="off"
             />
-            {nameError && <p className="form-error">{nameError}</p>}
+            {nameError && <p className="text-sm text-red-500 mt-1">{nameError}</p>}
           </div>
 
-          {/* Category picker */}
           <div className="form-group">
             <label className="form-label">Kategori</label>
-            <div className="cat-picker">
+            <div className="cat-picker flex overflow-x-auto gap-2 pb-2 custom-scrollbar">
               {allCats.map((c) => (
                 <button
                   key={c.id}
                   type="button"
-                  className={`cat-picker__item ${cat === c.id ? 'cat-picker__item--active' : ''}`}
+                  className={`flex-none flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${cat === c.id ? 'bg-yellow-500/10 border-yellow-500 text-yellow-500' : 'bg-[#0d1017] border-gray-800 text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}
                   onClick={() => { setCat(c.id); setValues({}); setSeedWords(Array(12).fill('')); }}
                   title={c.label}
                 >
                   <CategoryIcon catId={c.id} customCats={customCats} size="sm" />
-                  <span className="cat-picker__label">{c.label}</span>
+                  <span className="text-sm font-medium whitespace-nowrap">{c.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Favorit toggle */}
-          <div className="form-group form-group--inline">
-            <label htmlFor="form-fav" className="form-label">Tandai Favorit</label>
+          <div className="form-group flex items-center justify-between bg-[#0d1017] p-3 rounded-lg border border-gray-800">
+            <label htmlFor="form-fav" className="text-sm font-medium text-gray-200 cursor-pointer">Tandai Favorit</label>
             <button
               id="form-fav"
               role="switch"
               aria-checked={fav}
               type="button"
-              className={`settings-toggle ${fav ? 'settings-toggle--on' : ''}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${fav ? 'bg-yellow-500' : 'bg-gray-600'}`}
               onClick={() => setFav(!fav)}
-            />
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${fav ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
 
-          {/* Dynamic fields */}
-          <div className="form-divider" />
-          {currentFields.map(renderField)}
-          {renderSeedSection()}
-
+          <div className="h-px bg-gray-800 my-4" />
+          
+          <div className="space-y-4">
+            {currentFields.map(renderField)}
+            {renderSeedSection()}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="modal__footer entry-form-footer">
-          <button className="btn btn--ghost" onClick={onClose} disabled={saving}>
+        {/* Footer - Tidak ikut terscroll (shrink-0) */}
+        <div className="flex-none p-4 border-t border-gray-800 bg-[#07080f] flex justify-end gap-3 z-10">
+          <button className="px-5 py-2.5 rounded-lg font-medium text-gray-300 hover:bg-gray-800 transition-colors" onClick={onClose} disabled={saving}>
             Batal
           </button>
-          <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+          <button className="px-5 py-2.5 rounded-lg font-medium bg-yellow-500 text-black hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleSave} disabled={saving}>
             {saving ? 'Menyimpan…' : isEdit ? 'Simpan Perubahan' : 'Tambah Entri'}
           </button>
         </div>
       </div>
 
-      {/* Password Generator sub-modal */}
+      {/* Modal Generator Password juga dilindungi z-index absolut */}
       {showPwGen && (
-        <div className="modal-overlay pw-gen-overlay" role="dialog" aria-modal="true">
-          <div className="modal pw-gen-modal" onClick={(e) => e.stopPropagation()}>
-            <PasswordGenerator
-              onUse={handlePwGenUse}
-              onClose={() => setShowPwGen(false)}
-            />
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-sm bg-[#07080f] border border-gray-800 rounded-2xl shadow-2xl p-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <PasswordGenerator onUse={handlePwGenUse} onClose={() => setShowPwGen(false)} />
           </div>
         </div>
       )}
