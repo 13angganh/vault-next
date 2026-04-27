@@ -58,7 +58,12 @@ export function EntryCard({
 
   const handleToggleExpand = () => {
     if (isLocked && !isExpanded) {
-      setShowUnlockPrompt(true);
+      // Pakai callback ke parent (VaultListView) yang render overlay di luar transform context
+      if (onRequestUnlock) {
+        onRequestUnlock(entry);
+      } else {
+        setShowUnlockPrompt(true);
+      }
       return;
     }
     store.toggleExpanded(entry.id);

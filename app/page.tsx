@@ -19,6 +19,9 @@ export default function Page() {
     store.setVaultMeta(payload.meta);
     store.setLockedIds(payload.lockedIds);
     store.setCustomCats(payload.customCats);
+    // Simpan masterPw ke sessionStorage agar biometrik auth bisa dipakai
+    // sessionStorage otomatis terhapus saat tab/browser ditutup
+    try { sessionStorage.setItem('vault_ss_mpw', masterPw); } catch {}
   };
 
   if (!appReady) {
