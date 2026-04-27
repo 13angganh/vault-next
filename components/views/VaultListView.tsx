@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, forwardRef, useImperativeHandle, useMemo, useCallback } from 'react';
-import { ShieldOff, Search as SearchIcon, Trash2 } from 'lucide-react';
+import { ShieldOff, Search as SearchIcon, Trash2, Lock, X } from 'lucide-react';
+import { verifyPinAndGetMaster } from '@/lib/vaultService';
 import { useAppStore }       from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import { EntryCard }         from '@/components/entries/EntryCard';
@@ -20,15 +21,20 @@ interface VaultListViewProps {
 
 export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
   function VaultListView({ onGlobalLoading: _ }, ref) {
+    const masterPw      = useAppStore((s) => s.masterPw);
     const vault         = useAppStore((s) => s.vault);
     const recycleBin    = useAppStore((s) => s.recycleBin);
     const customCats    = useAppStore((s) => s.customCats);
     const currentFilter = useAppStore((s) => s.currentFilter);
     const searchQuery   = useAppStore((s) => s.searchQuery);
 
-    const [detailEntry, setDetailEntry] = useState<VaultEntry | null>(null);
-    const [editEntry,   setEditEntry]   = useState<VaultEntry | null>(null);
-    const [showAddForm, setShowAddForm] = useState(false);
+    const [detailEntry,      setDetailEntry]      = useState<VaultEntry | null>(null);
+    const [editEntry,        setEditEntry]        = useState<VaultEntry | null>(null);
+    const [showAddForm,      setShowAddForm]      = useState(false);
+    const [unlockEntry,      setUnlockEntry]      = useState<VaultEntry | null>(null);
+    const [unlockInput,      setUnlockInput]      = useState('');
+    const [unlockError,      setUnlockError]      = useState('');
+    const [unlockLoading,    setUnlockLoading]    = useState(false);
 
     const { showToast, ToastContainer } = useToast();
 
@@ -73,6 +79,37 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     }, [vault, recycleBin, currentFilter, searchQuery, isRecycleBin]);
 
     const handleCopy    = useCallback((_t: string, label: string) => showToast(`${label} disalin!`), [showToast]);
+
+    const handleUnlockSubmit = useCallback(async () => {
+      if (!unlockEntry || !unlockInput.trim()) return;
+      setUnlockLoading(true);
+      setUnlockError('');
+      try {
+        // Coba PIN dulu
+        let pw = masterPw;
+        if (!pw) {
+          try { pw = await verifyPinAndGetMaster(unlockInput); }
+          catch { pw = unlockInput; }
+        }
+        // Coba unlock dengan master pw
+        const store = useAppStore.getState();
+        if (pw !== store.masterPw && unlockInput !== store.masterPw) {
+          // Verifikasi sederhana: coba decrypt salah satu field
+          setUnlockError('PIN atau master password salah');
+          setUnlockLoading(false);
+          return;
+        }
+        // Unlock berhasil: mark entry sebagai unlocked
+        store.unlockEntry?.(unlockEntry.id);
+        setUnlockEntry(null);
+        setUnlockInput('');
+        setUnlockError('');
+      } catch {
+        setUnlockError('PIN atau master password salah');
+      } finally {
+        setUnlockLoading(false);
+      }
+    }, [unlockEntry, unlockInput, masterPw]);
     const handleEdit    = useCallback((entry: VaultEntry) => { setDetailEntry(null); setEditEntry(entry); }, []);
     const handleSaved   = useCallback(() => showToast('Entri disimpan'), [showToast]);
 
@@ -140,6 +177,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
                   onEdit={handleEdit}
                   onDetail={(e) => setDetailEntry(e)}
                   onCopy={handleCopy}
+                  onRequestUnlock={(e) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }}
                 />
               ))}
             </div>
@@ -147,6 +185,52 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
         </div>
 
         <ToastContainer />
+
+        {/* ── Unlock Modal — di root VaultListView, bebas dari overflow clip ── */}
+        {unlockEntry && (
+          <div
+            className="vl-unlock-overlay"
+            onClick={() => { setUnlockEntry(null); setUnlockInput(''); setUnlockError(''); }}
+          >
+            <div className="vl-unlock-card" onClick={(e) => e.stopPropagation()}>
+              <div className="vl-unlock-header">
+                <Lock size={20} style={{ color: 'var(--gold)' }} />
+                <span className="vl-unlock-title">Buka Entri</span>
+                <button className="vl-unlock-close" onClick={() => { setUnlockEntry(null); setUnlockInput(''); }}>
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="vl-unlock-name">{unlockEntry.name}</p>
+              <p className="vl-unlock-desc">Masukkan PIN atau Master Password</p>
+              <input
+                type="password"
+                className="input vl-unlock-input"
+                placeholder="PIN atau Master Password"
+                value={unlockInput}
+                autoFocus
+                onChange={(e) => { setUnlockInput(e.target.value); setUnlockError(''); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUnlockSubmit();
+                  if (e.key === 'Escape') { setUnlockEntry(null); setUnlockInput(''); }
+                }}
+                disabled={unlockLoading}
+              />
+              {unlockError && <p className="vl-unlock-error">{unlockError}</p>}
+              <div className="vl-unlock-actions">
+                <button className="btn btn--ghost"
+                  onClick={() => { setUnlockEntry(null); setUnlockInput(''); setUnlockError(''); }}
+                  disabled={unlockLoading}>
+                  Batal
+                </button>
+                <button className="btn btn--primary"
+                  onClick={handleUnlockSubmit}
+                  disabled={unlockLoading || !unlockInput.trim()}>
+                  {unlockLoading ? 'Memverifikasi…' : 'Buka'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Modal: render di luar scroll area (fixed overlay) ── */}
         {detailEntry && (

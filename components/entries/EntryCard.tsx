@@ -17,11 +17,12 @@ import { CategoryIcon }      from '@/components/entries/CategoryIcon';
 import type { VaultEntry }   from '@/lib/types';
 
 interface EntryCardProps {
-  entry:         VaultEntry;
-  isRecycleBin?: boolean;
-  onEdit?:       (entry: VaultEntry) => void;
-  onDetail?:     (entry: VaultEntry) => void;
-  onCopy?:       (text: string, label: string) => void;
+  entry:            VaultEntry;
+  isRecycleBin?:    boolean;
+  onEdit?:          (entry: VaultEntry) => void;
+  onDetail?:        (entry: VaultEntry) => void;
+  onCopy?:          (text: string, label: string) => void;
+  onRequestUnlock?: (entry: VaultEntry) => void;
 }
 
 export function EntryCard({
@@ -30,6 +31,7 @@ export function EntryCard({
   onEdit,
   onDetail,
   onCopy,
+  onRequestUnlock,
 }: EntryCardProps) {
   const store       = useAppStore();
   const customCats  = store.customCats;
@@ -401,46 +403,7 @@ export function EntryCard({
         </div>
       )}
 
-      {/* ── Unlock prompt overlay — fixed di atas semua konten ── */}
-      {showUnlockPrompt && (
-        <div className="entry-unlock-overlay entry-unlock-overlay--fixed" role="dialog" aria-modal="true" aria-label="Verifikasi untuk membuka entri" onClick={() => { setShowUnlockPrompt(false); setUnlockInput(''); }}>
-          <div className="entry-unlock-card" onClick={(e) => e.stopPropagation()}>
-            <div className="entry-unlock-icon"><Lock size={28} /></div>
-            <p className="entry-unlock-title">Entri Terkunci</p>
-            <p className="entry-unlock-desc">Masukkan PIN atau Master Password untuk melihat entri ini</p>
-            <input
-              ref={unlockRef}
-              type="password"
-              className="input entry-unlock-input"
-              placeholder="PIN atau Master Password"
-              value={unlockInput}
-              onChange={(e) => { setUnlockInput(e.target.value); setUnlockError(''); }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleUnlockEntry();
-                if (e.key === 'Escape') { setShowUnlockPrompt(false); setUnlockInput(''); }
-              }}
-              disabled={unlockLoading}
-            />
-            {unlockError && <p className="entry-unlock-error">{unlockError}</p>}
-            <div className="entry-unlock-actions">
-              <button
-                className="btn btn--ghost"
-                onClick={() => { setShowUnlockPrompt(false); setUnlockInput(''); setUnlockError(''); }}
-                disabled={unlockLoading}
-              >
-                Batal
-              </button>
-              <button
-                className="btn btn--primary"
-                onClick={handleUnlockEntry}
-                disabled={unlockLoading || !unlockInput.trim()}
-              >
-                {unlockLoading ? 'Memverifikasi…' : 'Buka'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
