@@ -1902,7 +1902,10 @@ select option { background: var(--bg-s2); color: var(--text); }
   inset: 0;
   border-radius: 0;
   z-index: 900;
-  padding: 16px;
+  /* Align ke atas — card muncul dari bawah header, keyboard tidak menutupi */
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(var(--appbar-height) + env(safe-area-inset-top, 0px) + 12px) 16px 16px;
 }
 
 .entry-card {
