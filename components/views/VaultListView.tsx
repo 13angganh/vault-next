@@ -21,7 +21,6 @@ interface VaultListViewProps {
 
 export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
   function VaultListView({ onGlobalLoading: _ }, ref) {
-    const masterPw      = useAppStore((s) => s.masterPw);
     const vault         = useAppStore((s) => s.vault);
     const recycleBin    = useAppStore((s) => s.recycleBin);
     const customCats    = useAppStore((s) => s.customCats);
@@ -85,31 +84,36 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       setUnlockLoading(true);
       setUnlockError('');
       try {
-        // Coba PIN dulu
-        let pw = masterPw;
-        if (!pw) {
-          try { pw = await verifyPinAndGetMaster(unlockInput); }
-          catch { pw = unlockInput; }
-        }
-        // Coba unlock dengan master pw
         const store = useAppStore.getState();
-        if (pw !== store.masterPw && unlockInput !== store.masterPw) {
-          // Verifikasi sederhana: coba decrypt salah satu field
+        // Verifikasi: cek apakah input cocok dengan masterPw atau PIN
+        let valid = false;
+        if (unlockInput === store.masterPw) {
+          valid = true;
+        } else {
+          // Coba verifikasi PIN
+          try {
+            await verifyPinAndGetMaster(unlockInput);
+            valid = true;
+          } catch {
+            valid = false;
+          }
+        }
+        if (!valid) {
           setUnlockError('PIN atau master password salah');
           setUnlockLoading(false);
           return;
         }
-        // Unlock berhasil: mark entry sebagai unlocked
-        store.unlockEntry?.(unlockEntry.id);
+        // Unlock: hapus entry dari lockedIds
+        store.setLockedIds(store.lockedIds.filter((id) => id !== unlockEntry.id));
         setUnlockEntry(null);
         setUnlockInput('');
         setUnlockError('');
       } catch {
-        setUnlockError('PIN atau master password salah');
+        setUnlockError('Gagal memverifikasi, coba lagi');
       } finally {
         setUnlockLoading(false);
       }
-    }, [unlockEntry, unlockInput, masterPw]);
+    }, [unlockEntry, unlockInput]);
     const handleEdit    = useCallback((entry: VaultEntry) => { setDetailEntry(null); setEditEntry(entry); }, []);
     const handleSaved   = useCallback(() => showToast('Entri disimpan'), [showToast]);
 
