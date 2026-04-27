@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Outfit, JetBrains_Mono } from 'next/font/google';
+import Script from 'next/script';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import '@/styles/globals.css';
 
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           {children}
         </ThemeProvider>
+      <Script src="/sw-register.js" strategy="lazyOnload" />
       </body>
     </html>
   );
