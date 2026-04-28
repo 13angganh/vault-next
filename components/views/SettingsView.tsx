@@ -66,13 +66,14 @@ export function SettingsView({ onClose }: SettingsViewProps) {
 
   return (
     <>
-      <div className="settings-view">
-        <div className="settings-header">
+      <div className="settings-page">
+        <div className="settings-page__header">
           {onClose && (
             <button className="icon-btn" onClick={onClose} aria-label="Kembali"><ArrowLeft size={18} /></button>
           )}
           <h2 className="settings-title"><Settings size={20} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Pengaturan</h2>
         </div>
+        <div className="settings-page__body">
 
         {/* Tampilan */}
         <section className="settings-section">
@@ -275,7 +276,8 @@ export function SettingsView({ onClose }: SettingsViewProps) {
           <span>·</span>
           <span>100% Offline · AES-256-GCM · PBKDF2</span>
         </div>
-      </div>
+        </div>{/* /settings-page__body */}
+      </div>{/* /settings-page */}
 
       {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
       {showBioModal && (

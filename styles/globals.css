@@ -1454,16 +1454,43 @@ select option { background: var(--bg-s2); color: var(--text); }
    SETTINGS VIEW
    ═══════════════════════════════════════════════════════════════ */
 
-.settings-view {
+/* settings-view lama — aliaskan ke settings-page */
+.settings-view { display: contents; }
+
+/* Settings page: flex column, header sticky, body scroll */
+.settings-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 600px;
+}
+
+.settings-page__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.settings-page__body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding: var(--space-5) var(--space-4);
-  padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
-  max-width: 600px;
-  width: 100%;
+  padding: var(--space-4) var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .settings-header {

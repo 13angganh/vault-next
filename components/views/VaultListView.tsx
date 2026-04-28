@@ -103,8 +103,9 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           setUnlockLoading(false);
           return;
         }
-        // Unlock berhasil: expand entry tanpa hapus dari lockedIds
-        // (lockedIds tetap — entry hanya di-expand untuk sesi ini)
+        // Unlock berhasil: hapus dari lockedIds agar tidak perlu klik lepas lagi
+        store.setLockedIds(store.lockedIds.filter((id) => id !== unlockEntry.id));
+        // Expand entry langsung
         store.toggleExpanded(unlockEntry.id);
         setUnlockEntry(null);
         setUnlockInput('');
