@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
+import { Button, Toggle }        from '@/components/ui/primitives';
 import { useAppStore }           from '@/lib/store/appStore';
 import { saveVault }              from '@/lib/vaultService';
 import { CategoryIcon }           from '@/components/entries/CategoryIcon';
@@ -238,10 +239,8 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           ))}
         </div>
         <div className="seed-grid__actions">
-          <button type="button" className="btn btn--ghost btn--sm"
-            onClick={() => setSeedWords(Array(12).fill(''))}>Reset 12 kata</button>
-          <button type="button" className="btn btn--ghost btn--sm"
-            onClick={() => setSeedWords(Array(24).fill(''))}>Ganti ke 24 kata</button>
+          <Button variant="ghost" size="sm" onClick={() => setSeedWords(Array(12).fill(''))}>Reset 12 kata</Button>
+          <Button variant="ghost" size="sm" onClick={() => setSeedWords(Array(24).fill(''))}>Ganti ke 24 kata</Button>
         </div>
       </div>
     );
@@ -256,13 +255,13 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
         {/* Header sticky */}
         <div className="entry-form-page__header">
-          <button className="entry-form-page__back" onClick={onClose} aria-label="Kembali">
+          <button className="entry-form-page__back ibtn" onClick={onClose} aria-label="Kembali">
             <ArrowLeft size={18} />
           </button>
           <h2 className="entry-form-page__title">
             {isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}
           </h2>
-          <button className="entry-form-page__close" onClick={onClose} aria-label="Tutup">
+          <button className="entry-form-page__close ibtn" onClick={onClose} aria-label="Tutup">
             <X size={18} />
           </button>
         </div>
@@ -311,14 +310,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           {/* Favorit */}
           <div className="form-group form-group--inline">
             <label htmlFor="form-fav" className="form-label">Tandai Favorit</label>
-            <button
-              id="form-fav"
-              role="switch"
-              aria-checked={fav}
-              type="button"
-              className={`settings-toggle ${fav ? 'settings-toggle--on' : ''}`}
-              onClick={() => setFav(!fav)}
-            />
+            <Toggle checked={fav} onChange={setFav} label="Tandai Favorit" />
           </div>
 
           <div className="form-divider" />
@@ -330,12 +322,10 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
         {/* Footer sticky — selalu terlihat */}
         <div className="entry-form-page__footer">
-          <button className="btn btn--ghost" onClick={onClose} disabled={saving}>
-            Batal
-          </button>
-          <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Batal</Button>
+          <Button variant="primary" onClick={handleSave} disabled={saving} loading={saving}>
             {saving ? 'Menyimpan…' : isEdit ? 'Simpan Perubahan' : 'Tambah Entri'}
-          </button>
+          </Button>
         </div>
       </div>
 

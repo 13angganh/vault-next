@@ -11,6 +11,7 @@ import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertT
 import { useAppStore }        from '@/lib/store/appStore';
 import { exportBackup, importBackup, saveVault } from '@/lib/vaultService';
 import { lsSet, LS_BACKUP }  from '@/lib/storage';
+import { Button, ErrorState }  from '@/components/ui/primitives';
 import { useFocusTrap }       from '@/lib/hooks/useFocusTrap';
 import type { VaultEntry, CustomCategory, VaultMeta } from '@/lib/types';
 
@@ -235,16 +236,22 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 </div>
               </div>
 
-              {exportError && <p className="backup-error">{exportError}</p>}
+              {exportError && (
+                <ErrorState
+                  title="Gagal export"
+                  message={exportError}
+                  className="backup-error-state"
+                />
+              )}
               {exportDone  && <p className="backup-success"><Check size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> File backup berhasil diunduh!</p>}
 
-              <button
-                className="btn btn-primary backup-action-btn"
+              <Button variant="primary" className="backup-action-btn"
                 onClick={handleExport}
                 disabled={exporting || !store.vaultMeta}
+                loading={exporting}
               >
-                {exporting ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Mengekspor…</> : <><Download size={14} /> Download Backup (.vault)</>}
-              </button>
+                {exporting ? 'Mengekspor…' : <><Download size={14} /> Download Backup (.vault)</>}
+              </Button>
             </div>
 
           {/* ── IMPORT — always rendered ── */}
@@ -287,13 +294,9 @@ export function BackupModal({ onClose }: BackupModalProps) {
                     style={{ display: 'none' }}
                     id="import-file-input"
                   />
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => fileRef.current?.click()}
-                    type="button"
-                  >
-                    <FolderOpen size={14} /> Pilih File
-                  </button>
+                  <Button variant="ghost" onClick={() => fileRef.current?.click()} leftIcon={<FolderOpen size={14} />}>
+                    Pilih File
+                  </Button>
                   <span className="backup-file-name">
                     {importFile ? importFile.name : 'Belum ada file dipilih'}
                   </span>
@@ -324,16 +327,17 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 </div>
               </div>
 
-              {importError  && <p className="backup-error">{importError}</p>}
+              {importError && (
+                <ErrorState
+                  title="Gagal import"
+                  message={importError}
+                  className="backup-error-state"
+                />
+              )}
               {importResult && <p className="backup-success">{importResult}</p>}
-
-              <button
-                className="btn btn-primary backup-action-btn"
-                onClick={handleImport}
-                disabled={importing}
-              >
-                {importing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Mengimpor…</> : <><Download size={14} /> Import Backup</>}
-              </button>
+                <Button variant="primary" className="backup-action-btn" onClick={handleImport} disabled={importing}>
+                  {importing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Mengimpor…</> : <><Download size={14} /> Import Backup</>}
+                </Button>
             </div>
 
           {/* ── SYNC — always rendered ── */}
@@ -366,13 +370,9 @@ export function BackupModal({ onClose }: BackupModalProps) {
                     Generate teks terenkripsi, salin, lalu tempel di perangkat penerima.
                   </p>
                   {!syncText ? (
-                    <button
-                      className="btn btn-primary backup-action-btn"
-                      onClick={handleSyncGenerate}
-                      disabled={syncing}
-                    >
-                      {syncing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Membuat…</> : <><ShieldCheck size={14} /> Generate Teks Sync</>}
-                    </button>
+                     <Button variant="primary" className="backup-action-btn" onClick={handleSyncGenerate} disabled={syncing}>
+                       {syncing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Membuat…</> : <><ShieldCheck size={14} /> Generate Teks Sync</>}
+                     </Button>
                   ) : (
                     <>
                       <textarea
@@ -431,17 +431,19 @@ export function BackupModal({ onClose }: BackupModalProps) {
                       </button>
                     </div>
                   </div>
-                  <button
-                    className="btn btn-primary backup-action-btn"
-                    onClick={handleSyncReceive}
-                    disabled={syncing}
-                  >
-                    {syncing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Menyinkronkan…</> : <><RefreshCw size={14} /> Terapkan Sync</>}
-                  </button>
+                   <Button variant="primary" className="backup-action-btn" onClick={handleSyncReceive} disabled={syncing}>
+                     {syncing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Menyinkronkan…</> : <><RefreshCw size={14} /> Terapkan Sync</>}
+                   </Button>
                 </>
               )}
 
-              {syncError  && <p className="backup-error">{syncError}</p>}
+              {syncError && (
+                <ErrorState
+                  title="Gagal sync"
+                  message={syncError}
+                  className="backup-error-state"
+                />
+              )}
               {syncResult && <p className="backup-success">{syncResult}</p>}
             </div>
 

@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { Button } from '@/components/ui/primitives';
 import { RefreshCw, Copy, Check, X } from 'lucide-react';
 import { PasswordStrengthMeter } from '@/components/ui/PasswordStrengthMeter';
 
@@ -154,9 +155,9 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
       {/* Actions */}
       {onUse && (
         <div className="pw-gen__actions">
-          <button className="btn btn--primary pw-gen__use-btn" onClick={handleUse}>
+          <Button variant="primary" className="pw-gen__use-btn" onClick={handleUse}>
             Pakai Password Ini
-          </button>
+          </Button>
         </div>
       )}
     </div>

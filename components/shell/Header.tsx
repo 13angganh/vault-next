@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { Button } from '@/components/ui/primitives';
 import { Search, X, Plus, Sun, Moon, Lock, Timer, Menu } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { useTheme }           from '@/components/providers/ThemeProvider';
@@ -112,14 +113,13 @@ export function Header({
 
         {/* Tambah — hanya tampil saat di vault view */}
         {activeView !== 'Pengaturan' && (
-          <button
-            className="btn btn-gold app-header__add-btn"
+          <Button variant="gold" className="app-header__add-btn"
             onClick={onAddEntry}
             aria-label="Tambah entri baru"
+            leftIcon={<Plus size={16} />}
           >
-            <Plus size={16} />
             <span className="app-header__add-label">Tambah</span>
-          </button>
+          </Button>
         )}
 
         {/* Tema toggle */}

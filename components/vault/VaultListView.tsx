@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, forwardRef, useImperativeHandle, useMemo, useCallback } from 'react';
-import { ShieldOff, Search as SearchIcon, Trash2, Lock, X } from 'lucide-react';
+import { useState, forwardRef, useImperativeHandle, useMemo, useCallback, useEffect } from 'react';
+import {
+  ShieldOff, Search as SearchIcon, Trash2, Lock, X,
+  Star, FolderOpen, PackageOpen,
+} from 'lucide-react';
 import { verifyPinAndGetMaster } from '@/lib/vaultService';
+import { Button, EmptyState, Skeleton } from '@/components/ui/primitives';
 import { useAppStore }       from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import { EntryCard }         from '@/components/entries/EntryCard';
@@ -17,10 +21,31 @@ export interface VaultListViewRef {
 
 interface VaultListViewProps {
   onGlobalLoading?: (v: boolean) => void;
+  isVaultLoading?: boolean;
+}
+
+/* ── Skeleton placeholder — 3 kartu saat vault sedang decrypt ── */
+function VaultSkeletonList() {
+  return (
+    <div className="vault-entries vault-skeleton-list" aria-busy="true" aria-label="Memuat entri…">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="entry-card vault-skeleton-card">
+          <div className="vault-skeleton-row">
+            <Skeleton circle width={36} height={36} />
+            <div className="vault-skeleton-text">
+              <Skeleton width="55%" height={13} style={{ marginBottom: 6 }} />
+              <Skeleton width="35%" height={10} />
+            </div>
+            <Skeleton width={16} height={16} style={{ borderRadius: 4 }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
-  function VaultListView({ onGlobalLoading: _ }, ref) {
+  function VaultListView({ onGlobalLoading: _, isVaultLoading = false }, ref) {
     const vault         = useAppStore((s) => s.vault);
     const recycleBin    = useAppStore((s) => s.recycleBin);
     const customCats    = useAppStore((s) => s.customCats);
@@ -34,6 +59,18 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     const [unlockInput,      setUnlockInput]      = useState('');
     const [unlockError,      setUnlockError]      = useState('');
     const [unlockLoading,    setUnlockLoading]    = useState(false);
+    // Skeleton muncul sebentar saat pertama load agar ada transisi halus
+    const [showSkeleton,     setShowSkeleton]     = useState(isVaultLoading);
+
+    useEffect(() => {
+      if (isVaultLoading) {
+        setShowSkeleton(true);
+      } else {
+        // Tunda sedikit agar animasi shimmer terlihat jika data sudah ada
+        const t = setTimeout(() => setShowSkeleton(false), 300);
+        return () => clearTimeout(t);
+      }
+    }, [isVaultLoading]);
 
     const { showToast, ToastContainer } = useToast();
 
@@ -85,12 +122,10 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       setUnlockError('');
       try {
         const store = useAppStore.getState();
-        // Verifikasi: cek apakah input cocok dengan masterPw atau PIN
         let valid = false;
         if (unlockInput === store.masterPw) {
           valid = true;
         } else {
-          // Coba verifikasi PIN
           try {
             await verifyPinAndGetMaster(unlockInput);
             valid = true;
@@ -103,9 +138,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           setUnlockLoading(false);
           return;
         }
-        // Unlock berhasil: hapus dari lockedIds agar tidak perlu klik lepas lagi
         store.setLockedIds(store.lockedIds.filter((id) => id !== unlockEntry.id));
-        // Expand entry langsung
         store.toggleExpanded(unlockEntry.id);
         setUnlockEntry(null);
         setUnlockInput('');
@@ -116,8 +149,57 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
         setUnlockLoading(false);
       }
     }, [unlockEntry, unlockInput]);
+
     const handleEdit    = useCallback((entry: VaultEntry) => { setDetailEntry(null); setEditEntry(entry); }, []);
     const handleSaved   = useCallback(() => showToast('Entri disimpan'), [showToast]);
+
+    /* ── Contextual empty state per filter ── */
+    const renderEmptyState = () => {
+      if (searchQuery) {
+        return (
+          <EmptyState
+            icon={<SearchIcon size={40} strokeWidth={1.2} />}
+            title="Tidak ada hasil"
+            description={`Tidak ditemukan entri untuk "${searchQuery}"`}
+          />
+        );
+      }
+      if (currentFilter === 'bin') {
+        return (
+          <EmptyState
+            icon={<Trash2 size={40} strokeWidth={1.2} />}
+            title="Tong Sampah kosong"
+            description="Entri yang dihapus akan muncul di sini"
+          />
+        );
+      }
+      if (currentFilter === 'fav') {
+        return (
+          <EmptyState
+            icon={<Star size={40} strokeWidth={1.2} />}
+            title="Belum ada favorit"
+            description="Tandai entri sebagai favorit untuk melihatnya di sini"
+          />
+        );
+      }
+      if (currentFilter !== 'all') {
+        const cat = allCats.find((c) => c.id === currentFilter);
+        return (
+          <EmptyState
+            icon={<FolderOpen size={40} strokeWidth={1.2} />}
+            title={`Kategori ${cat?.label ?? currentFilter} kosong`}
+            description="Tap + untuk menambahkan entri di kategori ini"
+          />
+        );
+      }
+      return (
+        <EmptyState
+          icon={<PackageOpen size={40} strokeWidth={1.2} />}
+          title="Vault masih kosong"
+          description="Tap + untuk menambahkan entri pertama"
+        />
+      );
+    };
 
     // Jika form aktif → tampilkan form penuh, menggantikan list
     if (showAddForm) {
@@ -152,26 +234,11 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
 
         {/* ── Entries: scroll mandiri ── */}
         <div className="vault-entries-scroll">
-          {entries.length === 0 ? (
-            <div className="vault-empty">
-              <div className="vault-empty__icon">
-                {searchQuery
-                  ? <SearchIcon size={40} strokeWidth={1.3} />
-                  : currentFilter === 'bin'
-                    ? <Trash2 size={40} strokeWidth={1.3} />
-                    : <ShieldOff size={40} strokeWidth={1.3} />}
-              </div>
-              <p className="vault-empty__title">
-                {searchQuery ? 'Tidak ada hasil'
-                  : currentFilter === 'bin' ? 'Tong Sampah kosong'
-                  : 'Belum ada entri'}
-              </p>
-              <p className="vault-empty__desc">
-                {searchQuery
-                  ? `Tidak ditemukan entri untuk "${searchQuery}"`
-                  : currentFilter === 'bin' ? 'Entri yang dihapus akan muncul di sini'
-                  : 'Tap + untuk menambahkan entri baru'}
-              </p>
+          {showSkeleton ? (
+            <VaultSkeletonList />
+          ) : entries.length === 0 ? (
+            <div className="vault-empty-wrap">
+              {renderEmptyState()}
             </div>
           ) : (
             <div className="vault-entries">
@@ -223,16 +290,17 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
               />
               {unlockError && <p className="vl-unlock-error">{unlockError}</p>}
               <div className="vl-unlock-actions">
-                <button className="btn btn--ghost"
+                <Button variant="ghost"
                   onClick={() => { setUnlockEntry(null); setUnlockInput(''); setUnlockError(''); }}
                   disabled={unlockLoading}>
                   Batal
-                </button>
-                <button className="btn btn--primary"
+                </Button>
+                <Button variant="primary"
                   onClick={handleUnlockSubmit}
+                  loading={unlockLoading}
                   disabled={unlockLoading || !unlockInput.trim()}>
                   {unlockLoading ? 'Memverifikasi…' : 'Buka'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

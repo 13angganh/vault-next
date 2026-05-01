@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import { LayoutGrid, Star, Trash2, Settings, X, ChevronDown } from 'lucide-react';
-import { VaultIcon }          from '@/components/LoadingScreen';
+import { VaultIcon }          from '@/components/common/LoadingScreen';
 import { useAppStore }        from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import type { FilterType }    from '@/lib/store/appStore';

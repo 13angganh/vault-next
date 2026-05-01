@@ -1,0 +1,210 @@
+/* styles/base.css — Vault Next */
+/* Typography, reset, color variables, scrollbar, focus */
+
+/* VAULT NEXT — GLOBAL STYLES CSS Variables, Reset, Animasi, Utility Classes */
+
+@import './tokens.css';
+
+/* Google Fonts: diload via next/font di layout.tsx */
+
+/* DARK MODE (default) */
+:root,
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg:          #07080f;
+  --bg-s1:       #0e0f1a;
+  --bg-s2:       #161724;
+  --bg-s3:       #1e1f2e;
+  --bg-overlay:  rgba(0,0,0,0.75);
+
+  /* Brand */
+  --gold:        #f0a500;
+  --gold2:       #ffcc44;
+  --gold-dim:    rgba(240,165,0,0.08);
+  --gold-border: rgba(240,165,0,0.3);
+  --gold-glow:   rgba(240,165,0,0.2);
+  --gold-soft:   rgba(240,165,0,0.12);
+  --gold-text:   #f0a500;
+
+  /* Accent */
+  --teal:        #00d4aa;
+  --red:         #ff4d6d;
+  --blue:        #4d8eff;
+  --crypto:      #f7931a;
+
+  /* Text */
+  --text:        #eeeef5;
+  --text2:       #c8c9d8;
+  --muted:       #6b6d85;
+  --muted2:      #9294ae;
+
+  /* Borders */
+  --border:      #2b2d42;
+  --border2:     #3a3d56;
+  --border-gold: rgba(240,165,0,0.35);
+
+  /* Strength Meter */
+  --str-1: #ff4d6d;
+  --str-2: #ff7043;
+  --str-3: #ffd166;
+  --str-4: #a8d8a8;
+  --str-5: #00d4aa;
+  --str-6: #06d6a0;
+  --str-7: #00ffcc;
+
+  /* Status */
+  --success:     #00d4aa;
+  --warning:     #f0a500;
+  --danger:      #ff4d6d;
+  --info:        #4d8eff;
+
+  /* Notice */
+  --notice-bg:     rgba(0,212,170,0.06);
+  --notice-border: rgba(0,212,170,0.18);
+  --notice-text:   rgba(0,212,170,0.85);
+
+  /* Shadows */
+  --shadow:         0 4px 20px rgba(0,0,0,0.4);
+  --shadow-gold:    0 6px 20px rgba(240,165,0,0.08);
+  --shadow-modal:   0 20px 60px rgba(0,0,0,0.6);
+  --shadow-sidebar: 4px 0 30px rgba(0,0,0,0.4);
+  --logo-shadow:    0 0 40px rgba(240,165,0,0.3);
+
+  /* Card hover */
+  --card-hover-bg: #161724;
+
+  /* PIN pad */
+  --pin-key-bg:     #0e0f1a;
+  --pin-key-border: #2b2d42;
+
+  /* Sidebar */
+  --sidebar-bg: #0a0b14;
+}
+
+/* LIGHT MODE — Warm white, bukan cold gray */
+[data-theme="light"] {
+  --bg:          #FAFAF8;
+  --bg-s1:       #FFFFFF;
+  --bg-s2:       #F3F2EF;
+  --bg-s3:       #E8E7E3;
+  --bg-overlay:  rgba(0,0,0,0.5);
+
+  --gold:        #C8860A;
+  --gold2:       #E09B1A;
+  --gold-dim:    rgba(200,134,10,0.07);
+  --gold-border: rgba(200,134,10,0.3);
+  --gold-glow:   rgba(200,134,10,0.15);
+  --gold-soft:   rgba(200,134,10,0.1);
+  --gold-text:   #A06C08;
+
+  --teal:        #059669;
+  --red:         #DC2626;
+  --blue:        #2563EB;
+  --crypto:      #D97706;
+
+  --text:        #1A1A2E;
+  --text2:       #374151;
+  --muted:       #6B7280;
+  --muted2:      #4B5563;
+
+  --border:      #DDD9D0;
+  --border2:     #9CA3AF;
+  --border-gold: rgba(200,134,10,0.3);
+
+  --str-1: #DC2626;
+  --str-2: #EA580C;
+  --str-3: #D97706;
+  --str-4: #65A30D;
+  --str-5: #059669;
+  --str-6: #0D9488;
+  --str-7: #0891B2;
+
+  --success:     #059669;
+  --warning:     #D97706;
+  --danger:      #DC2626;
+  --info:        #2563EB;
+
+  --notice-bg:     rgba(5,150,105,0.06);
+  --notice-border: rgba(5,150,105,0.2);
+  --notice-text:   rgba(5,150,105,0.9);
+
+  --shadow:         0 2px 12px rgba(0,0,0,0.07);
+  --shadow-gold:    0 4px 16px rgba(200,134,10,0.1);
+  --shadow-modal:   0 16px 48px rgba(0,0,0,0.18);
+  --shadow-sidebar: 4px 0 20px rgba(0,0,0,0.1);
+  --logo-shadow:    0 0 32px rgba(200,134,10,0.25);
+
+  --card-hover-bg:  #F3F2EF;
+  --pin-key-bg:     #F3F2EF;
+  --pin-key-border: #DDD9D0;
+  --sidebar-bg:     #F0EFE9;
+}
+
+/* RESET & BASE */
+*, *::before, *::after {
+  margin: 0; padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ambient glow background — dark only */
+[data-theme="dark"] body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(240,165,0,0.035) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 80% 90%, rgba(0,212,170,0.03) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Transisi tema — semua elemen kecuali yang punya animasi sendiri */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-default);
+}
+
+/* Override transisi untuk elemen animasi aktif */
+.no-transition,
+.loading-logo-wrap,
+.loading-bar,
+.pin-dot,
+.str-fill {
+  transition: none !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+/* Selection */
+::selection { background: var(--gold-soft); color: var(--text); }
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--gold-border);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Tap highlight mobile */
+* { -webkit-tap-highlight-color: transparent; }

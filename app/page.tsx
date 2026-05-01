@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LoadingScreen } from '@/components/LoadingScreen';
+import { LoadingScreen } from '@/components/common/LoadingScreen';
 import { LockScreen }    from '@/components/lock/LockScreen';
 import { AppShell }      from '@/components/shell/AppShell';
 import { useAppStore }   from '@/lib/store/appStore';

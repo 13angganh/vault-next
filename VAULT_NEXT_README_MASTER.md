@@ -853,3 +853,175 @@ Semua 6 sesi telah selesai. Vault Next siap deploy ke Vercel.
 ---
 
 *Vault Next v1.0 — Sesi 6 selesai April 2026*
+
+---
+
+## ✅ Sesi C — Skeleton, Empty States, Error States (SELESAI)
+
+### File Diupdate Sesi C
+```
+app/
+  loading.tsx               — Final: Shield icon + shimmer bars + pulse animation
+  error.tsx                 — Final: pakai ErrorState primitive + Button gold
+
+components/
+  vault/
+    VaultListView.tsx       — Tambah: VaultSkeletonList component, isVaultLoading prop,
+                              showSkeleton state (300ms delay), renderEmptyState() per konteks,
+                              vault-empty-wrap layout wrapper
+  settings/
+    BackupModal.tsx         — Ganti backup-error p tag dengan ErrorState primitive
+                              di semua 3 tab (export, import, sync)
+
+styles/
+  layout.css                — Tambah Sesi C: app-loading-root/inner/icon/bars,
+                              app-error-root, vault-skeleton-list/card/row/text,
+                              vault-empty-wrap, backup-error-state compact
+  components/
+    animations.css          — Tambah: @keyframes pulse (untuk loading icon)
+```
+
+### Yang Dikerjakan Sesi C
+
+**`app/loading.tsx` (M-11 — final):**
+- [x] Shield icon dengan pulse animation (opacity + scale 1.8s infinite)
+- [x] 2 skeleton bars (140px title + 96px subtitle) dengan shimmer
+- [x] `aria-live="polite"` + `aria-label` untuk aksesibilitas
+- [x] Class `app-loading-root/inner/icon/bars` — CSS di layout.css
+
+**`app/error.tsx` (M-11 — final):**
+- [x] Pakai `ErrorState` primitive (bukan inline style)
+- [x] Pakai `Button variant="gold"` untuk tombol retry
+- [x] `app-error-root` wrapper — full height centered
+
+**`VaultListView.tsx` (M-08, M-09):**
+- [x] `VaultSkeletonList` — 3 placeholder card: circle(36) + 2 text bars + chevron bar
+- [x] `isVaultLoading?: boolean` prop — default false
+- [x] `showSkeleton` state: aktif saat `isVaultLoading`, fade out setelah 300ms delay
+- [x] `renderEmptyState()` — contextual per filter:
+  - `searchQuery` → SearchIcon + "Tidak ada hasil" + query info
+  - `bin` → Trash2 + "Tong Sampah kosong"
+  - `fav` → Star + "Belum ada favorit" + hint
+  - kategori custom → FolderOpen + nama kategori + hint
+  - `all` → PackageOpen + "Vault masih kosong"
+- [x] `vault-empty-wrap` wrapper — min-height 320px, flex center
+
+**`BackupModal.tsx` (M-10):**
+- [x] `exportError` → `<ErrorState title="Gagal export" ... className="backup-error-state" />`
+- [x] `importError` → `<ErrorState title="Gagal import" ... />`
+- [x] `syncError` → `<ErrorState title="Gagal sync" ... />`
+- [x] `.backup-error-state` compact: no icon, merah subtle, font-xs, border-radius-md
+
+**CSS baru di `styles/layout.css`:**
+- [x] `.app-loading-root` — full dvh, centered, bg var(--bg)
+- [x] `.app-loading-icon` — gold, opacity 0.7, animasi pulse
+- [x] `.app-loading-bars` — flex column center, gap space-2
+- [x] `.app-error-root` — full dvh, centered, padding space-6
+- [x] `.vault-skeleton-list` — padding-top space-2
+- [x] `.vault-skeleton-card/row/text` — layout skeleton card
+- [x] `.vault-empty-wrap` — min-height 320px, flex center, padding space-6
+- [x] `.backup-error-state` — compact ErrorState override
+
+**CSS baru di `styles/components/animations.css`:**
+- [x] `@keyframes pulse` — opacity 0.7→1→0.7 + scale 1→1.08→1
+
+**Checklist Sesi C:**
+- [x] C-01 npm run build: 0 error
+- [x] C-08 tsc --noEmit: 0 error
+- [x] C-12 Skeleton muncul saat loading vault (VaultSkeletonList + showSkeleton state)
+- [x] C-13 Empty states konsisten di semua konteks (5 varian: search, bin, fav, kategori, all)
+- [x] C-14 Error states muncul dan informatif (BackupModal 3 tab, app/error.tsx final)
+- [x] C-15 ZIP tidak mengandung node_modules atau .next
+
+---
+
+*Vault Next God Mode Perfectionist Blueprint — Sesi C selesai April 2026*
+
+---
+
+## Sesi D — Micro-animations, Lucide Icon Picker, Security Feel — ✅ SELESAI
+
+### Scope Sesi D
+
+- **M-12** Micro-animations PIN dots & input focus
+- **M-13** CategoryManager: emoji picker → Lucide icon picker
+- **M-14** Visual "security feel" prominent — shield glow di LockScreen
+
+---
+
+### Log Perubahan Sesi D
+
+**`lib/types.ts`:**
+- [x] `CustomCategory` ditambah field `iconKey: string` (canonical icon key)
+- [x] Field `emoji` dipertahankan untuk backward-compat (berisi iconKey setelah Sesi D)
+
+**`components/entries/CategoryIcon.tsx`:**
+- [x] Ditambahkan `CUSTOM_CAT_ICONS` registry (60+ Lucide icons, diekspor)
+- [x] Custom categories sekarang render Lucide icon via `iconKey` (bukan emoji char)
+- [x] Backward-compat: jika `iconKey` tidak dikenali, fallback ke `Tag` icon
+- [x] Tidak ada emoji literal tersisa di komponen ini
+
+**`components/settings/CategoryManager.tsx` (M-13):**
+- [x] `EMOJI_LIST` array dihapus sepenuhnya
+- [x] `emoji` state → `iconKey` state
+- [x] `LucideIconPicker` inline: 48 icons dalam grid 8 kolom, scrollable
+- [x] Setiap item picker: Lucide icon + active check badge + tooltip label
+- [x] Preview badge menampilkan Lucide icon + nama (bukan emoji)
+- [x] handleSave: `emoji: iconKey` (backward-compat) + `iconKey: iconKey`
+- [x] List view: icon wrap Lucide menggantikan emoji span
+- [x] Zero emoji literal di seluruh komponen
+
+**`components/lock/PINPad.tsx` (M-12):**
+- [x] Prop baru: `success?: boolean` — flash gold→teal saat unlock berhasil
+- [x] Dot fill: animasi `pinDotBounce` (bounceIn dengan spring easing)
+- [x] Dot error: warna berubah ke `var(--red)` + shake baris dots
+- [x] Dot success: warna berubah ke `var(--teal)` + scale 1.15
+- [x] Key press: `onPointerDown/Up/Leave` → scale 0.91 + gold glow ring
+- [x] Transisi smooth semua state dot via CSS transition
+
+**`components/lock/LockScreen.tsx` (M-14):**
+- [x] VaultIcon dibungkus `.lock-shield-icon` + `.lock-shield-ring`
+- [x] Shield pulse glow animation 2.8s infinite saat LockScreen ditampilkan
+
+**`styles/components/animations.css`:**
+- [x] `@keyframes pinDotBounce` — bounceIn spring untuk PIN dot fill
+- [x] `@keyframes pinDotSuccess` — teal glow ring saat unlock berhasil
+- [x] `@keyframes shieldPulse` — opacity + drop-shadow gold glow 2.8s
+- [x] `@keyframes shieldRing` — expanding ring fade-out dari VaultIcon
+- [x] `@keyframes inputFocusRing` — box-shadow grow saat input focus
+
+**`styles/components/settings.css` (M-13):**
+- [x] `.emoji-picker*` CSS dihapus
+- [x] `.icon-picker` grid 8 kolom, max-height 200px, scrollable
+- [x] `.icon-picker__item` — square 36px, hover scale 1.12 + color
+- [x] `.icon-picker__item--active` — gold border + gold-dim bg
+- [x] `.icon-picker__check` — check badge kecil di sudut active item
+- [x] `.cat-manager-form__icon-row/btn/preview/hint` — menggantikan `__emoji-*`
+- [x] `.cat-manager__item-icon-wrap` — wrapper Lucide icon di list
+
+**`styles/components/lock.css` (M-14):**
+- [x] `.lock-shield-icon` — relative container untuk VaultIcon + ring
+- [x] `.lock-shield-ring` — absolute ring dengan shieldRing animation
+- [x] `svg` di dalam `.lock-shield-icon` — shieldPulse 2.8s infinite
+
+**`styles/components/ui.css` (M-12):**
+- [x] Input/textarea focus → `inputFocusRing` animation 0.35s
+
+---
+
+### Checklist Sesi D
+
+- [x] D-01 npm run build: 0 error
+- [x] D-02 tsc --noEmit: 0 error
+- [x] D-03 Zero emoji literal di CategoryManager & CategoryIcon
+- [x] D-04 Lucide icon picker tampil 48 icon, scrollable, accessible (role=listbox/option)
+- [x] D-05 PIN dots bounce saat digit dimasukkan
+- [x] D-06 PIN dots shake + merah saat error
+- [x] D-07 Shield pulse glow di LockScreen
+- [x] D-08 Input focus ring animation smooth
+- [x] D-09 Backward-compat: data lama (emoji field) tidak crash
+- [x] D-10 ZIP tidak mengandung node_modules atau .next
+
+---
+
+*Vault Next God Mode Perfectionist Blueprint — Sesi D selesai April 2026*

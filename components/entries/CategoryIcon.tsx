@@ -2,13 +2,25 @@
 
 /**
  * Vault Next — CategoryIcon
- * Lucide icons per kategori (tidak ada emoji).
- * Ukuran: sm (28px box) | md (36px box) | lg (48px box)
+ * Sesi D: custom categories pakai Lucide icon (iconKey), bukan emoji.
+ * Backward-compat: jika iconKey tidak dikenali, fallback ke Tag icon.
  */
 
 import {
   Share2, Mail, Landmark, Gamepad2, Bitcoin, CreditCard,
   Wifi, MoreHorizontal, Tag, LucideIcon,
+  Briefcase, Home, Heart, Star, Zap, Shield,
+  Globe, Camera, Music, ShoppingCart, Car, Plane,
+  GraduationCap, Wrench, BookOpen, Coffee, Palette,
+  Users, Phone, Key, Lock, Database, Cloud,
+  Smartphone, Monitor, Headphones, Tv, Printer,
+  ShieldCheck, Fingerprint, Inbox, Send, FileText,
+  DollarSign, PiggyBank, TrendingUp, Receipt, Wallet,
+  Trophy, Dice5, Joystick, Puzzle, Sword,
+  Leaf, Sun, Moon, Flame, Snowflake, Droplets,
+  Box, Package, Archive, Folder, Bookmark,
+  Bell, AlertCircle, CheckCircle, Info, HelpCircle,
+  MapPin, Navigation, Compass, Map,
 } from 'lucide-react';
 import type { CustomCategory } from '@/lib/types';
 
@@ -24,7 +36,7 @@ const CAT_ICONS: Record<string, LucideIcon> = {
   lainnya: MoreHorizontal,
 };
 
-/* ── Warna background per kategori ── */
+/* ── Warna background per kategori default ── */
 const CAT_COLORS: Record<string, string> = {
   sosmed:  'rgba(99,102,241,0.15)',
   email:   'rgba(59,130,246,0.15)',
@@ -36,7 +48,7 @@ const CAT_COLORS: Record<string, string> = {
   lainnya: 'rgba(156,163,175,0.15)',
 };
 
-/* ── Warna icon per kategori ── */
+/* ── Warna icon per kategori default ── */
 const CAT_ICON_COLORS: Record<string, string> = {
   sosmed:  '#818cf8',
   email:   '#60a5fa',
@@ -46,6 +58,23 @@ const CAT_ICON_COLORS: Record<string, string> = {
   kartu:   '#38bdf8',
   wifi:    '#c084fc',
   lainnya: '#9ca3af',
+};
+
+/* ── Lucide icon registry untuk custom categories ── */
+export const CUSTOM_CAT_ICONS: Record<string, LucideIcon> = {
+  Tag, Briefcase, Home, Heart, Star, Zap, Shield,
+  Globe, Camera, Music, ShoppingCart, Car, Plane,
+  GraduationCap, Wrench, BookOpen, Coffee, Palette,
+  Users, Phone, Key, Lock, Database, Cloud,
+  Smartphone, Monitor, Headphones, Tv, Printer,
+  ShieldCheck, Fingerprint, Inbox, Send, FileText,
+  DollarSign, PiggyBank, TrendingUp, Receipt, Wallet,
+  Trophy, Dice5, Joystick, Puzzle, Sword,
+  Leaf, Sun, Moon, Flame, Snowflake, Droplets,
+  Box, Package, Archive, Folder, Bookmark,
+  Bell, AlertCircle, CheckCircle, Info, HelpCircle,
+  MapPin, Navigation, Compass, Map,
+  Wifi, Mail, Share2, Landmark, Gamepad2, Bitcoin, CreditCard, MoreHorizontal,
 };
 
 const SIZE_MAP = {
@@ -72,39 +101,14 @@ export function CategoryIcon({
   /* Cek apakah kategori custom */
   const customCat = customCats.find((c) => c.id === catId);
 
-  /* Warna */
-  const bg        = CAT_COLORS[catId]      ?? 'rgba(156,163,175,0.15)';
-  const iconColor = CAT_ICON_COLORS[catId] ?? '#9ca3af';
-  const radius    = Math.round(box * 0.28);
+  /* Radius standar */
+  const radius = Math.round(box * 0.28);
 
-  /* Kategori default → Lucide icon */
-  const Icon = CAT_ICONS[catId];
-
-  /* Kategori custom → tampilkan emoji jika masih ada, atau fallback Tag */
   if (customCat) {
-    if (customCat.emoji) {
-      return (
-        <span
-          className={`cat-icon cat-icon--${size} ${className}`}
-          style={{
-            width: box, height: box,
-            fontSize: iconSize + 2,
-            backgroundColor: 'rgba(156,163,175,0.15)',
-            borderRadius: radius,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            userSelect: 'none',
-            lineHeight: 1,
-          }}
-          aria-hidden="true"
-        >
-          {customCat.emoji}
-        </span>
-      );
-    }
-    /* Custom tanpa emoji → Tag icon */
+    /* Resolve icon dari iconKey */
+    const iconKey = customCat.iconKey || customCat.emoji; // backward-compat
+    const CustomIcon: LucideIcon = CUSTOM_CAT_ICONS[iconKey] ?? Tag;
+
     return (
       <span
         className={`cat-icon cat-icon--${size} ${className}`}
@@ -120,12 +124,16 @@ export function CategoryIcon({
         }}
         aria-hidden="true"
       >
-        <Tag size={iconSize} color="#9ca3af" />
+        <CustomIcon size={iconSize} color="#9ca3af" strokeWidth={1.8} />
       </span>
     );
   }
 
   /* Default kategori dengan Lucide icon */
+  const bg        = CAT_COLORS[catId]      ?? 'rgba(156,163,175,0.15)';
+  const iconColor = CAT_ICON_COLORS[catId] ?? '#9ca3af';
+  const Icon      = CAT_ICONS[catId];
+
   return (
     <span
       className={`cat-icon cat-icon--${size} ${className}`}

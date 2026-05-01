@@ -43,9 +43,11 @@ export interface VaultMeta {
 // ─── Custom Category ──────────────────────────────────────────────────────────
 
 export interface CustomCategory {
-  id:    string;
-  label: string;
-  emoji: string;
+  id:      string;
+  label:   string;
+  emoji:   string;   // Sesi D: diisi dengan iconKey (nama Lucide icon), bukan emoji literal
+                     // Backward-compat: jika berisi emoji char lama, CategoryIcon fallback ke Tag
+  iconKey: string;   // canonical key — dipakai Sesi D+
 }
 
 // ─── Backup Format ────────────────────────────────────────────────────────────

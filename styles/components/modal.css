@@ -1,0 +1,390 @@
+/* styles/components/modal.css — Vault Next */
+/* Modal overlay, modal base, entry unlock overlay, form overlays */
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg-overlay);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-4);
+  animation: fadeIn 200ms var(--ease-default) both;
+}
+/* .modal utama — lihat definisi di section MODAL di bawah */
+.modal-sm { max-width: var(--modal-width-sm); }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text);
+}
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+}
+.modal-footer {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+  display: flex; gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+/* FORM UTILS */
+.form-group { margin-bottom: var(--space-4); }
+.form-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted2);
+  margin-bottom: var(--space-2);
+  letter-spacing: 0.02em;
+}
+.form-label.caps {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+}
+.form-err {
+  font-size: var(--text-sm);
+  color: var(--danger);
+  margin-top: var(--space-2);
+  animation: shake 350ms var(--ease-default) both;
+}
+.form-hint {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  margin-top: var(--space-1);
+  line-height: var(--lh-loose);
+}
+
+/* FILTER BAR (chip / pill buttons) */
+.filter-bar {
+  display: flex; gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.filter-chip {
+  padding: 5px 13px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+}
+.filter-chip.active {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+  font-weight: 600;
+}
+.filter-chip:hover:not(.active) {
+  border-color: var(--gold-border);
+  color: var(--text);
+}
+
+/* NOTICE BANNER */
+.notice {
+  background: var(--notice-bg);
+  border: 1px solid var(--notice-border);
+  border-radius: var(--radius-md);
+  padding: 11px var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--notice-text);
+  display: flex; gap: var(--space-3);
+  align-items: flex-start;
+  line-height: var(--lh-loose);
+}
+.notice-warn {
+  background: rgba(240,165,0,0.07);
+  border-color: var(--gold-border);
+  color: var(--gold-text);
+}
+.notice-danger {
+  background: rgba(255,77,109,0.07);
+  border-color: rgba(255,77,109,0.3);
+  color: var(--red);
+}
+
+/* BADGE / CHIP */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+/* DIVIDER */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-4) 0;
+}
+.divider-label {
+  display: flex; align-items: center; gap: var(--space-3);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  margin: var(--space-4) 0;
+}
+.divider-label::before, .divider-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ACCESSIBILITY */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .modal-overlay { padding: var(--space-2); align-items: flex-end; }
+  .entry-form-overlay { align-items: center; padding: 12px 16px; }
+  .modal { border-radius: var(--radius-xl) var(--radius-xl) 0 0; max-height: 92dvh; }
+  .modal.modal-center { border-radius: var(--radius-xl); }
+  /* entry-form-overlay: lihat base rule di bawah */
+}
+
+
+/* Modal overlay & base modal */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+  animation: fadeIn 0.15s ease;
+}
+
+.modal {
+  background: var(--bg-s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 80px);
+  display: flex;
+  flex-direction: column;
+  animation: fadeScaleIn 0.22s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  overflow: hidden; /* perlu untuk border-radius, tapi body & footer handle scroll */
+  position: relative;
+  z-index: 801;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+}
+
+/* entry-form-modal: flex column agar footer selalu terlihat */
+.entry-form-modal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.entry-form-modal .modal__body {
+  max-height: calc(100dvh - var(--appbar-height) - 56px - 56px - 32px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: 14px 16px;
+}
+
+.entry-form-modal .modal__footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-s2);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modal__title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.modal__close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--muted);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.modal__close:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(255,77,109,0.08);
+}
+
+.modal__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: 16px 18px;
+}
+
+.modal__footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;           /* tidak ikut scroll */
+  background: var(--bg-s2); /* solid, tidak transparan */
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+
+/* Bug 4 FIX: Modal overlay — solid background, z-index cukup tinggi */
+/* Override semua modal-overlay agar tidak tembus ke konten di belakang */
+/* Modal overlay — satu definisi bersih (sesi 7) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fadeIn 0.18s ease both;
+}
+
+[data-theme="light"] .modal-overlay {
+  background: rgba(0,0,0,0.45);
+}
+
+/* Entry form overlay: mulai dari bawah header, bukan full screen */
+/* entry-form-overlay dihapus — pakai entry-form-page */
+
+/* entry-form-overlay dihapus — pakai entry-form-page */
+
+/* Modal di dalam entry-form-overlay: scroll mandiri, footer selalu terlihat */
+.entry-form-overlay .modal {
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0; /* tidak dikompres oleh overlay */
+  margin: auto 0; /* vertikal center jika konten pendek */
+}
+
+/* duplikat dihapus */
+
+/* SESI 6E — BUG FIXES */
+
+
+/* BackupModal: modal-overlay align top agar modal tidak loncat naik-turun */
+.modal-overlay.backup-modal-overlay {
+  align-items: flex-start !important;
+  padding-top: max(env(safe-area-inset-top), 64px) !important;
+  overflow-y: auto !important;
+}
+
+@media (max-width: 768px) {
+  .modal-overlay.backup-modal-overlay {
+    align-items: flex-start !important;
+    padding-top: max(env(safe-area-inset-top), 56px) !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* BackupModal: tab content fixed container agar tidak naik-turun saat switch */
+.backup-tabs-content {
+  position: relative;
+}
+
+.backup-section {
+  /* semua tab section pakai visibility bukan conditional render */
+  padding: 16px 0 4px;
+  transition: opacity 0.15s ease;
+}
+
+.backup-section[style*="none"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* EntryCard expand/collapse: opacity fade saja, tidak ada gerak */
+.entry-card__body-wrap {
+  overflow: hidden;
+}
+
+.entry-card__body-wrap--open {
+  /* terbuka normal */
+}
+
+.entry-card__body-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.entry-card__body {
+  /* no animation - instant show */
+}
+
+/* Animasi perpindahan tab backup: fade smooth */
+@keyframes tabFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.backup-section--visible {
+  animation: tabFadeIn 0.18s ease both;
+}
+
+/* Input focus: pastikan tidak ada yang intercept focus saat ketik */
+.backup-section input,
+.backup-section textarea {
+  /* Hindari re-focus dari focus trap saat nilai berubah */
+  -webkit-user-select: text;
+  user-select: text;
+}

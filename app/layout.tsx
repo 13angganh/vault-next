@@ -4,7 +4,7 @@ import Script from 'next/script';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import '@/styles/globals.css';
 
-/* ── Google Fonts via next/font (no CDN, no layout shift) ── */
+/* Google Fonts via next/font (no CDN, no layout shift) */
 const outfit = Outfit({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700', '800'],
@@ -28,8 +28,18 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Vault Next',
   },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/icons/icon-152x152.png',
+  },
   other: {
     'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+    'google-site-verification': 'lUWKvqnjdB0FNmPRDnJFjbXO-0-y5g9TNVhE_o5TXwQ',
   },
 };
 
@@ -38,41 +48,25 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#07080f',
   viewportFit: 'cover',
-  interactiveWidget: 'resizes-visual',
+  themeColor: '#07080f',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html
-      lang="id"
-      data-theme="dark"
-      suppressHydrationWarning
-      className={`${outfit.variable} ${jetbrainsMono.variable}`}
-    >
+    <html lang="id" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                var t = localStorage.getItem('vault_theme');
-                if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
-              } catch(e) {}
-            `,
-          }}
-        />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+        <meta name="theme-color" content="#07080f" />
       </head>
-      <body>
+      <body className={`${outfit.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           {children}
         </ThemeProvider>
-      <Script src="/sw-register.js" strategy="lazyOnload" />
+        <Script src="/sw-register.js" strategy="afterInteractive" />
       </body>
     </html>
   );

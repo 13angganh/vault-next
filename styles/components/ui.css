@@ -1,0 +1,510 @@
+/* styles/components/ui.css — Vault Next */
+/* Buttons, inputs, ripple, toggle, badge, password tools, toast, spinner */
+
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(240,165,0,0.22);
+  transform: scale(0);
+  animation: ripple 480ms var(--ease-out);
+  pointer-events: none;
+}
+
+/* Sidebar item: ripple lebih subtle */
+.sidebar-item .ripple-effect {
+  background: rgba(240,165,0,0.14);
+}
+
+/* Icon btn: ripple putih-abu */
+.icon-btn .ripple-effect {
+  background: rgba(255,255,255,0.12);
+}
+
+/* SKELETON LOADER */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-s2) 25%,
+    var(--bg-s3) 50%,
+    var(--bg-s2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+/* INPUTS */
+input, select, textarea {
+  width: 100%;
+  background: var(--bg-s1);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-md);
+  padding: 10px 13px;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-dim);
+}
+input::placeholder, textarea::placeholder { color: var(--muted); }
+select option { background: var(--bg-s2); color: var(--text); }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  touch-action: manipulation;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: #000;
+}
+.btn-gold:hover { opacity: 0.87; transform: translateY(-1px); }
+.btn-ghost {
+  background: var(--bg-s1);
+  color: var(--muted2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--gold); color: var(--text); }
+.btn-danger {
+  background: rgba(255,77,109,0.1);
+  color: var(--red);
+  border: 1px solid rgba(255,77,109,0.25);
+}
+.btn-danger:hover { background: rgba(255,77,109,0.18); }
+.btn-teal {
+  background: rgba(0,212,170,0.1);
+  color: var(--teal);
+  border: 1px solid rgba(0,212,170,0.25);
+}
+.btn-teal:hover { background: rgba(0,212,170,0.18); }
+.btn-sm { padding: 6px 13px; font-size: var(--text-sm); }
+.btn-xs { padding: 4px 10px; font-size: var(--text-xs); }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+
+/* Icon button */
+.ibtn {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+.ibtn:hover { border-color: var(--gold); color: var(--text); background: var(--bg-s2); }
+.ibtn.del:hover { border-color: var(--red); color: var(--red); }
+.ibtn.lock-active { border-color: var(--blue); color: var(--blue); background: rgba(77,142,255,0.1); }
+
+/* CARD */
+.card {
+  background: var(--bg-s1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  transition: border-color var(--transition-fast),
+              background-color var(--transition-fast),
+              transform var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+.card:hover {
+  border-color: var(--gold-border);
+  background: var(--card-hover-bg);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-gold);
+}
+
+/* ===============================================================
+
+/* PasswordStrengthMeter */
+
+.strength-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.strength-meter__bars {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+}
+
+.strength-meter__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background-color 0.25s ease;
+}
+
+.strength-meter__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  min-width: 80px;
+  text-align: right;
+  transition: color 0.25s ease;
+}
+
+/* PasswordGenerator */
+
+.pw-gen {
+  padding: 4px 0;
+}
+
+.pw-gen__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.pw-gen__title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pw-gen__close {
+  color: var(--text-muted);
+}
+
+.pw-gen__preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.pw-gen__pw {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  word-break: break-all;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pw-gen__copy,
+.pw-gen__regen {
+  font-size: 17px;
+  color: var(--text-muted);
+  padding: 3px 5px;
+  border-radius: var(--radius-sm);
+  transition: color var(--trans-fast), background var(--trans-fast);
+  flex-shrink: 0;
+}
+
+.pw-gen__copy:hover,
+.pw-gen__regen:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.pw-gen__copy--copied { color: #4ade80 !important; }
+
+.pw-gen__row {
+  margin: 12px 0 6px;
+}
+
+.pw-gen__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.pw-gen__length-val {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent);
+  font-size: var(--text-sm);
+}
+
+.pw-gen__slider {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.pw-gen__toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.pw-gen__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.pw-gen__actions {
+  margin-top: 14px;
+}
+
+.pw-gen__use-btn {
+  width: 100%;
+}
+
+/* PwGen sub-modal */
+
+.pw-gen-overlay {
+  z-index: 300;
+}
+
+.pw-gen-modal {
+  width: min(400px, 100%);
+  max-height: 80vh;
+}
+
+.pw-gen-modal .modal__body {
+  padding: 16px 18px;
+}
+
+/* Btn sizes */
+
+.btn--sm {
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+}
+
+
+
+/* Ripple effect: .btn sudah punya position:relative overflow:hidden di block utama */
+
+/* Add btn di header */
+.app-header__add-btn {
+  height: 36px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: var(--space-1);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.app-header__add-label { display: inline; }
+
+/* Spinner utility */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin { animation: spin 1s linear infinite; }
+
+
+/* Toast slide-in */
+.toast-container {
+  position: fixed;
+  bottom: env(safe-area-inset-bottom, 24px);
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  z-index: 9000;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px var(--space-4);
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  animation: toastSlideUp 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes toastSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.toast--success { background: #166534; color: #86efac; }
+.toast--error   { background: #7f1d1d; color: #fca5a5; }
+.toast--info    { background: #1e3a5f; color: #93c5fd; }
+.toast__icon    { display: flex; align-items: center; flex-shrink: 0; }
+
+
+/* Vault empty icon — Lucide */
+.vault-empty__icon {
+  color: var(--muted);
+  opacity: 0.55;
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Cat icon sizing */
+.cat-icon { display: inline-flex; flex-shrink: 0; }
+
+/* Button alias (dipakai EntryForm) */
+.btn--ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+.btn--ghost:hover {
+  background: var(--bg-s2);
+  border-color: var(--border2);
+  color: var(--text);
+}
+
+.btn--primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: #000;
+  font-weight: 700;
+}
+.btn--primary:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+.btn--primary:disabled {
+  opacity: 0.45;
+  transform: none;
+  cursor: not-allowed;
+}
+
+
+.entry-field__btn { width:28px;height:28px;background:none;border:1px solid var(--border);cursor:pointer;color:var(--muted2);display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);transition:all var(--transition-fast);flex-shrink:0;position:relative;z-index:1;touch-action:manipulation; }
+.entry-field__btn > svg { position:relative;z-index:2; }
+.entry-field__btn:hover { color:var(--text);background:var(--bg-s3);border-color:var(--border2); }
+
+/* Vault entries scroll area — mandiri, tidak ikut header */
+/* ── PRIMITIVES CSS (Sesi B) ─────────────────────────────────────── */
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.badge__icon { display: flex; align-items: center; }
+.badge--gold  { background: var(--gold-dim);  color: var(--gold);  border: 1px solid var(--gold-border); }
+.badge--teal  { background: rgba(0,212,170,0.1); color: var(--teal); border: 1px solid rgba(0,212,170,0.25); }
+.badge--red   { background: rgba(255,77,109,0.1); color: var(--red);  border: 1px solid rgba(255,77,109,0.25); }
+.badge--muted { background: var(--bg-s2);   color: var(--muted2); border: 1px solid var(--border); }
+.badge--blue  { background: rgba(77,142,255,0.1); color: var(--blue); border: 1px solid rgba(77,142,255,0.25); }
+
+/* Field wrapper (Input/Textarea dengan label & error) */
+.field { display: flex; flex-direction: column; gap: var(--space-2); }
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted2);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+}
+.field__wrap { position: relative; display: flex; align-items: center; }
+.field__wrap--has-prefix input { padding-left: 36px; }
+.field__wrap--has-suffix input { padding-right: 36px; }
+.field__prefix, .field__suffix {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+.field__prefix { left: 10px; }
+.field__suffix { right: 8px; pointer-events: auto; }
+.field__input--error { border-color: var(--red) !important; }
+.field__error {
+  font-size: var(--text-xs);
+  color: var(--red);
+  margin-top: -2px;
+}
+
+/* EmptyState */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-4);
+  color: var(--muted);
+}
+.empty-state__icon { color: var(--muted); opacity: 0.55; }
+.empty-state__title { font-size: var(--text-md); font-weight: 600; color: var(--text2); }
+.empty-state__desc  { font-size: var(--text-base); color: var(--muted); }
+.empty-state__action { margin-top: var(--space-2); }
+
+/* ErrorState */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-4);
+}
+.error-state__icon { color: var(--red); opacity: 0.75; }
+.error-state__title { font-size: var(--text-md); font-weight: 700; color: var(--red); }
+.error-state__msg   { font-size: var(--text-base); color: var(--muted2); }
+.error-state__action { margin-top: var(--space-2); }
+
+/* IconButton sm */
+.ibtn--sm { width: 28px; height: 28px; }
+
+/* ─── Sesi D — Input focus ring animation (M-12) ─────────────────────────── */
+.input:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  animation: inputFocusRing 0.35s var(--ease-out) forwards;
+}

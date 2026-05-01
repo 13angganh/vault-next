@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { Button } from '@/components/ui/primitives';
 import {
   Sun, Moon, KeyRound, Lock, Fingerprint,
   RefreshCw, ArrowLeft, Plus, Loader2, Eye, EyeOff,
 } from 'lucide-react';
-import { VaultIcon }          from '@/components/LoadingScreen';
+import { VaultIcon }          from '@/components/common/LoadingScreen';
 import { useTheme }           from '@/components/providers/ThemeProvider';
 import { PINPad }             from './PINPad';
 import { RecoveryPanel }      from './RecoveryPanel';
@@ -168,9 +169,12 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
           {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
 
-        {/* Logo */}
+        {/* Logo — Sesi D: shield glow (M-14) */}
         <div className="ls-logo">
-          <VaultIcon size={44} />
+          <div className="lock-shield-icon">
+            <VaultIcon size={44} />
+            <span className="lock-shield-ring" aria-hidden="true" />
+          </div>
           <h1 className="ls-title">
             Vault <span className="ls-title__gold">Next</span>
           </h1>
@@ -250,13 +254,11 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 </div>
                 {error && <p className="ls-error">{error}</p>}
               </div>
-
-              <button className="btn btn-gold ls-submit" onClick={handleMasterSubmit}
-                disabled={loading || !masterInput}>
+              <Button variant="gold" full onClick={handleMasterSubmit} disabled={loading || !masterInput}>
                 {loading
                   ? <><Loader2 size={14} className="spin" /> Membuka…</>
                   : 'Buka Vault'}
-              </button>
+              </Button>
 
               <div className="ls-links">
                 {hasPinSetup() && (
@@ -295,13 +297,11 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 />
                 {error && <p className="ls-error">{error}</p>}
               </div>
-
-              <button className="btn btn-gold ls-submit"
-                onClick={handleSeedLogin} disabled={loading || !seedInput.trim()}>
+              <Button variant="gold" full onClick={handleSeedLogin} disabled={loading || !seedInput.trim()}>
                 {loading
                   ? <><Loader2 size={14} className="spin" /> Membuka…</>
                   : 'Buka Vault'}
-              </button>
+              </Button>
 
               <div className="ls-links">
                 <button style={S.link} onClick={() => goPanel(hasPinSetup() ? 'pin' : 'master')}>

@@ -16,6 +16,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/primitives';
 import { X, Fingerprint, CheckCircle2, AlertCircle, Loader2, Shield } from 'lucide-react';
 
 /* ── Constants ── */
@@ -237,9 +238,7 @@ export function BiometricHintModal({
               Browser atau perangkat ini tidak mendukung autentikasi biometrik.
               Gunakan Chrome/Safari terbaru di Android atau iOS.
             </p>
-            <button className="btn btn-ghost" style={{ marginTop: 'var(--space-4)', width: '100%' }} onClick={onClose}>
-              Mengerti
-            </button>
+            <Button variant="ghost" full onClick={onClose}>Mengerti</Button>
           </div>
         )}
 
@@ -259,17 +258,11 @@ export function BiometricHintModal({
               Sidik jari disimpan aman di perangkat (tidak dikirim ke server).
               Sesi biometrik aktif hingga browser/tab ditutup.
             </div>
-            <button
-              className="btn btn-gold"
-              style={{ width: '100%', gap: 8, fontSize: 'var(--text-base)', padding: '13px 18px' }}
+            <Button variant="gold" full
               onClick={handleRegister}
-            >
-              <Fingerprint size={18} />
-              Daftarkan Sidik Jari
-            </button>
-            <button className="btn btn-ghost" style={{ width: '100%' }} onClick={onClose}>
-              Batal
-            </button>
+            ><Fingerprint size={18} />
+              Daftarkan Sidik Jari</Button>
+            <Button variant="ghost" full onClick={onClose}>Batal</Button>
           </div>
         )}
 
@@ -319,9 +312,7 @@ export function BiometricHintModal({
               {mode === 'register' ? 'Sidik jari terdaftar!' : 'Verifikasi berhasil!'}
             </p>
             {mode === 'register' && (
-              <button className="btn btn-gold" style={{ marginTop: 'var(--space-2)', width: '100%' }} onClick={onClose}>
-                Selesai
-              </button>
+              <Button variant="gold" full onClick={onClose}>Selesai</Button>
             )}
           </div>
         )}
@@ -342,9 +333,7 @@ export function BiometricHintModal({
                 {errMsg}
               </span>
             </div>
-            <button className="btn btn-gold" style={{ width: '100%' }} onClick={onClose}>
-              Masuk dengan PIN / Password
-            </button>
+            <Button variant="gold" full onClick={onClose}>Masuk dengan PIN / Password</Button>
           </div>
         )}
 
@@ -362,18 +351,12 @@ export function BiometricHintModal({
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--red)', lineHeight: 1.6 }}>{errMsg}</span>
             </div>
             {mode === 'auth' && (
-              <button className="btn btn-gold" style={{ width: '100%', gap: 8 }} onClick={handleAuth}>
-                <Fingerprint size={16} /> Coba Lagi
-              </button>
+              <Button variant="gold" full onClick={handleAuth}><Fingerprint size={16} /> Coba Lagi</Button>
             )}
             {mode === 'register' && (
-              <button className="btn btn-gold" style={{ width: '100%', gap: 8 }} onClick={handleRegister}>
-                <Fingerprint size={16} /> Coba Lagi
-              </button>
+              <Button variant="gold" full onClick={handleRegister}><Fingerprint size={16} /> Coba Lagi</Button>
             )}
-            <button className="btn btn-ghost" style={{ width: '100%' }} onClick={onClose}>
-              Tutup
-            </button>
+            <Button variant="ghost" full onClick={onClose}>Tutup</Button>
           </div>
         )}
       </div>

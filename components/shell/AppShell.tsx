@@ -5,11 +5,11 @@ import { useRipple }            from '@/lib/hooks/useRipple';
 import { AutoLockManager }      from '@/components/shell/AutoLockManager';
 import { Sidebar }              from '@/components/shell/Sidebar';
 import { Header }               from '@/components/shell/Header';
-import { VaultListView }        from '@/components/views/VaultListView';
-import type { VaultListViewRef } from '@/components/views/VaultListView';
-import { SettingsView }         from '@/components/views/SettingsView';
-import { BackupReminderModal }  from '@/components/views/BackupReminderModal';
-import { BackupModal }          from '@/components/views/BackupModal';
+import { VaultListView }        from '@/components/vault/VaultListView';
+import type { VaultListViewRef } from '@/components/vault/VaultListView';
+import { SettingsView }         from '@/components/settings/SettingsView';
+import { BackupReminderModal }  from '@/components/settings/BackupReminderModal';
+import { BackupModal }          from '@/components/settings/BackupModal';
 import { useAppStore }          from '@/lib/store/appStore';
 
 type ShellView = 'vault' | 'settings';
