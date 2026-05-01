@@ -26,6 +26,7 @@ interface HeaderProps {
 export function Header({
   onAddEntry,
   onToggleSidebar,
+  sidebarOpen,
   activeView,
   autoLockMinutes,
   lastActivityAt,
