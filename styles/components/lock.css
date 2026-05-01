@@ -1,56 +1,6 @@
 /* styles/components/lock.css — Vault Next */
 /* Lock screen, PIN pad, biometric, setup flow, recovery */
 
-@keyframes skeletonPulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-
-.skeleton {
-  animation: skeletonPulse 1.5s ease-in-out infinite;
-  background: var(--bg-s2);
-  border-radius: var(--radius-sm);
-}
-
-/* Empty state polish */
-.vault-list__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-12) var(--space-6);
-  text-align: center;
-  color: var(--muted);
-  min-height: 40vh;
-}
-
-.vault-list__empty-icon {
-  font-size: 48px;
-  opacity: 0.4;
-}
-
-.vault-list__empty-title {
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-.vault-list__empty-desc {
-  font-size: var(--text-sm);
-  max-width: 240px;
-  line-height: var(--lh-loose);
-}
-
-/* Smooth scroll momentum */
-.app-main,
-.modal__body,
-.cat-drawer__body,
-.cat-manager,
-.backup-modal {
-  -webkit-overflow-scrolling: touch;
-}
-
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -60,31 +10,26 @@
   }
 }
 
-/* iOS PWA standalone status bar space */
+/* iOS PWA standalone */
 @media (display-mode: standalone) {
-  .app-shell {
-    /* In standalone PWA: top safe area already handled via env() */
-  }
-
-  /* Hide install guide on standalone (already installed) */
-  .settings-install-guide {
-    display: none;
-  }
+  .settings-install-guide { display: none; }
 }
 
 /* Scrollbar hide on mobile */
 @media (max-width: 768px) {
-  ::-webkit-scrollbar {
-    display: none;
-  }
-  * {
-    scrollbar-width: none;
-  }
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; }
 }
 
-/* LOCK SCREEN — Sesi 6B rewrite Sebelumnya pakai inline style. Sekarang proper CSS class. */
+/* Smooth scroll momentum */
+.app-main,
+.modal__body,
+.cat-manager,
+.backup-modal {
+  -webkit-overflow-scrolling: touch;
+}
 
-/* ===============================================================
+/* ── LOCK SCREEN ──────────────────────────────────────────────────────────── */
 
 .ls {
   height: 100dvh;
@@ -101,7 +46,7 @@
   overflow: hidden;
 }
 
-/* Ambient glow */
+/* Ambient glow background */
 .ls::before {
   content: '';
   position: fixed;
@@ -130,6 +75,7 @@
   justify-content: center;
   z-index: 10;
   transition: color var(--transition-fast);
+  touch-action: manipulation;
 }
 .ls-theme-btn:hover { color: var(--gold); }
 
@@ -179,7 +125,7 @@
   box-shadow: 0 4px 24px rgba(0,0,0,0.08);
 }
 
-/* Panel — scroll jika konten melebihi tinggi */
+/* Panel — scrollable jika konten panjang */
 .ls-panel {
   padding: 16px 18px 14px;
   display: flex;
@@ -192,7 +138,7 @@
   overscroll-behavior-y: contain;
 }
 
-/* Section title — untuk master pw dan seed */
+/* Section title */
 .ls-section-title {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -203,7 +149,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Notice (locked, dll) */
+/* Notice (locked, warning) */
 .ls-notice {
   display: flex;
   align-items: center;
@@ -219,7 +165,7 @@
   color: var(--red);
 }
 
-/* Hint petunjuk */
+/* Hint */
 .ls-hint {
   background: var(--gold-dim);
   border: 1px solid var(--gold-border);
@@ -231,7 +177,7 @@
 }
 .ls-hint__label { font-weight: 700; }
 
-/* Field */
+/* Field group */
 .ls-field {
   display: flex;
   flex-direction: column;
@@ -264,9 +210,9 @@
   font-family: var(--font-sans);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   -webkit-appearance: none;
+  outline: none;
 }
 .ls-input:focus {
-  outline: none;
   border-color: var(--gold-border);
   box-shadow: 0 0 0 3px var(--gold-soft);
 }
@@ -286,6 +232,7 @@
   align-items: center;
   justify-content: center;
   transition: color var(--transition-fast);
+  touch-action: manipulation;
 }
 .ls-pw-toggle:hover { color: var(--text); }
 
@@ -301,10 +248,10 @@
   line-height: 1.7;
   resize: none;
   -webkit-appearance: none;
-  transition: border-color var(--transition-fast);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 .ls-textarea:focus {
-  outline: none;
   border-color: var(--gold-border);
   box-shadow: 0 0 0 3px var(--gold-soft);
 }
@@ -326,7 +273,7 @@
   font-weight: 700;
 }
 
-/* Links navigasi — vertikal, konsisten, tanpa titik pemisah */
+/* Nav links — vertikal, tanpa titik pemisah */
 .ls-links {
   display: flex;
   flex-direction: column;
@@ -336,7 +283,7 @@
   border-top: 1px solid var(--border);
 }
 
-/* Footer */
+/* Footer — biometric + links */
 .ls-footer {
   display: flex;
   align-items: center;
@@ -374,50 +321,128 @@
   border-color: rgba(0,212,170,0.4);
 }
 
+/* ── SETUP FLOW ───────────────────────────────────────────────────────────── */
 
+.setup-step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
 
-/* Biometric button di lock screen */
-.lock-bio-btn {
+.setup-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: all 0.2s ease;
+}
+
+.setup-step-dot--active {
+  width: 18px;
+  border-radius: 3px;
+  background: var(--gold);
+}
+
+.setup-step-dot--done {
+  background: var(--teal);
+}
+
+/* Seed phrase grid */
+.seed-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.seed-word {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.seed-word__num {
+  color: var(--muted);
+  flex-shrink: 0;
+  min-width: 16px;
+}
+
+.seed-word__val {
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Strength meter */
+.strength-meter {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--bg-s3);
+  transition: background 0.2s ease;
+}
+
+/* ── BIOMETRIC MODAL ─────────────────────────────────────────────────────── */
+
+.biometric-modal-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(0,212,170,0.25);
-  background: rgba(0,212,170,0.06);
-  color: var(--teal);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  transition: all var(--transition-fast);
-  touch-action: manipulation;
-  min-width: 72px;
+  gap: 16px;
 }
 
-.lock-bio-btn:hover {
-  background: rgba(0,212,170,0.12);
-  border-color: rgba(0,212,170,0.4);
-  transform: translateY(-1px);
+.biometric-icon-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
 }
 
-/* Lock footer layout */
-.lock-footer {
+.biometric-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0,212,170,0.1);
+  border: 2px solid rgba(0,212,170,0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 18px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
+  color: var(--teal);
 }
 
-/* ─── Sesi D — Security feel (M-14) ─────────────────────────────────────── */
+.biometric-desc {
+  font-size: var(--text-sm);
+  color: var(--muted2);
+  line-height: 1.6;
+  text-align: center;
+}
 
-/* Shield glow di LockScreen header */
+.biometric-warning {
+  background: rgba(255,77,109,0.07);
+  border: 1px solid rgba(255,77,109,0.2);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: var(--text-xs);
+  color: var(--red);
+  line-height: 1.5;
+}
+
+/* ── Sesi D — Security feel (M-14) ──────────────────────────────────────── */
+
 .lock-shield-icon {
   position: relative;
   display: inline-flex;

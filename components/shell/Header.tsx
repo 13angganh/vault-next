@@ -69,7 +69,7 @@ export function Header({
         className="app-header__hamburger"
         onClick={onToggleSidebar}
         aria-label="Buka menu"
-        aria-expanded={false}
+        aria-expanded={sidebarOpen}
       >
         <Menu size={20} />
       </button>

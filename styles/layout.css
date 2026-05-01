@@ -156,7 +156,6 @@
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
-  margin-left: auto;
 }
 
 .app-header__countdown {
@@ -485,9 +484,6 @@
   0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
   40%           { opacity: 1;   transform: scale(1); }
 }
-
-/* Biometric button di lock screen */
-.lock-bio-btn {
 
 /* Vault entries scroll area — mandiri, tidak ikut header */
 .vault-entries-scroll {

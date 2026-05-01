@@ -140,8 +140,6 @@ select option { background: var(--bg-s2); color: var(--text); }
   box-shadow: var(--shadow-gold);
 }
 
-/* ===============================================================
-
 /* PasswordStrengthMeter */
 
 .strength-meter {

@@ -12,7 +12,7 @@ import { useAppStore }           from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES }    from '@/lib/types';
 import type { CustomCategory }   from '@/lib/types';
 import { Button, IconButton }    from '@/components/ui/primitives';
-import { CUSTOM_CAT_ICONS }      from '@/components/entries/CategoryIcon';
+import { CUSTOM_CAT_ICONS, CategoryIcon } from '@/components/entries/CategoryIcon';
 
 /* ── Daftar icon yang tersedia di picker ── */
 const ICON_LIST: Array<{ key: string; label: string }> = [
@@ -250,10 +250,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       <div className="cat-manager__list">
         {DEFAULT_CATEGORIES.map((cat) => (
           <div key={cat.id} className="cat-manager__item cat-manager__item--default">
-            <span className="cat-manager__item-icon-wrap cat-manager__item-icon-wrap--default">
-              {/* CategoryIcon tidak di-import di sini untuk menghindari circular — inline render */}
-              <span style={{ width: 28, height: 28, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} />
-            </span>
+            <CategoryIcon catId={cat.id} size="sm" />
             <span className="cat-manager__item-label">{cat.label}</span>
             <span className="cat-manager__item-badge">Default</span>
           </div>
