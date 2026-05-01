@@ -105,15 +105,15 @@ export function Header({
           </span>
         )}
 
-        {/* Tambah — icon-only button agar tidak makan ruang */}
+        {/* Tambah */}
         {activeView !== 'Pengaturan' && (
           <button
-            className="app-header__add-btn"
+            className="icon-btn"
             onClick={onAddEntry}
             aria-label="Tambah entri baru"
             title="Tambah entri"
           >
-            <Plus size={18} />
+            <Plus size={16} />
           </button>
         )}
 

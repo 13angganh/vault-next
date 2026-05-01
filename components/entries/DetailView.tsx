@@ -11,8 +11,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { IconButton } from '@/components/ui/primitives';
-import { X, Star, Lock, Unlock, Eye, EyeOff, Copy } from 'lucide-react';
+
+import { X, Star, Lock, Unlock, Eye, EyeOff, Copy, Pencil, Trash2 } from 'lucide-react';
 import { useAppStore }       from '@/lib/store/appStore';
 import { saveVault }          from '@/lib/vaultService';
 import { CategoryIcon }       from '@/components/entries/CategoryIcon';
@@ -220,7 +220,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
           <CategoryIcon catId={entry.cat} customCats={customCats} size="lg" />
           <div className="detail-header__info">
             <h2 className="detail-header__name">{entry.name}</h2>
-            <span className="detail-header__cat">{catInfo.emoji} {catInfo.label}</span>
+            <span className="detail-header__cat">{catInfo.label}</span>
           </div>
           <div className="detail-header__badges">
             {entry.fav   && <span aria-label="Favorit"><Star size={14} fill="currentColor" style={{ color: 'var(--gold)' }} /></span>}
@@ -243,7 +243,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
         {/* Action bar */}
         <div className="detail-actions">
           <button className="detail-action-btn" onClick={() => onEdit(entry)} title="Edit">
-            ✎ Edit
+            <Pencil size={14} /> Edit
           </button>
           <button className="detail-action-btn" onClick={handleToggleLock} title={isLocked ? 'Lepas kunci' : 'Kunci'}>
             {isLocked ? <><Unlock size={14} /> Lepas</> : <><Lock size={14} /> Kunci</>}
@@ -253,14 +253,14 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
             onClick={handleFav}
             title={entry.fav ? 'Hapus favorit' : 'Tambah favorit'}
           >
-            {entry.fav ? '★' : '☆'} Favorit
+            <Star size={14} fill={entry.fav ? 'currentColor' : 'none'} /> Favorit
           </button>
           <button
             className={`detail-action-btn detail-action-btn--delete ${delConfirm ? 'detail-action-btn--confirm' : ''}`}
             onClick={handleDelete}
             title="Hapus"
           >
-            {delConfirm ? 'Konfirmasi?' : 'Hapus'}
+            <Trash2 size={14} /> {delConfirm ? 'Konfirmasi?' : 'Hapus'}
           </button>
         </div>
       </div>

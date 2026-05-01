@@ -6,14 +6,14 @@
  */
 
 import { useState }            from 'react';
-import { Settings, ArrowLeft, Cloud, LayoutGrid, Lock, Shield, Sun, Moon, Fingerprint } from 'lucide-react';
+import { ArrowLeft, Cloud, LayoutGrid, Lock, Shield, Sun, Moon, Fingerprint } from 'lucide-react';
 import { useAppStore }         from '@/lib/store/appStore';
 import { useTheme }            from '@/components/providers/ThemeProvider';
 import { PINSettingsPanel }    from '@/components/settings/PINSettingsPanel';
 import { CategoryManager }     from '@/components/settings/CategoryManager';
 import { BackupModal }         from '@/components/settings/BackupModal';
 import { BiometricHintModal }  from '@/components/lock/BiometricHintModal';
-import { Button, Toggle, IconButton } from '@/components/ui/primitives';
+import { Button, Toggle } from '@/components/ui/primitives';
 
 interface SettingsViewProps {
   onClose?: () => void;
@@ -60,10 +60,14 @@ export function SettingsView({ onClose }: SettingsViewProps) {
   return (
     <>
       <div className="settings-page">
-        <div className="settings-page__header">
-          {onClose && <IconButton icon={<ArrowLeft size={18} />} onClick={onClose} aria-label="Kembali" />}
-          <h2 className="settings-title">
-            <Settings size={20} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />Pengaturan
+        <div className="page-header">
+          {onClose && (
+            <button className="page-header__back" onClick={onClose} aria-label="Kembali ke vault">
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          <h2 className="page-header__title">
+            Pengaturan
           </h2>
         </div>
         <div className="settings-page__body">

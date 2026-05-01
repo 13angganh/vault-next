@@ -21,9 +21,10 @@ interface SidebarProps {
   open:            boolean;
   onClose:         () => void;
   onSettingsClick: () => void;
+  onNavVault:      () => void;  // dipanggil saat nav ke vault filter
 }
 
-export function Sidebar({ open, onClose, onSettingsClick }: SidebarProps) {
+export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarProps) {
   const [catsOpen, setCatsOpen] = useState(true);
 
   const currentFilter = useAppStore((s) => s.currentFilter);
@@ -39,8 +40,9 @@ export function Sidebar({ open, onClose, onSettingsClick }: SidebarProps) {
     ...customCats.map((c) => ({ id: c.id, label: c.label })),
   ];
 
-  /* Klik menu item → tutup sidebar langsung */
+  /* Klik menu item → switch ke vault view + set filter + tutup sidebar */
   const handleNav = (filterId: FilterType) => {
+    onNavVault();
     setFilter(filterId);
     onClose();
   };

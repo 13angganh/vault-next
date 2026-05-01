@@ -87,6 +87,7 @@ export function AppShell() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onSettingsClick={handleNavSettings}
+        onNavVault={() => setShellView('vault')}
       />
 
       {/* Konten utama — HARUS scrollable */}

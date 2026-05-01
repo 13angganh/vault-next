@@ -253,15 +253,15 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
       {/* Full-page form — menggantikan list view */}
       <div className="entry-form-page">
 
-        {/* Header sticky */}
-        <div className="entry-form-page__header">
-          <button className="entry-form-page__back ibtn" onClick={onClose} aria-label="Kembali">
+        {/* Header sticky — konsisten dengan page-header token */}
+        <div className="page-header">
+          <button className="page-header__back" onClick={onClose} aria-label="Kembali">
             <ArrowLeft size={18} />
           </button>
-          <h2 className="entry-form-page__title">
+          <h2 className="page-header__title">
             {isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}
           </h2>
-          <button className="entry-form-page__close ibtn" onClick={onClose} aria-label="Tutup">
+          <button className="page-header__back" onClick={onClose} aria-label="Tutup" title="Tutup">
             <X size={18} />
           </button>
         </div>
