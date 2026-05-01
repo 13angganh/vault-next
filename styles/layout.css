@@ -43,12 +43,16 @@
   top: 0;
   z-index: 100;
   flex-shrink: 0;
+  /* Pastikan tidak overflow */
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Hamburger button */
 .app-header__hamburger {
   width: 44px;
   height: 44px;
+  min-width: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -68,37 +72,7 @@
   background: var(--bg-s2);
 }
 
-/* View title di tengah */
-.app-header__view-title {
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.app-header__title-gold {
-  color: var(--gold);
-  font-weight: 800;
-}
-
-.app-header__logo-mobile {
-  display: none;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-.app-header__logo-text {
-  font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: var(--text-md);
-  color: var(--gold);
-  letter-spacing: -0.02em;
-}
-
+/* Search — flex:1 mengisi semua sisa ruang */
 .app-header__search-wrap {
   flex: 1;
   min-width: 0;
@@ -110,9 +84,9 @@
 .app-header__search-icon {
   position: absolute;
   left: var(--space-3);
-  font-size: 14px;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.45;
+  flex-shrink: 0;
 }
 
 .app-header__search {
@@ -128,6 +102,7 @@
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   outline: none;
   min-width: 0;
+  -webkit-appearance: none;
 }
 
 .app-header__search::placeholder { color: var(--muted); }
@@ -137,6 +112,9 @@
   box-shadow: 0 0 0 3px var(--gold-soft);
 }
 
+/* Hide browser's default clear button on search input */
+.app-header__search::-webkit-search-cancel-button { display: none; }
+
 .app-header__search-clear {
   position: absolute;
   right: var(--space-3);
@@ -144,17 +122,20 @@
   border: none;
   cursor: pointer;
   color: var(--muted);
-  font-size: 12px;
-  padding: 2px 4px;
+  padding: 4px;
   border-radius: 4px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .app-header__search-clear:hover { color: var(--text); }
 
+/* Right actions — ukuran tetap, tidak flex-grow */
 .app-header__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 
@@ -165,21 +146,40 @@
   background: rgba(240,165,0,0.08);
   border: 1px solid rgba(240,165,0,0.2);
   border-radius: var(--radius-full);
-  padding: 2px var(--space-3);
+  padding: 2px var(--space-2);
   white-space: nowrap;
   animation: pulse 1s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
+/* Tambah — icon-only, ukuran 36×36, gold accent */
 .app-header__add-btn {
-  height: 32px;
-  padding: 0 var(--space-3);
-  font-size: var(--text-sm);
-  gap: var(--space-1);
-  border-radius: var(--radius-full);
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gold);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #000;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.app-header__add-label {
-  display: inline;
+.app-header__add-btn:hover {
+  background: var(--gold2);
+  transform: scale(1.05);
+}
+
+.app-header__add-btn:active {
+  transform: scale(0.94);
 }
 
 .icon-btn {

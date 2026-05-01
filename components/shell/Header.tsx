@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Button } from '@/components/ui/primitives';
+
 import { Search, X, Plus, Sun, Moon, Lock, Timer, Menu } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { useTheme }           from '@/components/providers/ThemeProvider';
@@ -65,7 +65,7 @@ export function Header({
   return (
     <header className="app-header">
 
-      {/* Hamburger — kiri */}
+      {/* Hamburger — kiri, flex-shrink:0 */}
       <button
         className="app-header__hamburger"
         onClick={onToggleSidebar}
@@ -75,20 +75,13 @@ export function Header({
         <Menu size={20} />
       </button>
 
-      {/* Nama view aktif — tengah */}
-      <div className="app-header__view-title" aria-live="polite">
-        {activeView === 'Vault Next' ? (
-          <>Vault<span className="app-header__title-gold"> Next</span></>
-        ) : activeView}
-      </div>
-
-      {/* Search — tengah melebar */}
+      {/* Search — melebar mengisi sisa ruang */}
       <div className="app-header__search-wrap">
         <Search size={14} className="app-header__search-icon" aria-hidden="true" />
         <input
           type="search"
           className="app-header__search"
-          placeholder=""
+          placeholder="Cari entri…"
           value={localQuery}
           onChange={(e) => handleSearch(e.target.value)}
           aria-label="Cari entri"
@@ -104,7 +97,7 @@ export function Header({
         )}
       </div>
 
-      {/* Right actions */}
+      {/* Right actions — flex-shrink:0, ukuran tetap */}
       <div className="app-header__actions">
         {countdown && (
           <span className="app-header__countdown" title={`Auto-lock dalam ${countdown}`}>
@@ -112,15 +105,16 @@ export function Header({
           </span>
         )}
 
-        {/* Tambah — hanya tampil saat di vault view */}
+        {/* Tambah — icon-only button agar tidak makan ruang */}
         {activeView !== 'Pengaturan' && (
-          <Button variant="gold" className="app-header__add-btn"
+          <button
+            className="app-header__add-btn"
             onClick={onAddEntry}
             aria-label="Tambah entri baru"
-            leftIcon={<Plus size={16} />}
+            title="Tambah entri"
           >
-            <span className="app-header__add-label">Tambah</span>
-          </Button>
+            <Plus size={18} />
+          </button>
         )}
 
         {/* Tema toggle */}
