@@ -67,29 +67,27 @@
   --content-max:      960px;
   --modal-width:      480px;
   --modal-width-sm:   360px;
-}
 
-/* Strength meter colors (F2-01) */
---str-1: #ef4444;  /* sangat lemah — red     */
---str-2: #f97316;  /* lemah        — orange  */
---str-3: #eab308;  /* cukup        — yellow  */
---str-4: #84cc16;  /* sedang       — lime    */
---str-5: #22c55e;  /* kuat         — green   */
---str-6: #10b981;  /* sangat kuat  — emerald */
---str-7: var(--gold); /* luar biasa — brand  */
+  /* Strength meter colors (F2-01) */
+  --str-1: #ef4444;
+  --str-2: #f97316;
+  --str-3: #eab308;
+  --str-4: #84cc16;
+  --str-5: #22c55e;
+  --str-6: #10b981;
+  --str-7: var(--gold);
 
-/* Category icon colors (F2-02) */
---cat-sosmed:  #818cf8;
---cat-email:   #60a5fa;
---cat-bank:    #34d399;
---cat-game:    #f87171;
---cat-crypto:  var(--gold);
---cat-kartu:   #38bdf8;
---cat-wifi:    #c084fc;
---cat-lainnya: var(--muted);
+  /* Category icon colors (F2-02) */
+  --cat-sosmed:  #818cf8;
+  --cat-email:   #60a5fa;
+  --cat-bank:    #34d399;
+  --cat-game:    #f87171;
+  --cat-crypto:  var(--gold);
+  --cat-kartu:   #38bdf8;
+  --cat-wifi:    #c084fc;
+  --cat-lainnya: var(--muted);
 
-/* ── Z-index tokens ─────────────────────────────────────── */
-:root {
+  /* Z-index tokens (F3-02) */
   --z-base:     0;
   --z-content:  10;
   --z-sticky:   100;
