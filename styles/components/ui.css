@@ -101,13 +101,23 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 .btn-teal:hover { background: rgba(0,212,170,0.18); }
 .btn-sm { padding: 6px 13px; font-size: var(--text-sm); }
-.btn-xs { padding: 4px 10px; font-size: var(--text-xs); }
+.btn-xs { padding: 8px 10px; font-size: var(--text-xs); min-height: 36px; }  /* F2-06: min touch target */
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+/* Spinner di dalam button (F2-09) */
+.btn__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--radius-full);
+  animation: spin 0.6s linear infinite;
+}
 
 /* Icon button */
 .ibtn {
-  width: 32px; height: 32px;
+  width: 36px; height: 36px;  /* F2-05: min touch target */
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: transparent;
@@ -117,6 +127,13 @@ select option { background: var(--bg-s2); color: var(--text); }
   transition: all var(--transition-fast);
   touch-action: manipulation;
   flex-shrink: 0;
+  position: relative;
+}
+/* Expand tap area tanpa ubah visual */
+.ibtn::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
 }
 .ibtn:hover { border-color: var(--gold); color: var(--text); background: var(--bg-s2); }
 .ibtn.del:hover { border-color: var(--red); color: var(--red); }
@@ -286,7 +303,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 /* PwGen sub-modal */
 
 .pw-gen-overlay {
-  z-index: 300;
+  z-index: var(--z-dropdown);
 }
 
 .pw-gen-modal {
@@ -341,7 +358,7 @@ select option { background: var(--bg-s2); color: var(--text); }
   flex-direction: column;
   gap: var(--space-2);
   align-items: center;
-  z-index: 9000;
+  z-index: var(--z-top);
   pointer-events: none;
 }
 
@@ -383,28 +400,17 @@ select option { background: var(--bg-s2); color: var(--text); }
 /* Cat icon sizing */
 .cat-icon { display: inline-flex; flex-shrink: 0; }
 
-/* Button alias (dipakai EntryForm) */
-.btn--ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text2);
-}
-.btn--ghost:hover {
-  background: var(--bg-s2);
-  border-color: var(--border2);
-  color: var(--text);
-}
-
-.btn--primary {
+/* btn-primary — F2-08: ganti alias double-dash dengan single-dash */
+.btn-primary {
   background: linear-gradient(135deg, var(--gold), var(--gold2));
   color: #000;
   font-weight: 700;
 }
-.btn--primary:hover {
+.btn-primary:hover {
   opacity: 0.88;
   transform: translateY(-1px);
 }
-.btn--primary:disabled {
+.btn-primary:disabled {
   opacity: 0.45;
   transform: none;
   cursor: not-allowed;
@@ -496,7 +502,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 .error-state__action { margin-top: var(--space-2); }
 
 /* IconButton sm */
-.ibtn--sm { width: 28px; height: 28px; }
+.ibtn--sm { width: 32px; height: 32px; }
 
 /* ─── Sesi D — Input focus ring animation (M-12) ─────────────────────────── */
 .input:focus,

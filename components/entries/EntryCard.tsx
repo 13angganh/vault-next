@@ -29,7 +29,7 @@ export function EntryCard({
   entry,
   isRecycleBin = false,
   onEdit,
-  onDetail,
+  onDetail: _onDetail,
   onCopy,
   onRequestUnlock,
 }: EntryCardProps) {
@@ -46,8 +46,8 @@ export function EntryCard({
   // Local: show unlock prompt overlay
   const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
   const [unlockInput,      setUnlockInput]      = useState('');
-  const [unlockError,      setUnlockError]      = useState('');
-  const [unlockLoading,    setUnlockLoading]    = useState(false);
+  const [_unlockError,      setUnlockError]      = useState('');
+  const [_unlockLoading,    setUnlockLoading]    = useState(false);
   const unlockRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export function EntryCard({
     store.toggleExpanded(entry.id);
   };
 
-  const handleUnlockEntry = async () => {
+  const _handleUnlockEntry = async () => {
     if (!unlockInput.trim()) return;
     setUnlockLoading(true);
     setUnlockError('');
@@ -106,6 +106,7 @@ export function EntryCard({
     );
     store.setVault(updated);
     if (store.autoSaveEnabled) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, updated, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds);
     }
   };
@@ -116,6 +117,7 @@ export function EntryCard({
       const updated = store.recycleBin.filter((e) => e.id !== entry.id);
       store.setRecycleBin(updated);
       if (store.autoSaveEnabled) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         await saveVault(store.masterPw, store.vault, updated, store.vaultMeta!, store.customCats, store.lockedIds);
       }
     } else {
@@ -125,7 +127,8 @@ export function EntryCard({
       store.setVault(newVault);
       store.setRecycleBin(newBin);
       if (store.autoSaveEnabled) {
-        await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds);
       }
     }
   };
@@ -136,6 +139,7 @@ export function EntryCard({
     store.setRecycleBin(newBin);
     store.setVault(newVault);
     if (store.autoSaveEnabled) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds);
     }
   };
@@ -150,6 +154,7 @@ export function EntryCard({
       const newLocked = lockedIds.includes(entry.id)
         ? lockedIds.filter((id) => id !== entry.id)
         : [...lockedIds, entry.id];
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked);
     }
   };

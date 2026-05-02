@@ -34,3 +34,15 @@ export const SEED_PHRASE_WORD_COUNT = 24;
 
 /** LocalStorage keys prefix */
 export const STORAGE_PREFIX = 'vault_';
+
+/** Z-index tokens — gunakan ini, jangan hardcode angka di CSS/TSX */
+export const Z = {
+  base:     0,
+  content:  10,
+  sticky:   100,
+  sidebar:  200,
+  dropdown: 300,
+  modal:    400,
+  toast:    500,
+  top:      9999,
+} as const;

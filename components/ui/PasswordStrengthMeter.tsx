@@ -47,15 +47,16 @@ export function calcStrength(pw: string): StrengthResult {
   if (len >= 16 && types === 4)            level = 7;
 
   const LABELS = ['', 'Sangat Lemah', 'Lemah', 'Cukup', 'Sedang', 'Kuat', 'Sangat Kuat', 'Luar Biasa'];
+  // Gunakan CSS variables — F2-01 fix
   const COLORS = [
     'transparent',
-    '#ef4444', // red
-    '#f97316', // orange
-    '#eab308', // yellow
-    '#84cc16', // lime
-    '#22c55e', // green
-    '#10b981', // emerald
-    '#f0a500', // gold — brand color
+    'var(--str-1)',  // red
+    'var(--str-2)',  // orange
+    'var(--str-3)',  // yellow
+    'var(--str-4)',  // lime
+    'var(--str-5)',  // green
+    'var(--str-6)',  // emerald
+    'var(--str-7)',  // gold — brand color
   ];
 
   return { level, label: LABELS[level], color: COLORS[level] };

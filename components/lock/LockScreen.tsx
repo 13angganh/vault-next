@@ -12,6 +12,8 @@ import { PINPad }             from './PINPad';
 import { RecoveryPanel }      from './RecoveryPanel';
 import { SetupFlow }          from './SetupFlow';
 import { BiometricHintModal } from './BiometricHintModal';
+import { lsGet, LS_BIO_CRED_ID } from '@/lib/storage';
+import { useAppStore } from '@/lib/store/appStore';
 import {
   unlockVault, setupVault, verifyPinAndGetMaster,
   hasPinSetup, recoverMasterPw, hasVaultData, getVaultHint,
@@ -20,7 +22,7 @@ import type { UnlockPayload } from '@/lib/vaultService';
 
 function hasBiometricCredential(): boolean {
   if (typeof window === 'undefined') return false;
-  return !!localStorage.getItem('vault_bio_cred') && !!window.PublicKeyCredential;
+  return !!lsGet(LS_BIO_CRED_ID) && !!window.PublicKeyCredential;  // F2-07
 }
 
 type Panel = 'pin' | 'master' | 'seed' | 'recovery' | 'setup';
@@ -46,9 +48,15 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
   const [error,         setError]         = useState('');
   const [showBiometric, setShowBiometric] = useState(false);
 
-  const [pinBuf,         setPinBuf]         = useState('');
-  const [pinAttempts,    setPinAttempts]    = useState(0);
-  const [pinLockedUntil, setPinLockedUntil] = useState(0);
+  // F2-12: PIN state dari appStore (tidak duplikat)
+  const pinBuf         = useAppStore((s) => s.pinBuffer);
+  const pinAttempts    = useAppStore((s) => s.pinAttempts);
+  const pinLockedUntil = useAppStore((s) => s.pinLockedUntil);
+  const appendPin      = useAppStore((s) => s.appendPin);
+  const clearPin       = useAppStore((s) => s.clearPin);
+  const incrementPinAttempts = useAppStore((s) => s.incrementPinAttempts);
+  const _resetPinAttempts    = useAppStore((s) => s.resetPinAttempts);
+  const setPinLocked         = useAppStore((s) => s.setPinLocked);
   const [lockRemain,     setLockRemain]     = useState(0);
 
   const [masterInput, setMasterInput] = useState('');
@@ -69,10 +77,10 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     return () => clearInterval(id);
   }, [pinLockedUntil, pinLocked]);
 
-  const goPanel = (p: Panel) => {
+  const goPanel = useCallback((p: Panel) => {
     setPanel(p); setError('');
-    setPinBuf(''); setMasterInput(''); setSeedInput('');
-  };
+    clearPin(); setMasterInput(''); setSeedInput('');
+  }, [clearPin]);
 
   const doUnlockWithMaster = useCallback(async (masterPw: string) => {
     setLoading(true); setError('');
@@ -95,20 +103,19 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     setLoading(true); setError('');
     try {
       const masterPw = await verifyPinAndGetMaster(pinBuf);
-      setPinBuf('');
+      clearPin();
       await doUnlockWithMaster(masterPw);
     } catch (e) {
-      setPinBuf('');
+      clearPin();
       const msg = (e as Error).message ?? 'PIN salah';
       if (msg.includes('Format PIN lama')) {
         setError('Format PIN lama. Masuk dengan master password, lalu setup ulang PIN.');
         goPanel('master');
       } else {
+        incrementPinAttempts();
         const next = pinAttempts + 1;
-        setPinAttempts(next);
         if (next >= MAX_PIN_ATTEMPTS) {
-          setPinLockedUntil(Date.now() + PIN_LOCKOUT_MS);
-          setPinAttempts(0);
+          setPinLocked(Date.now() + PIN_LOCKOUT_MS);
           setError('Terlalu banyak percobaan. PIN dikunci 5 menit.');
         } else {
           setError(`PIN salah. ${MAX_PIN_ATTEMPTS - next} percobaan tersisa.`);
@@ -116,7 +123,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
       }
       setLoading(false);
     }
-  }, [pinBuf, pinLocked, lockRemain, pinAttempts, doUnlockWithMaster]);
+  }, [pinBuf, pinLocked, lockRemain, pinAttempts, incrementPinAttempts, setPinLocked, clearPin, doUnlockWithMaster, goPanel]);
 
   const handleSeedLogin = async () => {
     if (!seedInput.trim()) { setError('Masukkan recovery phrase'); return; }
@@ -198,11 +205,11 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 maxLen={8}
                 onDigit={(d) => {
                   if (!pinLocked && !loading) {
-                    setPinBuf((b) => b.length < 8 ? b + d : b);
+                    appendPin(d);
                     setError('');
                   }
                 }}
-                onDelete={() => setPinBuf((b) => b.slice(0, -1))}
+                onDelete={() => useAppStore.setState({ pinBuffer: pinBuf.slice(0, -1) })}
                 onSubmit={handlePinSubmit}
                 disabled={loading}
                 locked={pinLocked}

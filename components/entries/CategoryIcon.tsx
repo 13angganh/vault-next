@@ -48,16 +48,16 @@ const CAT_COLORS: Record<string, string> = {
   lainnya: 'rgba(156,163,175,0.15)',
 };
 
-/* ── Warna icon per kategori default ── */
+/* ── Warna icon per kategori default — pakai CSS variables (F2-02) ── */
 const CAT_ICON_COLORS: Record<string, string> = {
-  sosmed:  '#818cf8',
-  email:   '#60a5fa',
-  bank:    '#34d399',
-  game:    '#f87171',
-  crypto:  '#f0a500',
-  kartu:   '#38bdf8',
-  wifi:    '#c084fc',
-  lainnya: '#9ca3af',
+  sosmed:  'var(--cat-sosmed)',
+  email:   'var(--cat-email)',
+  bank:    'var(--cat-bank)',
+  game:    'var(--cat-game)',
+  crypto:  'var(--cat-crypto)',
+  kartu:   'var(--cat-kartu)',
+  wifi:    'var(--cat-wifi)',
+  lainnya: 'var(--cat-lainnya)',
 };
 
 /* ── Lucide icon registry untuk custom categories ── */
@@ -124,7 +124,7 @@ export function CategoryIcon({
         }}
         aria-hidden="true"
       >
-        <CustomIcon size={iconSize} color="#9ca3af" strokeWidth={1.8} />
+        <CustomIcon size={iconSize} color="var(--cat-lainnya)" strokeWidth={1.8} />
       </span>
     );
   }
@@ -151,7 +151,7 @@ export function CategoryIcon({
     >
       {Icon
         ? <Icon size={iconSize} color={iconColor} strokeWidth={1.8} />
-        : <MoreHorizontal size={iconSize} color="#9ca3af" />
+        : <MoreHorizontal size={iconSize} color="var(--cat-lainnya)" />
       }
     </span>
   );

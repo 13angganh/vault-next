@@ -45,6 +45,47 @@ export function AppShell() {
     setTimeout(() => vaultListRef.current?.openAddForm(), 80);
   }, [setFilter]);
 
+  /* ── Keyboard shortcuts ── */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      // Jangan intercept jika sedang di dalam input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+      // Cmd/Ctrl + K → fokus ke search
+      if (mod && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector<HTMLInputElement>('[data-search-input]');
+        if (searchInput) searchInput.focus();
+        return;
+      }
+
+      // Cmd/Ctrl + / → toggle sidebar
+      if (mod && e.key === '/') {
+        e.preventDefault();
+        setSidebarOpen((v) => !v);
+        return;
+      }
+
+      // Cmd/Ctrl + N → tambah entri baru (hanya di vault view)
+      if (mod && e.key === 'n' && !isEditing) {
+        e.preventDefault();
+        handleAddEntry();
+        return;
+      }
+
+      // Escape → tutup sidebar jika terbuka
+      if (e.key === 'Escape') {
+        setSidebarOpen(false);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleAddEntry]);
+
   const handleNavSettings = useCallback(() => {
     setShellView('settings');
   }, []);

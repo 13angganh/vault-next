@@ -2,13 +2,14 @@
 
 /**
  * components/ui/primitives/Modal.tsx — Vault Next
- * Modal overlay dasar: backdrop + panel dengan focus trap.
+ * Modal overlay dasar: backdrop + panel dengan focus trap + Framer Motion animasi.
  * Komponen consumer (BackupModal, BiometricHintModal, dll) wrapping ini.
  *
- * Sesi B — M-05
+ * Sesi B — M-05 | F3-03 — animasi via AnimatePresence + motion.div
  */
 
 import { useEffect, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
@@ -60,44 +61,54 @@ export function Modal({
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="modal-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      onClick={persistent ? undefined : onClose}
-    >
-      <div
-        ref={trapRef}
-        className={clsx(
-          'modal',
-          size === 'sm' && 'modal--sm',
-          className,
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {(title || !hideClose) && (
-          <div className="modal__header">
-            {title && <h3 className="modal__title">{title}</h3>}
-            {!hideClose && (
-              <button
-                className="ibtn modal__close"
-                onClick={onClose}
-                aria-label="Tutup"
-                type="button"
-              >
-                <X size={16} />
-              </button>
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={persistent ? undefined : onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          <motion.div
+            ref={trapRef}
+            className={clsx(
+              'modal',
+              size === 'sm' && 'modal--sm',
+              className,
             )}
-          </div>
-        )}
-        <div className="modal__body">
-          {children}
-        </div>
-      </div>
-    </div>
+            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+          >
+            {(title || !hideClose) && (
+              <div className="modal__header">
+                {title && <h3 className="modal__title">{title}</h3>}
+                {!hideClose && (
+                  <button
+                    className="ibtn modal__close"
+                    onClick={onClose}
+                    aria-label="Tutup"
+                    type="button"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="modal__body">
+              {children}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

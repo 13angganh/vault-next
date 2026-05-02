@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/primitives';
-import { RefreshCw, Copy, Check, X } from 'lucide-react';
+import { Copy, Check, X } from 'lucide-react';
 import { PasswordStrengthMeter } from '@/components/ui/PasswordStrengthMeter';
 
 const CHARS = {

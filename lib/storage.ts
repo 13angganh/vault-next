@@ -118,6 +118,8 @@ export function clearAllVaultData(): void {
     LS_KEY, LS_META, LS_PIN, LS_BACKUP, LS_BKPDATA,
     LS_BKPIVL, LS_BKPDISM, LS_AUTOLOCK, LS_AUTOSAVE,
     LS_CATS, LS_PIN_SKIPPED,
+    LS_BIO_ENABLED,   // hapus state biometrik aktif
+    LS_BIO_CRED_ID,   // hapus credential ID WebAuthn
   ];
   keys.forEach(lsRemove);
 }

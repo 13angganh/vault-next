@@ -44,12 +44,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       'ripple-container',
       {
         'btn-gold':    variant === 'gold',
-        'btn--primary': variant === 'primary',
         'btn-ghost':   variant === 'ghost',
-        'btn--ghost':  variant === 'ghost',   // alias
         'btn-danger':  variant === 'danger',
-        'btn--danger': variant === 'danger',   // alias
         'btn-teal':    variant === 'teal',
+        'btn-primary': variant === 'primary',
         'btn-sm':      size === 'sm',
         'btn-xs':      size === 'xs',
         'btn-full':    full,
@@ -66,7 +64,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {leftIcon && <span className="btn__icon btn__icon--left">{leftIcon}</span>}
         {loading
-          ? <span className="spin" style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%' }} />
+          ? <span className="btn__spinner" />  /* F2-09 */
           : children
         }
         {rightIcon && <span className="btn__icon btn__icon--right">{rightIcon}</span>}

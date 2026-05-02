@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, forwardRef, useImperativeHandle, useMemo, useCallback, useEffect } from 'react';
-import {
-  ShieldOff, Search as SearchIcon, Trash2, Lock, X,
+import { Search as SearchIcon, Trash2, Lock, X,
   Star, FolderOpen, PackageOpen,
 } from 'lucide-react';
 import { verifyPinAndGetMaster } from '@/lib/vaultService';

@@ -7,13 +7,12 @@
  */
 
 import { useState, useRef }  from 'react';
-import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Package, Plus, FolderOpen, ShieldCheck , Loader2 } from 'lucide-react';
+import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Plus, FolderOpen, ShieldCheck , Loader2 } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { exportBackup, importBackup, saveVault } from '@/lib/vaultService';
 import { lsSet, LS_BACKUP }  from '@/lib/storage';
 import { Button, ErrorState }  from '@/components/ui/primitives';
 import { useFocusTrap }       from '@/lib/hooks/useFocusTrap';
-import type { VaultEntry, CustomCategory, VaultMeta } from '@/lib/types';
 
 type Tab = 'export' | 'import' | 'sync';
 
@@ -37,6 +36,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
         store.masterPw,
         store.vault,
         store.recycleBin,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         store.vaultMeta!,
         store.customCats,
         store.lockedIds,
@@ -147,6 +147,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
         store.masterPw,
         store.vault,
         store.recycleBin,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         store.vaultMeta!,
         store.customCats,
         store.lockedIds,

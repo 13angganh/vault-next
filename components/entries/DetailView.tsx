@@ -62,6 +62,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
     );
     store.setVault(updated);
     if (store.autoSaveEnabled) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, updated, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds);
     }
   };
@@ -72,6 +73,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
       ? lockedIds.filter((id) => id !== entry.id)
       : [...lockedIds, entry.id];
     if (store.autoSaveEnabled) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked);
     }
   };
@@ -83,6 +85,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
     store.setVault(newVault);
     store.setRecycleBin(newBin);
     if (store.autoSaveEnabled) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds);
     }
     onClose();

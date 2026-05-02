@@ -10,6 +10,7 @@
  */
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { LayoutGrid, Star, Trash2, Settings, X, ChevronDown } from 'lucide-react';
 import { VaultIcon }          from '@/components/common/LoadingScreen';
 import { useAppStore }        from '@/lib/store/appStore';
@@ -55,19 +56,33 @@ export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarP
   return (
     <>
       {/* Backdrop overlay */}
-      <div
-        className={`sidebar-overlay${open ? ' sidebar-overlay--open' : ''}`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="sidebar-overlay sidebar-overlay--open"
+            onClick={onClose}
+            aria-hidden="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar panel */}
-      <aside
-        className={`sidebar${open ? ' sidebar--open' : ''}`}
-        aria-label="Menu navigasi"
-        aria-hidden={!open}
-        role="navigation"
-      >
+      <AnimatePresence>
+        {open && (
+        <motion.aside
+          className="sidebar sidebar--open"
+          aria-label="Menu navigasi"
+          aria-hidden={!open}
+          role="navigation"
+          initial={{ x: '-100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '-100%' }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+        >
         {/* ── Header sidebar ── */}
         <div className="sidebar-header">
           <div className="sidebar-logo">
@@ -163,7 +178,9 @@ export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarP
             onClick={handleSettings}
           />
         </div>
-      </aside>
+        </motion.aside>
+        )}
+      </AnimatePresence>
     </>
   );
 }

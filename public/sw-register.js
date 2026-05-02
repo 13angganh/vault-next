@@ -3,13 +3,18 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/sw.js')
       .then((reg) => {
+        // Cek update di background setiap halaman load
+        reg.update().catch(() => {});
+
         reg.addEventListener('updatefound', () => {
           const newSW = reg.installing;
           if (!newSW) return;
           newSW.addEventListener('statechange', () => {
+            // Ketika SW baru installed dan ada controller aktif,
+            // panggil skipWaiting agar SW baru langsung aktif.
+            // AppShell.tsx akan tangkap via 'controllerchange' event.
             if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-              // Ada versi baru — notif di app via AppShell
-              window.dispatchEvent(new CustomEvent('sw-update'));
+              newSW.postMessage({ type: 'SKIP_WAITING' });
             }
           });
         });

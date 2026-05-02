@@ -43,21 +43,21 @@ export function VaultIcon({ size = 56 }: { size?: number }) {
         fill="none"
       />
       {/* Lubang kunci */}
-      <circle cx="28" cy="32" r="2.5" fill="#07080f" opacity="0.7" />
-      <rect x="27" y="33" width="2" height="3" rx="1" fill="#07080f" opacity="0.7" />
+      <circle cx="28" cy="32" r="2.5" fill="var(--bg)" opacity="0.7" />
+      <rect x="27" y="33" width="2" height="3" rx="1" fill="var(--bg)" opacity="0.7" />
 
       <defs>
         <linearGradient id="shieldGrad" x1="8" y1="4" x2="48" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f0a500" />
-          <stop offset="1" stopColor="#ffcc44" />
+          <stop stopColor="var(--gold)" />
+          <stop offset="1" stopColor="var(--gold2)" />
         </linearGradient>
         <linearGradient id="strokeGrad" x1="8" y1="4" x2="48" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f0a500" />
-          <stop offset="1" stopColor="#ffcc44" />
+          <stop stopColor="var(--gold)" />
+          <stop offset="1" stopColor="var(--gold2)" />
         </linearGradient>
         <linearGradient id="lockGrad" x1="19" y1="26" x2="37" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f0a500" />
-          <stop offset="1" stopColor="#ffcc44" />
+          <stop stopColor="var(--gold)" />
+          <stop offset="1" stopColor="var(--gold2)" />
         </linearGradient>
       </defs>
     </svg>

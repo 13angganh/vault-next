@@ -16,6 +16,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { lsGet, lsSet, LS_BIO_CRED_ID } from '@/lib/storage';
 import { Button } from '@/components/ui/primitives';
 import { X, Fingerprint, CheckCircle2, AlertCircle, Loader2, Shield } from 'lucide-react';
 
@@ -24,7 +25,6 @@ const RP_NAME    = 'Vault Next';
 const USER_NAME  = 'vault-user';
 const USER_ID    = new TextEncoder().encode('vault-next-user-001');
 const SS_KEY     = 'vault_ss_mpw';
-const LS_CRED    = 'vault_bio_cred';
 
 /* ── Helpers ── */
 function bufToB64(buf: ArrayBuffer): string {
@@ -105,7 +105,7 @@ export function BiometricHintModal({
 
       /* Simpan credentialId di localStorage */
       const credId = bufToB64(credential.rawId);
-      localStorage.setItem(LS_CRED, credId);
+      lsSet(LS_BIO_CRED_ID, credId);
 
       /* Simpan master password di sessionStorage untuk sesi ini */
       sessionStorage.setItem(SS_KEY, masterPw);
@@ -129,7 +129,7 @@ export function BiometricHintModal({
     setStep('loading');
     setErrMsg('');
     try {
-      const credId = localStorage.getItem(LS_CRED);
+      const credId = lsGet(LS_BIO_CRED_ID);
       if (!credId) throw new Error('Belum ada sidik jari terdaftar. Daftarkan di Pengaturan terlebih dahulu.');
 
       const challenge = crypto.getRandomValues(new Uint8Array(32));

@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import type { VaultEntry, VaultMeta, CustomCategory } from '@/lib/types';
 import {
-  lsGet, lsSet, lsGetNum, lsSetNum, lsGetBool, lsSetBool, lsGetJson, lsSetJson,
+  lsGet, lsSet, lsRemove, lsGetNum, lsSetNum, lsGetBool, lsSetBool, lsGetJson, lsSetJson,
   LS_AUTOLOCK, LS_AUTOSAVE, LS_BKPIVL, LS_CATS, LS_BIO_ENABLED, LS_BIO_CRED_ID,
 } from '@/lib/storage';
 
@@ -266,6 +266,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   setBiometricCredId: (id) => {
     if (id) lsSet(LS_BIO_CRED_ID, id);
+    else lsRemove(LS_BIO_CRED_ID);
     set({ biometricCredId: id });
   },
 }));

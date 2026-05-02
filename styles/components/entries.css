@@ -234,7 +234,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  z-index: 9999 !important;
+  z-index: var(--z-top) !important;
   border-radius: 0;
   animation: fadeIn 0.15s ease;
   padding: calc(var(--appbar-height) + env(safe-area-inset-top, 0px) + 16px) 16px 16px;

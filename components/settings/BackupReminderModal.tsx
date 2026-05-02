@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAppStore }          from '@/lib/store/appStore';
-import { lsGet, lsSet, lsGetNum, LS_BACKUP, LS_BKPDISM, LS_BKPIVL } from '@/lib/storage';
+import { lsSet, lsGetNum, LS_BACKUP, LS_BKPDISM, LS_BKPIVL } from '@/lib/storage';
 import { useFocusTrap }         from '@/lib/hooks/useFocusTrap';
 import { Button }               from '@/components/ui/primitives';
 

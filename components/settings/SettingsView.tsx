@@ -7,6 +7,7 @@
 
 import { useState }            from 'react';
 import { ArrowLeft, Cloud, LayoutGrid, Lock, Shield, Sun, Moon, Fingerprint } from 'lucide-react';
+import { lsGet, LS_BIO_CRED_ID } from '@/lib/storage';
 import { useAppStore }         from '@/lib/store/appStore';
 import { useTheme }            from '@/components/providers/ThemeProvider';
 import { PINSettingsPanel }    from '@/components/settings/PINSettingsPanel';
@@ -43,7 +44,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
   const [showBioModal, setShowBioModal] = useState(false);
 
   const isWebAuthnSupported = typeof window !== 'undefined' && !!window.PublicKeyCredential;
-  const hasBioCredential    = typeof window !== 'undefined' && !!localStorage.getItem('vault_bio_cred');
+  const hasBioCredential    = typeof window !== 'undefined' && !!lsGet(LS_BIO_CRED_ID);  // F2-07
 
   const autoLockOptions = [
     { value: 0, label: 'Nonaktif' }, { value: 1, label: '1 menit' },
@@ -121,10 +122,11 @@ export function SettingsView({ onClose }: SettingsViewProps) {
                     <span className="settings-row__desc">Hapus data sidik jari dari perangkat ini</span>
                   </div>
                   <Button variant="danger" size="sm" className="settings-row__action" onClick={() => {
-                    localStorage.removeItem('vault_bio_cred');
-                    sessionStorage.removeItem('vault_ss_mpw');
+                    // F4-02: Gunakan store methods — bukan direct localStorage
+                    // setBiometricCredId(null) sudah handle lsRemove via F1-02
                     setBiometricEnabled(false);
                     setBiometricCredId(null);
+                    sessionStorage.removeItem('vault_ss_mpw');
                   }}>
                     Hapus
                   </Button>

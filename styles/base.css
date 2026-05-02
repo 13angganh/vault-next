@@ -3,7 +3,7 @@
 
 /* VAULT NEXT — GLOBAL STYLES CSS Variables, Reset, Animasi, Utility Classes */
 
-@import './tokens.css';
+/* tokens.css diimport dari globals.css — jangan import ulang di sini */
 
 /* Google Fonts: diload via next/font di layout.tsx */
 
@@ -191,9 +191,9 @@ body {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
 
 /* Selection */

@@ -10,10 +10,7 @@ import { PasswordStrengthMeter }  from '@/components/ui/PasswordStrengthMeter';
 import { PasswordGenerator }      from '@/components/ui/PasswordGenerator';
 import { DEFAULT_CATEGORIES }     from '@/lib/types';
 import type { VaultEntry, CustomCategory } from '@/lib/types';
-
-function generateId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
+import { generateId } from '@/lib/utils';  // F2-11
 
 interface EntryFormProps {
   entry?:   VaultEntry;
@@ -91,7 +88,9 @@ const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
 
 function getFieldsForCat(catId: string, customCats: CustomCategory[]): FieldDef[] {
   if (FIELDS_BY_CAT[catId]) return FIELDS_BY_CAT[catId];
-  void customCats;
+  // Custom category — cek apakah punya config, fallback ke 'lainnya' (F2-10)
+  const customCat = customCats.find((c) => c.id === catId);
+  if (customCat) return FIELDS_BY_CAT['lainnya'];
   return FIELDS_BY_CAT['lainnya'];
 }
 
@@ -154,6 +153,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         newVault = [newEntry, ...store.vault];
       }
       store.setVault(newVault);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, newVault, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds);
       onSaved(newEntry);
       onClose();

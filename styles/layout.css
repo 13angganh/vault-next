@@ -41,7 +41,7 @@
   padding: 0 var(--space-3);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-sticky);
   flex-shrink: 0;
   /* Pastikan tidak overflow */
   min-width: 0;
@@ -438,7 +438,7 @@
   height: 2px;
   background: linear-gradient(90deg, var(--gold), var(--gold2), var(--gold));
   background-size: 200% 100%;
-  z-index: 9999;
+  z-index: var(--z-top);
   animation: linearProgress 1.4s ease-in-out infinite;
 }
 
@@ -452,7 +452,7 @@
   position: fixed;
   top: var(--appbar-height);
   left: 0; right: 0;
-  z-index: 900;
+  z-index: var(--z-toast);
   background: var(--gold);
   color: #000;
   padding: 8px var(--space-4);
@@ -520,7 +520,7 @@
   background: var(--bg);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--z-content);
 }
 
 .entry-form-page__back {
@@ -617,7 +617,7 @@
   background: rgba(0,0,0,0.72);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  z-index: 9999;
+  z-index: var(--z-top);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -816,7 +816,7 @@
   background: var(--bg);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--z-content);
   flex-shrink: 0;
 }
 

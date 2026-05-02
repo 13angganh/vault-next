@@ -83,7 +83,7 @@ self.addEventListener('fetch', (event) => {
 
 // Message: handle skipWaiting dari app
 self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
+  if (event.data === 'skipWaiting' || event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });

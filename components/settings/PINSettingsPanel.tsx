@@ -102,7 +102,7 @@ export function PINSettingsPanel() {
         </div>
       )}
       {pinErr    && <p className="form-error">{pinErr}</p>}
-      {pinSuccess && <p className="form-hint" style={{ color: '#4ade80' }}>{pinSuccess}</p>}
+      {pinSuccess && <p className="form-hint" style={{ color: 'var(--success)' }}>{pinSuccess}</p>}
     </div>
   );
 

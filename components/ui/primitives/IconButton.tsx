@@ -15,7 +15,7 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   icon:      ReactNode;
   /** Warna hover: default (gold) | del (red) | lock (blue) */
   colorHover?: 'default' | 'del' | 'lock';
-  /** 32px (default) | 28px (sm) */
+  /** 36px (default) | 32px (sm) — F2-05 */
   size?:     'sm' | 'md';
 }
 
