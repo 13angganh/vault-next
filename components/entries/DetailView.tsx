@@ -68,13 +68,19 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
   };
 
   const handleToggleLock = async () => {
-    store.toggleLockedId(entry.id);
+    // Hitung newLocked dulu dari closure yang konsisten — hindari race condition
     const newLocked = lockedIds.includes(entry.id)
       ? lockedIds.filter((id) => id !== entry.id)
       : [...lockedIds, entry.id];
-    if (store.autoSaveEnabled) {
+    // Update store
+    store.setLockedIds(newLocked);
+    // Selalu simpan locked state — ini data penting, tidak tergantung autoSave
+    try {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked);
+    } catch {
+      // Rollback jika save gagal
+      store.setLockedIds(lockedIds);
     }
   };
 

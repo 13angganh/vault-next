@@ -145,17 +145,23 @@ export function EntryCard({
   };
 
   const handleToggleLock = async () => {
-    store.toggleLockedId(entry.id);
-    // Collapse if locking
+    // Hitung newLocked dulu dari closure yang konsisten — hindari race condition
+    const newLocked = lockedIds.includes(entry.id)
+      ? lockedIds.filter((id) => id !== entry.id)
+      : [...lockedIds, entry.id];
+    // Update store
+    store.setLockedIds(newLocked);
+    // Collapse jika sedang dikunci
     if (!lockedIds.includes(entry.id) && isExpanded) {
       store.toggleExpanded(entry.id);
     }
-    if (store.autoSaveEnabled) {
-      const newLocked = lockedIds.includes(entry.id)
-        ? lockedIds.filter((id) => id !== entry.id)
-        : [...lockedIds, entry.id];
+    // Selalu simpan locked state — ini data penting, tidak tergantung autoSave
+    try {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked);
+    } catch {
+      // Rollback jika save gagal
+      store.setLockedIds(lockedIds);
     }
   };
 

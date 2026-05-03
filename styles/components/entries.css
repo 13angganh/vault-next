@@ -379,29 +379,40 @@
 /* Category Picker */
 
 .cat-picker {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
-  max-height: 112px;
+  /* Maksimal 2 baris terlihat (~102px), sisanya scroll */
+  max-height: 116px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   padding-bottom: 2px;
+  /* Scrollbar tipis */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
 }
+
+.cat-picker::-webkit-scrollbar { width: 4px; }
+.cat-picker::-webkit-scrollbar-track { background: transparent; }
+.cat-picker::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
 .cat-picker__item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 8px 10px;
+  padding: 8px 4px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: transparent;
   cursor: pointer;
   transition: all var(--transition-fast);
-  min-width: 62px;
+  min-width: 0;        /* penting di dalam grid */
+  width: 100%;
   touch-action: manipulation;
+  min-height: 52px;
 }
 
 .cat-picker__item:hover {
@@ -420,11 +431,14 @@
 }
 
 .cat-picker__label {
-  font-size: 10px;
+  font-size: 9px;
   font-family: var(--font-sans);
   font-weight: 500;
   color: var(--muted2);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .cat-picker__item--active .cat-picker__label {
