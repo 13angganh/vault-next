@@ -41,6 +41,18 @@ interface PinStorage {
   encMaster:    string;   // encrypt(masterPw, pin) — untuk standalone PIN unlock
 }
 
+// ─── Util: normalisasi VaultMeta dari backup lama ────────────────────────────
+// Backup lama (vault-private-offline) mungkin tidak punya field recovery/encMasterBySeed
+
+function normalizeMeta(raw: Partial<VaultMeta>): VaultMeta {
+  return {
+    hint:            raw.hint            ?? '',
+    recoveryHash:    raw.recoveryHash    ?? '',
+    recovery:        raw.recovery        ?? '',
+    encMasterBySeed: raw.encMasterBySeed ?? '',
+  };
+}
+
 // ─── Setup Pertama Kali ───────────────────────────────────────────────────────
 
 export async function setupVault(payload: SetupPayload): Promise<void> {
@@ -81,7 +93,7 @@ export async function unlockVault(masterPw: string): Promise<UnlockPayload> {
   return {
     vault:      data.vault      ?? [],
     recycleBin: data.recycleBin ?? [],
-    meta:       data.meta,
+    meta:       normalizeMeta(data.meta ?? {}),
     customCats: data.customCats ?? [],
     lockedIds:  data.lockedIds  ?? [],
   };
@@ -261,7 +273,7 @@ export async function importBackup(
   return {
     vault:      data.vault      ?? [],
     recycleBin: data.recycleBin ?? [],
-    meta:       data.meta,
+    meta:       normalizeMeta(data.meta ?? {}),
     customCats: data.customCats ?? [],
     lockedIds:  data.lockedIds  ?? [],
   };

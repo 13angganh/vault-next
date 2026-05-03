@@ -105,6 +105,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
       const masterPw = await verifyPinAndGetMaster(pinBuf);
       clearPin();
       await doUnlockWithMaster(masterPw);
+      // loading akan tetap true sampai komponen unmount saat vault terbuka — ini normal
     } catch (e) {
       clearPin();
       const msg = (e as Error).message ?? 'PIN salah';
@@ -209,7 +210,12 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                     setError('');
                   }
                 }}
-                onDelete={() => useAppStore.setState({ pinBuffer: pinBuf.slice(0, -1) })}
+                onDelete={() => {
+                  if (!pinLocked && !loading) {
+                    useAppStore.setState({ pinBuffer: pinBuf.slice(0, -1) });
+                    setError('');
+                  }
+                }}
                 onSubmit={handlePinSubmit}
                 disabled={loading}
                 locked={pinLocked}

@@ -231,7 +231,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   appendPin: (digit) => {
     const curr = get().pinBuffer;
-    if (curr.length < 6) set({ pinBuffer: curr + digit });
+    if (curr.length < 8) set({ pinBuffer: curr + digit }); // maxLen=8 sesuai PINPad
   },
   clearPin: () => set({ pinBuffer: '' }),
 

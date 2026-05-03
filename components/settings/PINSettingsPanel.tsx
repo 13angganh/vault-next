@@ -34,7 +34,7 @@ export function PINSettingsPanel() {
     setLoading(true);
     try {
       await setupPin(pin, masterPw);
-      setLocalPinExists(true); setPinSuccess('✅ PIN berhasil dibuat!'); setTimeout(reset, 1500);
+      setLocalPinExists(true); setPinSuccess('PIN berhasil dibuat!'); setTimeout(reset, 1500);
     } catch { setPinErr('Gagal menyimpan PIN'); } finally { setLoading(false); }
   };
 
@@ -55,7 +55,7 @@ export function PINSettingsPanel() {
     setLoading(true);
     try {
       await setupPin(pin, masterPw);
-      setPinSuccess('✅ PIN berhasil diubah!'); setTimeout(reset, 1500);
+      setPinSuccess('PIN berhasil diubah!'); setTimeout(reset, 1500);
     } catch { setPinErr('Gagal menyimpan PIN baru'); } finally { setLoading(false); }
   };
 
@@ -65,7 +65,7 @@ export function PINSettingsPanel() {
     try {
       const ok = await verifyPin(pin);
       if (!ok) { setPinErr('PIN salah'); setLoading(false); return; }
-      removePin(); setLocalPinExists(false); setPinSuccess('✅ PIN berhasil dihapus.'); setTimeout(reset, 1500);
+      removePin(); setLocalPinExists(false); setPinSuccess('PIN berhasil dihapus.'); setTimeout(reset, 1500);
     } finally { setLoading(false); }
   };
 
