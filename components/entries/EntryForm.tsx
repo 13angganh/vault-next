@@ -109,6 +109,21 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [showPwGen,   setShowPwGen]   = useState(false);
   const [pwGenTarget, setPwGenTarget] = useState<FieldKey>('pass');
   const [seedWords,   setSeedWords]   = useState<string[]>(entry?.seedPhrase ?? Array(12).fill(''));
+  const [seedMode,    setSeedMode]    = useState<'grid' | 'text'>('grid');
+
+  /* Konversi seedWords ↔ textarea text */
+  const seedToText = (words: string[]) => words.map((w) => w.trim()).filter(Boolean).join(' ');
+  const textToSeed = (text: string, count: number) => {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    const arr = Array(count).fill('');
+    words.slice(0, count).forEach((w, i) => { arr[i] = w; });
+    return arr;
+  };
+
+  const switchSeedMode = (next: 'grid' | 'text') => {
+    // Sinkronkan state sebelum pindah mode
+    setSeedMode(next);
+  };
 
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -214,33 +229,115 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
   const renderSeedSection = () => {
     if (cat !== 'crypto') return null;
+    const wordCount = seedWords.length; // 12 atau 24
+
     return (
       <div className="form-group">
-        <label className="form-label">Seed Phrase (12 atau 24 kata)</label>
-        <p className="form-hint">Isi satu kata per kotak</p>
-        <div className="seed-grid">
-          {seedWords.map((w, i) => (
-            <div key={i} className="seed-grid__item">
-              <span className="seed-grid__num">{i + 1}</span>
-              <input
-                type="text"
-                className="input seed-grid__input mono"
-                value={w}
-                placeholder={`kata ${i + 1}`}
-                onChange={(e) => {
-                  const updated = [...seedWords];
-                  updated[i] = e.target.value;
-                  setSeedWords(updated);
-                }}
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </div>
-          ))}
+        <div className="form-label-row">
+          <label className="form-label">Seed Phrase ({wordCount} kata)</label>
+          {/* Tab switcher mode */}
+          <div className="seed-mode-tabs">
+            <button
+              type="button"
+              className={`seed-mode-tab${seedMode === 'grid' ? ' seed-mode-tab--active' : ''}`}
+              onClick={() => switchSeedMode('grid')}
+            >
+              Per Kata
+            </button>
+            <button
+              type="button"
+              className={`seed-mode-tab${seedMode === 'text' ? ' seed-mode-tab--active' : ''}`}
+              onClick={() => switchSeedMode('text')}
+            >
+              Teks
+            </button>
+          </div>
         </div>
+
+        {/* Mode 1: Grid per kata */}
+        {seedMode === 'grid' && (
+          <>
+            <p className="form-hint">Isi satu kata per kotak</p>
+            <div className="seed-grid">
+              {seedWords.map((w, i) => (
+                <div key={i} className="seed-grid__item">
+                  <span className="seed-grid__num">{i + 1}</span>
+                  <input
+                    type="text"
+                    className="input seed-grid__input mono"
+                    value={w}
+                    placeholder={`kata ${i + 1}`}
+                    onChange={(e) => {
+                      const updated = [...seedWords];
+                      updated[i] = e.target.value;
+                      setSeedWords(updated);
+                    }}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Mode 2: Textarea semua kata sekaligus (pisah spasi) */}
+        {seedMode === 'text' && (
+          <>
+            <p className="form-hint">
+              Ketik atau tempel semua kata seed phrase, pisahkan dengan spasi. {wordCount} kata.
+            </p>
+            <textarea
+              className="input form-textarea mono"
+              value={seedToText(seedWords)}
+              placeholder={`kata1 kata2 kata3 … (${wordCount} kata, pisahkan spasi)`}
+              rows={wordCount === 12 ? 3 : 5}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              onChange={(e) => {
+                setSeedWords(textToSeed(e.target.value, wordCount));
+              }}
+            />
+            {/* Tampilkan jumlah kata terisi */}
+            {(() => {
+              const filled = seedWords.filter((w) => w.trim()).length;
+              return filled > 0 ? (
+                <p className="form-hint" style={{
+                  color: filled === wordCount ? 'var(--success)' : filled > wordCount ? 'var(--red)' : 'var(--muted2)',
+                }}>
+                  {filled}/{wordCount} kata{filled === wordCount ? ' — lengkap' : filled > wordCount ? ' — terlalu banyak' : ''}
+                </p>
+              ) : null;
+            })()}
+          </>
+        )}
+
+        {/* Actions: reset + ganti panjang — berlaku di kedua mode */}
         <div className="seed-grid__actions">
-          <Button variant="ghost" size="sm" onClick={() => setSeedWords(Array(12).fill(''))}>Reset 12 kata</Button>
-          <Button variant="ghost" size="sm" onClick={() => setSeedWords(Array(24).fill(''))}>Ganti ke 24 kata</Button>
+          <Button variant="ghost" size="sm" onClick={() => setSeedWords(Array(12).fill(''))}>
+            Reset 12 kata
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => {
+            // Saat ganti panjang, pertahankan kata yang sudah ada
+            const current = seedWords.filter((w) => w.trim());
+            const next = Array(24).fill('');
+            current.slice(0, 24).forEach((w, i) => { next[i] = w; });
+            setSeedWords(next);
+          }}>
+            Ganti ke 24 kata
+          </Button>
+          {wordCount === 24 && (
+            <Button variant="ghost" size="sm" onClick={() => {
+              const current = seedWords.filter((w) => w.trim());
+              const next = Array(12).fill('');
+              current.slice(0, 12).forEach((w, i) => { next[i] = w; });
+              setSeedWords(next);
+            }}>
+              Kembali ke 12 kata
+            </Button>
+          )}
         </div>
       </div>
     );

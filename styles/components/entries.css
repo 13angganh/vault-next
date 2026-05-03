@@ -475,8 +475,46 @@
 
 .seed-grid__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
+}
+
+/* ── Seed phrase dual mode tabs ── */
+.seed-mode-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-s1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.seed-mode-tab {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--muted2);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+  min-height: 28px;
+  white-space: nowrap;
+}
+
+.seed-mode-tab--active {
+  background: var(--bg-s3);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.seed-mode-tab:hover:not(.seed-mode-tab--active) {
+  color: var(--text);
 }
 
 /* DetailView */

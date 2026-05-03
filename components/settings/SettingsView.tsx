@@ -13,7 +13,7 @@ import { useTheme }            from '@/components/providers/ThemeProvider';
 import { PINSettingsPanel }    from '@/components/settings/PINSettingsPanel';
 import { CategoryManager }     from '@/components/settings/CategoryManager';
 import { BackupModal }         from '@/components/settings/BackupModal';
-import { BiometricHintModal }  from '@/components/lock/BiometricHintModal';
+import { BiometricHintModal, clearBioSession } from '@/components/lock/BiometricHintModal';
 import { Button, Toggle } from '@/components/ui/primitives';
 
 interface SettingsViewProps {
@@ -122,11 +122,9 @@ export function SettingsView({ onClose }: SettingsViewProps) {
                     <span className="settings-row__desc">Hapus data sidik jari dari perangkat ini</span>
                   </div>
                   <Button variant="danger" size="sm" className="settings-row__action" onClick={() => {
-                    // F4-02: Gunakan store methods — bukan direct localStorage
-                    // setBiometricCredId(null) sudah handle lsRemove via F1-02
                     setBiometricEnabled(false);
                     setBiometricCredId(null);
-                    sessionStorage.removeItem('vault_ss_mpw');
+                    clearBioSession(); // hapus sessionStorage + LS_BIO_SESSION sekaligus
                   }}>
                     Hapus
                   </Button>

@@ -12,7 +12,7 @@ import { PINPad }             from './PINPad';
 import { RecoveryPanel }      from './RecoveryPanel';
 import { SetupFlow }          from './SetupFlow';
 import { BiometricHintModal } from './BiometricHintModal';
-import { lsGet, LS_BIO_CRED_ID } from '@/lib/storage';
+import { lsGet, lsSet, LS_BIO_CRED_ID, LS_BIO_SESSION } from '@/lib/storage';
 import { useAppStore } from '@/lib/store/appStore';
 import {
   unlockVault, setupVault, verifyPinAndGetMaster,
@@ -86,10 +86,22 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     setLoading(true); setError('');
     try {
       const payload = await unlockVault(masterPw);
+      // Simpan ke sessionStorage + LS fallback agar sidik jari tetap bekerja setelah background
+      sessionStorage.setItem('vault_ss_mpw', masterPw);
+      const credId = lsGet(LS_BIO_CRED_ID);
+      if (credId) {
+        // XOR obfuscate sederhana pakai credId sebagai key
+        const textBytes = new TextEncoder().encode(masterPw);
+        const keyBytes  = new TextEncoder().encode(credId);
+        const out = new Uint8Array(textBytes.length);
+        for (let i = 0; i < textBytes.length; i++) out[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
+        lsSet(LS_BIO_SESSION, btoa(String.fromCharCode(...out)));
+      }
       onUnlocked(payload, masterPw);
     } catch (e) {
       setError((e as Error).message ?? 'Password salah');
-    } finally { setLoading(false); }
+      setLoading(false);
+    }
   }, [onUnlocked]);
 
   const handleMasterSubmit = () => {
@@ -222,16 +234,6 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 lockedLabel={`Dikunci ${lockRemain} detik lagi…`}
                 error={error}
               />
-
-              {/* Link navigasi — inline, tanpa titik pemisah, konsisten */}
-              <div className="ls-links">
-                <button style={S.link} onClick={() => goPanel('master')}>
-                  <KeyRound size={11} /> Master Password
-                </button>
-                <button style={S.link} onClick={() => goPanel('seed')}>
-                  <KeyRound size={11} /> Seed Phrase
-                </button>
-              </div>
             </div>
           )}
 
@@ -272,20 +274,6 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   ? <><Loader2 size={14} className="spin" /> Membuka…</>
                   : 'Buka Vault'}
               </Button>
-
-              <div className="ls-links">
-                {hasPinSetup() && (
-                  <button style={S.link} onClick={() => goPanel('pin')}>
-                    <ArrowLeft size={11} /> Kembali ke PIN
-                  </button>
-                )}
-                <button style={S.link} onClick={() => goPanel('seed')}>
-                  <KeyRound size={11} /> Seed Phrase
-                </button>
-                <button style={S.link} onClick={() => goPanel('recovery')}>
-                  <RefreshCw size={11} /> Lupa password?
-                </button>
-              </div>
             </div>
           )}
 
@@ -315,15 +303,6 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   ? <><Loader2 size={14} className="spin" /> Membuka…</>
                   : 'Buka Vault'}
               </Button>
-
-              <div className="ls-links">
-                <button style={S.link} onClick={() => goPanel(hasPinSetup() ? 'pin' : 'master')}>
-                  <ArrowLeft size={11} /> Kembali
-                </button>
-                <button style={S.link} onClick={() => goPanel('recovery')}>
-                  <RefreshCw size={11} /> Reset password
-                </button>
-              </div>
             </div>
           )}
 
@@ -349,6 +328,56 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
           {/* ── Footer: biometrik + setup baru ── */}
           {panel !== 'setup' && panel !== 'recovery' && (
             <div className="ls-footer">
+              {/* Baris navigasi teks: Master Password · Seed Phrase · Vault Baru */}
+              <div className="ls-footer__links">
+                {panel === 'pin' && (
+                  <>
+                    <button style={S.link} onClick={() => goPanel('master')}>
+                      <KeyRound size={11} /> Master Password
+                    </button>
+                    <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
+                    <button style={S.link} onClick={() => goPanel('seed')}>
+                      <KeyRound size={11} /> Seed Phrase
+                    </button>
+                  </>
+                )}
+                {panel === 'master' && (
+                  <>
+                    {hasPinSetup() && (
+                      <>
+                        <button style={S.link} onClick={() => goPanel('pin')}>
+                          <ArrowLeft size={11} /> Kembali ke PIN
+                        </button>
+                        <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
+                      </>
+                    )}
+                    <button style={S.link} onClick={() => goPanel('seed')}>
+                      <KeyRound size={11} /> Seed Phrase
+                    </button>
+                    <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
+                    <button style={S.link} onClick={() => goPanel('recovery')}>
+                      <RefreshCw size={11} /> Lupa password?
+                    </button>
+                  </>
+                )}
+                {panel === 'seed' && (
+                  <>
+                    <button style={S.link} onClick={() => goPanel(hasPinSetup() ? 'pin' : 'master')}>
+                      <ArrowLeft size={11} /> Kembali
+                    </button>
+                    <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
+                    <button style={S.link} onClick={() => goPanel('recovery')}>
+                      <RefreshCw size={11} /> Reset password
+                    </button>
+                  </>
+                )}
+                <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
+                <button style={S.link} onClick={() => goPanel('setup')}>
+                  <Plus size={11} /> Vault Baru
+                </button>
+              </div>
+
+              {/* Tombol sidik jari — di tengah, hanya jika tersedia */}
               {hasBiometricCredential() && (
                 <button className="ls-bio-btn" onClick={() => setShowBiometric(true)}
                   aria-label="Buka dengan sidik jari">
@@ -356,9 +385,6 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   <span>Sidik Jari</span>
                 </button>
               )}
-              <button style={S.link} onClick={() => goPanel('setup')}>
-                <Plus size={11} /> Vault Baru
-              </button>
             </div>
           )}
         </div>

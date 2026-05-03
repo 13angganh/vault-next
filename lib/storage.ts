@@ -19,6 +19,7 @@ export const LS_CATS       = 'vault_cats';       // kategori custom (JSON)
 export const LS_PIN_SKIPPED   = 'vault_pin_skip';   // boolean skip setup PIN
 export const LS_BIO_ENABLED   = 'vault_bio_enabled'; // boolean biometrik aktif
 export const LS_BIO_CRED_ID   = 'vault_bio_cred';    // base64 credentialId WebAuthn
+export const LS_BIO_SESSION   = 'vault_bio_sess';     // fallback sesi biometrik (obfuscated)
 export const SS_MASTER_PW     = 'vault_ss_mpw';      // sessionStorage: master pw sementara (biometrik)
 
 // ─── SSR Guard ────────────────────────────────────────────────────────────────
@@ -120,6 +121,7 @@ export function clearAllVaultData(): void {
     LS_CATS, LS_PIN_SKIPPED,
     LS_BIO_ENABLED,   // hapus state biometrik aktif
     LS_BIO_CRED_ID,   // hapus credential ID WebAuthn
+    LS_BIO_SESSION,   // hapus fallback sesi biometrik
   ];
   keys.forEach(lsRemove);
 }

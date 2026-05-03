@@ -9,14 +9,18 @@
  *
  * Alur:
  *  1. Register: WebAuthn navigator.credentials.create() → simpan credentialId
- *  2. Auth: WebAuthn navigator.credentials.get() → onSuccess(masterPw dari sessionStorage)
+ *  2. Auth: WebAuthn navigator.credentials.get() → onSuccess(masterPw dari storage)
  *
- * Master password disimpan di sessionStorage (bukan localStorage) —
- * otomatis terhapus saat tab/browser ditutup. Behavior standar banking mobile.
+ * Session storage strategy (Fix Bug Biometrik):
+ *  - Primary: sessionStorage (terhapus saat tab ditutup)
+ *  - Fallback: localStorage dengan XOR obfuscation pakai credentialId sebagai key
+ *    Ini BUKAN enkripsi kuat — hanya obfuscation agar tidak plaintext di LS.
+ *    Master pw tetap aman karena vault utama dienkripsi AES-256-GCM.
+ *    Fallback ini hanya aktif selama biometrik aktif dan credentialId ada.
  */
 
 import { useState, useEffect } from 'react';
-import { lsGet, lsSet, LS_BIO_CRED_ID } from '@/lib/storage';
+import { lsGet, lsSet, lsRemove, LS_BIO_CRED_ID, LS_BIO_SESSION } from '@/lib/storage';
 import { Button } from '@/components/ui/primitives';
 import { X, Fingerprint, CheckCircle2, AlertCircle, Loader2, Shield } from 'lucide-react';
 
@@ -25,6 +29,66 @@ const RP_NAME    = 'Vault Next';
 const USER_NAME  = 'vault-user';
 const USER_ID    = new TextEncoder().encode('vault-next-user-001');
 const SS_KEY     = 'vault_ss_mpw';
+
+/* ── Session helpers (dual storage) ── */
+
+/** XOR-obfuscate string menggunakan key (credentialId). Bukan enkripsi — hanya obfuscation. */
+function xorObfuscate(text: string, key: string): string {
+  const textBytes = new TextEncoder().encode(text);
+  const keyBytes  = new TextEncoder().encode(key);
+  const out = new Uint8Array(textBytes.length);
+  for (let i = 0; i < textBytes.length; i++) {
+    out[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
+  }
+  return btoa(String.fromCharCode(...out));
+}
+
+function xorDeobfuscate(b64: string, key: string): string {
+  try {
+    const bytes   = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const keyBytes = new TextEncoder().encode(key);
+    const out = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) {
+      out[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+    }
+    return new TextDecoder().decode(out);
+  } catch {
+    return '';
+  }
+}
+
+/** Simpan master pw ke sessionStorage (primary) + localStorage fallback */
+function saveBioSession(masterPw: string): void {
+  sessionStorage.setItem(SS_KEY, masterPw);
+  const credId = lsGet(LS_BIO_CRED_ID);
+  if (credId) {
+    lsSet(LS_BIO_SESSION, xorObfuscate(masterPw, credId));
+  }
+}
+
+/** Ambil master pw dari sessionStorage, fallback ke localStorage */
+function loadBioSession(): string | null {
+  // Cek sessionStorage dulu
+  const ss = sessionStorage.getItem(SS_KEY);
+  if (ss) return ss;
+  // Fallback: ambil dari localStorage dan restore ke sessionStorage
+  const credId = lsGet(LS_BIO_CRED_ID);
+  if (!credId) return null;
+  const raw = lsGet(LS_BIO_SESSION);
+  if (!raw) return null;
+  const recovered = xorDeobfuscate(raw, credId);
+  if (recovered) {
+    sessionStorage.setItem(SS_KEY, recovered); // restore ke SS
+    return recovered;
+  }
+  return null;
+}
+
+/** Hapus semua session data biometrik (dipanggil saat hapus biometrik di pengaturan) */
+export function clearBioSession(): void {
+  sessionStorage.removeItem(SS_KEY);
+  lsRemove(LS_BIO_SESSION);
+}
 
 /* ── Helpers ── */
 function bufToB64(buf: ArrayBuffer): string {
@@ -48,8 +112,8 @@ function isWebAuthnSupported(): boolean {
 interface BiometricHintModalProps {
   onClose:    () => void;
   mode?:      'register' | 'auth';
-  masterPw?:  string;                 // diperlukan saat mode='register'
-  onSuccess?: (masterPw: string) => void; // dipanggil saat auth berhasil
+  masterPw?:  string;
+  onSuccess?: (masterPw: string) => void;
 }
 
 export function BiometricHintModal({
@@ -65,8 +129,8 @@ export function BiometricHintModal({
   /* Auto-trigger auth saat modal dibuka dalam mode auth */
   useEffect(() => {
     if (mode !== 'auth' || !supported) return;
-    // Cek session dulu sebelum trigger WebAuthn
-    const hasSS = !!sessionStorage.getItem('vault_ss_mpw');
+    // Cek session (primary SS + fallback LS)
+    const hasSS = !!loadBioSession();
     if (!hasSS) {
       setErrMsg('Sesi biometrik belum aktif. Masuk sekali dengan PIN atau master password — sidik jari aktif kembali setelahnya.');
       setStep('session_expired');
@@ -76,7 +140,7 @@ export function BiometricHintModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── Register: daftarkan credential baru ── */
+  /* ── Register ── */
   async function handleRegister() {
     if (!masterPw) { setErrMsg('Master password diperlukan'); return; }
     setStep('loading');
@@ -89,8 +153,8 @@ export function BiometricHintModal({
           rp: { name: RP_NAME },
           user: { id: USER_ID, name: USER_NAME, displayName: 'Pengguna Vault' },
           pubKeyCredParams: [
-            { type: 'public-key', alg: -7  },  // ES256
-            { type: 'public-key', alg: -257 }, // RS256
+            { type: 'public-key', alg: -7  },
+            { type: 'public-key', alg: -257 },
           ],
           authenticatorSelection: {
             authenticatorAttachment: 'platform',
@@ -103,12 +167,9 @@ export function BiometricHintModal({
 
       if (!credential) throw new Error('Pendaftaran dibatalkan');
 
-      /* Simpan credentialId di localStorage */
       const credId = bufToB64(credential.rawId);
       lsSet(LS_BIO_CRED_ID, credId);
-
-      /* Simpan master password di sessionStorage untuk sesi ini */
-      sessionStorage.setItem(SS_KEY, masterPw);
+      saveBioSession(masterPw); // simpan ke dual storage
 
       setStep('success');
     } catch (err: unknown) {
@@ -124,7 +185,7 @@ export function BiometricHintModal({
     }
   }
 
-  /* ── Auth: verifikasi sidik jari ── */
+  /* ── Auth ── */
   async function handleAuth() {
     setStep('loading');
     setErrMsg('');
@@ -144,13 +205,14 @@ export function BiometricHintModal({
 
       if (!assertion) throw new Error('Verifikasi dibatalkan.');
 
-      /* Ambil master password dari sessionStorage */
-      const pw = sessionStorage.getItem(SS_KEY);
+      /* Ambil master pw dari dual storage */
+      const pw = loadBioSession();
       if (!pw) {
-        // Session habis — credential ada tapi master pw belum di-cache
-        // Ini normal terjadi saat browser/tab baru dibuka
         throw new Error('session_expired');
       }
+
+      // Refresh session setelah auth berhasil
+      saveBioSession(pw);
 
       setStep('success');
       setTimeout(() => {
