@@ -19,7 +19,6 @@ export interface VaultListViewRef {
 }
 
 interface VaultListViewProps {
-  onGlobalLoading?: (v: boolean) => void;
   isVaultLoading?: boolean;
 }
 
@@ -44,7 +43,7 @@ function VaultSkeletonList() {
 }
 
 export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
-  function VaultListView({ onGlobalLoading: _, isVaultLoading = false }, ref) {
+  function VaultListView({ isVaultLoading = false }, ref) {
     const vault         = useAppStore((s) => s.vault);
     const recycleBin    = useAppStore((s) => s.recycleBin);
     const customCats    = useAppStore((s) => s.customCats);

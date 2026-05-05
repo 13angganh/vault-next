@@ -42,6 +42,9 @@ Form di app ini sederhana (PIN entry, password generator, entri vault). Validasi
 ### Tanpa Firebase / Cloud
 App ini 100% offline. Semua data disimpan di localStorage (terenkripsi AES-256-GCM). Tidak ada server, tidak ada akun, tidak ada sync otomatis.
 
+### Font: Outfit (bukan Inter)
+Standar `prompt-personal.md` merekomendasikan Inter. Vault Next menggunakan **Outfit** karena karakter display-nya lebih ekspresif untuk password manager dengan estetika dark/premium — terutama di lock screen dan heading. JetBrains Mono tetap digunakan untuk semua teks monospace (password, seed phrase, kode, timestamp) sesuai standar.
+
 ## Struktur Folder
 
 ```

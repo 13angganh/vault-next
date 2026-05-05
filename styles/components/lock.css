@@ -471,3 +471,258 @@
   animation: shieldRing 2.8s ease-out infinite;
   pointer-events: none;
 }
+
+/* ── SetupFlow — Fix STYLE-01 ────────────────────────────────────────────── */
+/* Sebelumnya menggunakan inline style. Dipindahkan ke CSS class. */
+
+.setup-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+/* Progress stepper */
+.setup-steps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.setup-step {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.setup-step:last-child {
+  flex: none;
+}
+
+.setup-step__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+  border: 1.5px solid var(--border);
+  background: var(--bg-s3);
+}
+
+.setup-step__dot--done {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.setup-step__dot--active {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+}
+
+.setup-step__num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.setup-step__num--active {
+  color: var(--gold);
+}
+
+.setup-step__line {
+  flex: 1;
+  height: 1.5px;
+  background: var(--border);
+  transition: background var(--transition-fast);
+}
+
+.setup-step__line--done {
+  background: var(--gold);
+}
+
+/* Step panels */
+.setup-panel {
+  animation: fadeUp 0.3s ease both;
+}
+
+.setup-panel--center {
+  animation: fadeUp 0.3s ease both;
+  text-align: center;
+}
+
+.setup-panel__title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.setup-panel__title-muted {
+  color: var(--muted2);
+  font-weight: 400;
+  font-size: var(--text-sm);
+}
+
+.setup-panel__desc {
+  font-size: var(--text-xs);
+  color: var(--muted2);
+  margin-bottom: var(--space-5);
+  line-height: 1.6;
+}
+
+.setup-panel__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.setup-panel__field-wrap {
+  position: relative;
+}
+
+.setup-panel__row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* Strength meter (mini) di dalam setup */
+.setup-strength {
+  animation: fadeIn 0.2s ease;
+}
+
+.setup-strength__bars {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.setup-strength__bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.2s ease;
+}
+
+.setup-strength__label {
+  font-size: 10px;
+}
+
+/* Input style untuk setup (tanpa label wrapper) */
+.setup-input {
+  width: 100%;
+  padding: 13px 40px 13px 14px;
+  background: var(--bg-s1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.setup-input:focus {
+  border-color: var(--gold-border);
+}
+
+.setup-input--error {
+  border-color: var(--red);
+}
+
+.setup-input--mono {
+  font-family: var(--font-mono);
+  line-height: 1.7;
+  resize: none;
+}
+
+.setup-input--textarea {
+  padding: 13px 14px;
+}
+
+/* Toggle eye button (password show/hide) */
+.setup-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted2);
+  padding: 4px;
+  display: flex;
+  transition: color var(--transition-fast);
+}
+
+.setup-eye-btn:hover {
+  color: var(--text2);
+}
+
+/* Error message */
+.setup-error {
+  font-size: var(--text-xs);
+  color: var(--red);
+  animation: fadeIn 0.2s ease;
+  text-align: center;
+}
+
+/* Done step */
+.setup-done-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: rgba(0,212,170,0.1);
+  border: 1.5px solid rgba(0,212,170,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4);
+}
+
+.setup-done-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.setup-done-desc {
+  font-size: var(--text-xs);
+  color: var(--muted2);
+  line-height: 1.7;
+  margin-bottom: var(--space-6);
+}
+
+.setup-summary {
+  text-align: left;
+  background: var(--bg-s1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.setup-summary__row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: var(--text-xs);
+  border-bottom: 1px solid var(--border);
+}
+
+.setup-summary__row:last-child {
+  border-bottom: none;
+}
+
+.setup-summary__label {
+  color: var(--muted2);
+}
+
+.setup-summary__value {
+  color: var(--text2);
+  font-family: var(--font-mono);
+}

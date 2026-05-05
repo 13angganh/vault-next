@@ -15,11 +15,10 @@ import { useAppStore }          from '@/lib/store/appStore';
 type ShellView = 'vault' | 'settings';
 
 export function AppShell() {
-  const [shellView,     setShellView]     = useState<ShellView>('vault');
-  const [sidebarOpen,   setSidebarOpen]   = useState(false);
-  const [showBackup,    setShowBackup]    = useState(false);
-  const [swUpdate,      setSwUpdate]      = useState(false);
-  const [globalLoading, setGlobalLoading] = useState(false);
+  const [shellView,   setShellView]   = useState<ShellView>('vault');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showBackup,  setShowBackup]  = useState(false);
+  const [swUpdate,    setSwUpdate]    = useState(false);
   const vaultListRef = useRef<VaultListViewRef>(null);
 
   const autoLockMinutes = useAppStore((s) => s.autoLockMinutes);
@@ -90,18 +89,11 @@ export function AppShell() {
     setShellView('settings');
   }, []);
 
-  const handleGlobalLoading = useCallback((v: boolean) => {
-    setGlobalLoading(v);
-  }, []);
-
   const viewTitle = shellView === 'settings' ? 'Pengaturan' : 'Vault Next';
 
   return (
     <div className="app-shell">
       <AutoLockManager />
-
-      {/* Linear progress bar */}
-      {globalLoading && <div className="linear-progress" aria-hidden="true" />}
 
       {/* SW update bar */}
       {swUpdate && (
@@ -135,10 +127,7 @@ export function AppShell() {
       <main className="app-main" id="main-content" tabIndex={-1}>
         {shellView === 'vault' && (
           <div className="shell-view-anim" key="vault">
-            <VaultListView
-              ref={vaultListRef}
-              onGlobalLoading={handleGlobalLoading}
-            />
+            <VaultListView ref={vaultListRef} />
           </div>
         )}
         {shellView === 'settings' && (

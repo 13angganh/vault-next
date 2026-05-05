@@ -85,6 +85,7 @@ export function Header({
           value={localQuery}
           onChange={(e) => handleSearch(e.target.value)}
           aria-label="Cari entri"
+          data-search-input
         />
         {localQuery && (
           <button

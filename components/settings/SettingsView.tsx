@@ -8,6 +8,7 @@
 import { useState }            from 'react';
 import { ArrowLeft, Cloud, LayoutGrid, Lock, Shield, Sun, Moon, Fingerprint } from 'lucide-react';
 import { lsGet, LS_BIO_CRED_ID } from '@/lib/storage';
+import { AUTOLOCK_OPTIONS_MIN } from '@/lib/constants';
 import { useAppStore }         from '@/lib/store/appStore';
 import { useTheme }            from '@/components/providers/ThemeProvider';
 import { PINSettingsPanel }    from '@/components/settings/PINSettingsPanel';
@@ -46,11 +47,6 @@ export function SettingsView({ onClose }: SettingsViewProps) {
   const isWebAuthnSupported = typeof window !== 'undefined' && !!window.PublicKeyCredential;
   const hasBioCredential    = typeof window !== 'undefined' && !!lsGet(LS_BIO_CRED_ID);  // F2-07
 
-  const autoLockOptions = [
-    { value: 0, label: 'Nonaktif' }, { value: 1, label: '1 menit' },
-    { value: 5, label: '5 menit' },  { value: 10, label: '10 menit' },
-    { value: 30, label: '30 menit' },{ value: 60, label: '1 jam' },
-  ];
   const backupOptions = [
     { value: 0, label: 'Nonaktif' },   { value: 24, label: 'Setiap hari' },
     { value: 72, label: 'Setiap 3 hari' }, { value: 168, label: 'Setiap minggu' },
@@ -143,7 +139,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
               </div>
               <select className="settings-select" value={autoLockMinutes}
                 onChange={(e) => setAutoLock(Number(e.target.value))} aria-label="Pilih waktu auto-lock">
-                {autoLockOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                {AUTOLOCK_OPTIONS_MIN.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
             <div className="settings-row settings-row--block">

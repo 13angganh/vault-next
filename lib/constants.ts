@@ -10,18 +10,24 @@ export const APP_NAME = 'Vault';
 /** Versi aplikasi — sync dengan package.json */
 export const APP_VERSION = '0.8.0';
 
-/** Auto-lock default timeout (ms) */
-export const AUTO_LOCK_DEFAULT_MS = 5 * 60 * 1000; // 5 menit
+/** Auto-lock default timeout (menit) */
+export const AUTO_LOCK_DEFAULT_MIN = 5;
 
-/** Auto-lock options (ms) */
-export const AUTO_LOCK_OPTIONS = [
-  { label: '1 menit',  value: 1 * 60 * 1000 },
-  { label: '3 menit',  value: 3 * 60 * 1000 },
-  { label: '5 menit',  value: 5 * 60 * 1000 },
-  { label: '10 menit', value: 10 * 60 * 1000 },
-  { label: '30 menit', value: 30 * 60 * 1000 },
-  { label: 'Tidak pernah', value: 0 },
+/**
+ * Auto-lock options — nilai dalam MENIT, sesuai unit yang dipakai store (autoLockMinutes).
+ * Jangan gunakan AUTO_LOCK_DEFAULT_MS untuk ini — unit berbeda.
+ */
+export const AUTOLOCK_OPTIONS_MIN = [
+  { label: 'Nonaktif',  value: 0  },
+  { label: '1 menit',   value: 1  },
+  { label: '5 menit',   value: 5  },
+  { label: '10 menit',  value: 10 },
+  { label: '30 menit',  value: 30 },
+  { label: '1 jam',     value: 60 },
 ] as const;
+
+/** @deprecated Gunakan AUTOLOCK_OPTIONS_MIN. AUTO_LOCK_OPTIONS memakai ms (berbeda unit dari store). */
+export const AUTO_LOCK_DEFAULT_MS = 5 * 60 * 1000; // 5 menit dalam ms
 
 /** Backup reminder interval (ms) — 24 jam */
 export const BACKUP_REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000;

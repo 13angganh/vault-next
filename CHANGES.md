@@ -1,7 +1,67 @@
 # CHANGES — Vault Next
 
-Dokumen ini mencatat semua perubahan yang dilakukan selama sesi audit (Fix Fase 1–4).
-Total temuan: 36 item. Semua diselesaikan kecuali yang tercatat sebagai [DEVIATION].
+Dokumen ini mencatat semua perubahan yang dilakukan selama sesi audit (Fix Fase 1–4) dan Audit Kedua (Fix Fase 5).
+Total temuan audit pertama: 36 item. Semua diselesaikan kecuali yang tercatat sebagai [DEVIATION].
+Total temuan audit kedua: 9 item. Semua diselesaikan dalam 1 fase.
+
+---
+
+## Fix Fase 5 — Audit Kedua (9 Temuan)
+
+### FIX-BUG-01 — Dokumentasi deviasi font Outfit vs Inter
+**File:** `README.md`
+- Tambah entri baru di section "Deviasi dari Standar Prompt"
+- Menjelaskan alasan pilihan Outfit: karakter display lebih ekspresif untuk password manager dark/premium
+- Deviasi sebelumnya tidak terdokumentasi — sekarang eksplisit seperti Custom CSS dan tanpa Firebase
+
+### FIX-BUG-02 — Rename `idleSec` → `idleMinutes` di AutoLockManager
+**File:** `components/shell/AutoLockManager.tsx`
+- Variable `idleSec` menyimpan nilai dalam menit (bukan detik) — nama menyesatkan
+- Rename ke `idleMinutes` agar sesuai dengan nilai aktual dan konsisten dengan `autoLockMinutes`
+- Logika perbandingan tidak berubah (sudah benar), hanya nama variable
+
+### FIX-INC-01 — Sinkronkan version package.json dengan constants.ts
+**File:** `package.json`
+- `"version": "0.1.0"` → `"0.8.0"` agar sinkron dengan `APP_VERSION` di `lib/constants.ts`
+- Satu sumber kebenaran versi: `package.json` sebagai ground truth, `constants.ts` mengikuti
+
+### FIX-INC-02 — Hapus duplikasi autoLockOptions, perbaiki inkonsistensi unit
+**File:** `lib/constants.ts`, `components/settings/SettingsView.tsx`
+- `constants.ts`: hapus `AUTO_LOCK_OPTIONS` yang ms-based (berbeda unit dari store), tambah `AUTOLOCK_OPTIONS_MIN` dalam menit + `@deprecated` JSDoc pada `AUTO_LOCK_DEFAULT_MS`
+- `SettingsView.tsx`: import `AUTOLOCK_OPTIONS_MIN` dari constants, hapus definisi lokal `autoLockOptions` yang duplikat
+- Inkonsistensi unit (ms vs menit) kini resolved — store dan options pakai unit yang sama (menit)
+
+### FIX-INC-03 — Hapus prop dead `onGlobalLoading` dari VaultListView dan AppShell
+**File:** `components/vault/VaultListView.tsx`, `components/shell/AppShell.tsx`
+- `VaultListView`: hapus `onGlobalLoading` dari `VaultListViewProps` interface dan destructuring
+- `AppShell`: hapus state `globalLoading`, handler `handleGlobalLoading`, dan linear progress bar yang tidak pernah di-trigger
+- Prop sudah di-discard (`_`) sejak refactor sebelumnya tapi interface dan call site belum dibersihkan
+
+### FIX-A11Y-01 — Modal gunakan aria-labelledby (WAI-ARIA Dialog pattern)
+**File:** `components/ui/primitives/Modal.tsx`
+- Import `useId` dari React untuk generate ID unik per instance modal
+- Ganti `aria-label={title}` dengan `aria-labelledby={titleId}` yang referensi ke `<h3 id={titleId}>`
+- Fallback: jika tidak ada `title`, tetap pakai `aria-label="Dialog"` agar selalu ada accessible name
+- Sesuai WAI-ARIA Dialog Pattern — screen reader sekarang baca judul modal langsung dari elemen H3
+
+### FIX-INC-04 — Tambah `data-search-input` ke Header search input
+**File:** `components/shell/Header.tsx`
+- Tambah atribut `data-search-input` ke `<input type="search">`
+- AppShell keyboard handler `Cmd/Ctrl+K` mencari `[data-search-input]` — tanpa atribut ini shortcut tidak berfungsi
+- Bug fungsional: shortcut `Cmd/Ctrl+K` sebelumnya selalu gagal karena selector tidak menemukan target
+
+### FIX-STYLE-01 — Refactor SetupFlow dari inline style ke CSS classes
+**File:** `components/lock/SetupFlow.tsx`, `styles/components/lock.css`
+- Tambah 100+ baris CSS class di `lock.css`: `.setup-flow`, `.setup-steps`, `.setup-step`, `.setup-panel`, `.setup-input`, `.setup-strength`, `.setup-summary`, dll.
+- Ganti ~59 `style={{}}` inline di SetupFlow dengan className equivalents
+- Sisa 12 inline styles yang tidak bisa dihindari: dynamic computed color (strength meter), icon color, dan `flex: 1` di Button prop
+- Konsistensi dengan komponen lain yang sepenuhnya class-based
+
+### FIX-TEST-01 — Catat E2E tests sebagai backlog
+**File:** `CHANGES.md` (file ini)
+- Playwright + E2E tests untuk alur utama (unlock → tambah entri → lock) tidak ada
+- Dicatat sebagai backlog — tidak dieksekusi di fase ini
+- Prioritas rendah: unit tests sudah cover fungsi kritikal (crypto, storage, vaultService)
 
 ---
 
@@ -172,5 +232,6 @@ Total temuan: 36 item. Semua diselesaikan kecuali yang tercatat sebagai [DEVIATI
 
 | ID | Deskripsi | Alasan |
 |---|---|---|
-| T-06 | Font tidak sesuai standar prompt-personal | Outfit + JetBrains Mono sudah dipilih secara sadar, tidak perlu diubah |
+| T-06 | Font Outfit (bukan Inter sesuai prompt-personal) | Intentional — didokumentasikan di README section "Deviasi dari Standar Prompt" sejak Fix Fase 5 |
 | K-03b | Tailwind/shadcn/RHF/Zod tidak ada | Intentional deviation — lihat README section "Deviasi dari Standar Prompt" |
+| TEST-01 | Tidak ada E2E Playwright | Backlog — unit tests crypto/storage/vaultService sudah cover fungsi kritikal |

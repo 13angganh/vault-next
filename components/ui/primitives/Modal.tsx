@@ -6,9 +6,10 @@
  * Komponen consumer (BackupModal, BiometricHintModal, dll) wrapping ini.
  *
  * Sesi B — M-05 | F3-03 — animasi via AnimatePresence + motion.div
+ * Fix A11Y-01: aria-labelledby referensi ke elemen judul (WAI-ARIA Dialog pattern)
  */
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -39,7 +40,8 @@ export function Modal({
   hideClose    = false,
   persistent   = false,
 }: ModalProps) {
-  const trapRef = useFocusTrap<HTMLDivElement>(open);
+  const trapRef  = useFocusTrap<HTMLDivElement>(open);
+  const titleId  = useId();
 
   // Escape key
   useEffect(() => {
@@ -68,7 +70,9 @@ export function Modal({
           className="modal-overlay"
           role="dialog"
           aria-modal="true"
-          aria-label={title}
+          /* A11Y-01: aria-labelledby jika ada judul, fallback aria-label jika tidak */
+          aria-labelledby={title ? titleId : undefined}
+          aria-label={!title ? 'Dialog' : undefined}
           onClick={persistent ? undefined : onClose}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -90,7 +94,7 @@ export function Modal({
           >
             {(title || !hideClose) && (
               <div className="modal__header">
-                {title && <h3 className="modal__title">{title}</h3>}
+                {title && <h3 id={titleId} className="modal__title">{title}</h3>}
                 {!hideClose && (
                   <button
                     className="ibtn modal__close"

@@ -56,8 +56,8 @@ export function AutoLockManager() {
 
     const handleVisibilityChange = () => {
       if (document.hidden) return; // user kembali ke tab
-      const idleSec = (Date.now() - lastActivityAt) / 1000 / 60;
-      if (idleSec >= autoLockMinutes) lock();
+      const idleMinutes = (Date.now() - lastActivityAt) / 1000 / 60;
+      if (idleMinutes >= autoLockMinutes) lock();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
