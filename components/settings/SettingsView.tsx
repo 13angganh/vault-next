@@ -179,7 +179,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
             <div className="settings-row">
               <div className="settings-row__info">
                 <span className="settings-row__label">Backup & Sync</span>
-                <span className="settings-row__desc">Export/Import .vault · Sync manual antar perangkat</span>
+                <span className="settings-row__desc">Backup & pulihkan .vault · Sinkron antar perangkat</span>
               </div>
               <Button variant="ghost" size="sm" className="settings-row__action"
                 onClick={() => setShowBackup(true)} leftIcon={<Cloud size={14} />}>
@@ -213,7 +213,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
               </div>
               <div className="settings-info-item">
                 <span className="settings-info-item__val">{recycleBin.length}</span>
-                <span className="settings-info-item__label">Tong Sampah</span>
+                <span className="settings-info-item__label">Sampah</span>
               </div>
               <div className="settings-info-item">
                 <span className="settings-info-item__val">AES-256</span>

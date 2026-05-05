@@ -4,7 +4,7 @@ import { useState, forwardRef, useImperativeHandle, useMemo, useCallback, useEff
 import { Search as SearchIcon, Trash2, Lock, X,
   Star, FolderOpen, PackageOpen,
 } from 'lucide-react';
-import { verifyPinAndGetMaster } from '@/lib/vaultService';
+import { verifyPinAndGetMaster, saveVault } from '@/lib/vaultService';
 import { Button, EmptyState, Skeleton } from '@/components/ui/primitives';
 import { useAppStore }       from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
@@ -84,7 +84,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     const filterLabel = useMemo(() => {
       if (currentFilter === 'all') return 'Semua Entri';
       if (currentFilter === 'fav') return 'Favorit';
-      if (currentFilter === 'bin') return 'Tong Sampah';
+      if (currentFilter === 'bin') return 'Sampah';
       const cat = allCats.find((c) => c.id === currentFilter);
       return cat ? cat.label : currentFilter;
     }, [currentFilter, allCats]);
@@ -136,8 +136,23 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           setUnlockLoading(false);
           return;
         }
-        store.setLockedIds(store.lockedIds.filter((id) => id !== unlockEntry.id));
+        const newLockedIds = store.lockedIds.filter((id) => id !== unlockEntry.id);
+        store.setLockedIds(newLockedIds);
         store.toggleExpanded(unlockEntry.id);
+        // Simpan ke disk — tanpa ini, perubahan hilang saat app ditutup/dibuka lagi
+        try {
+          await saveVault(
+            store.masterPw,
+            store.vault,
+            store.recycleBin,
+            store.vaultMeta!,
+            store.customCats,
+            newLockedIds,
+          );
+        } catch {
+          // Gagal simpan — rollback store agar konsisten dengan disk
+          store.setLockedIds(store.lockedIds);
+        }
         setUnlockEntry(null);
         setUnlockInput('');
         setUnlockError('');
@@ -166,7 +181,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
         return (
           <EmptyState
             icon={<Trash2 size={40} strokeWidth={1.2} />}
-            title="Tong Sampah kosong"
+            title="Sampah kosong"
             description="Entri yang dihapus akan muncul di sini"
           />
         );

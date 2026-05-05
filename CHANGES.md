@@ -6,7 +6,40 @@ Total temuan audit kedua: 9 item. Semua diselesaikan dalam 1 fase.
 
 ---
 
-## Fix Fase 5 — Audit Kedua (9 Temuan)
+## Fix Fase 6 — Bug Lock Per-Entri + Konsistensi Bahasa
+
+### FIX-BUG-LOCK — lockedIds tidak tersimpan saat unlock per-entri
+**File:** `components/vault/VaultListView.tsx`
+- **Root cause:** `handleUnlockSubmit` melepas kunci entri via `store.setLockedIds(...)` ke in-memory saja tanpa memanggil `saveVault` — sehingga perubahan hilang saat app ditutup/dibuka kembali
+- **Fix:** Tambah import `saveVault`, hitung `newLockedIds` terlebih dahulu, panggil `saveVault` setelah `store.setLockedIds` agar state ter-persist ke localStorage (terenkripsi)
+- **Rollback guard:** Jika `saveVault` gagal, store di-rollback ke `lockedIds` sebelumnya agar konsisten dengan disk
+- Catatan: `EntryCard.handleToggleLock` (lock dari tombol) sudah benar — sudah memanggil `saveVault`. Hanya alur **unlock** yang kurang
+
+### FIX-BAHASA-01 — "Tong Sampah" → "Sampah" (5 lokasi)
+**File:** `Sidebar.tsx`, `VaultListView.tsx` (2x), `BackupModal.tsx`, `SettingsView.tsx`
+- Lebih singkat dan natural sebagai label navigasi dan stat
+
+### FIX-BAHASA-02 — Konsistensi bahasa BackupModal (seluruh file)
+**File:** `components/settings/BackupModal.tsx`
+- Tab label: `Export` → `Backup`, `Import` → `Pulihkan`, `Sync` → `Sinkron`
+- Modal title: `Backup & Sync` → `Backup & Sinkron`
+- Info box: `Export semua entri` → `Backup semua entri`, `diimport kembali` → `dipulihkan`
+- Stat label: `Tong Sampah` → `Sampah`
+- Error title: `Gagal export` → `Gagal membuat backup`, `Gagal import` → `Gagal memulihkan`, `Gagal sync` → `Gagal sinkron`
+- Tombol utama: `Download Backup` → `Unduh Backup`, `Mengekspor` → `Membuat backup…`, `Import Backup` → `Pulihkan dari Backup`, `Mengimpor` → `Memulihkan…`, `Generate Teks Sync` → `Buat Teks Sinkron`, `Terapkan Sync` → `Terapkan Sinkron`, `Menyinkronkan` tetap
+- Desc teks: `Sync manual via copy-paste` → `Sinkron manual via copy-paste`, `Generate teks terenkripsi` → `Buat teks terenkripsi`, `teks sync` → `teks sinkron`
+- `aria-label="Toggle visibility"` → `aria-label={show ? 'Sembunyikan password' : 'Tampilkan password'}` (2 lokasi — import pw + sync pw)
+- Pesan error validasi: `Tempel teks sync di atas` → `Tempel teks sinkron di atas terlebih dahulu`
+- Fix bug kecil: `syncCopied` tampil teks JSX yang benar (sebelumnya ada string literal yang tidak dirender)
+
+### FIX-BAHASA-03 — SettingsView desc Backup & Sync
+**File:** `components/settings/SettingsView.tsx`
+- `Export/Import .vault · Sync manual antar perangkat` → `Backup & pulihkan .vault · Sinkron antar perangkat`
+- `Tong Sampah` → `Sampah` di Info Vault grid
+
+---
+
+
 
 ### FIX-BUG-01 — Dokumentasi deviasi font Outfit vs Inter
 **File:** `README.md`

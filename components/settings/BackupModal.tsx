@@ -2,8 +2,8 @@
 
 /**
  * Vault Next — BackupModal
- * Export backup .vault, Import backup .vault, Sync manual (copy-paste teks).
- * Sesi 5.
+ * Backup .vault, Pulihkan .vault, Sinkron manual (copy-paste teks).
+ * Sesi 5. Fix bahasa: Export→Backup, Import→Pulihkan, Sync→Sinkron.
  */
 
 import { useState, useRef }  from 'react';
@@ -24,7 +24,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
   const store      = useAppStore();
   const [tab, setTab] = useState<Tab>('export');
 
-  // ── Export ───────────────────────────────────────────────────────────────────
+  // ── Backup (Export) ───────────────────────────────────────────────────────────
   const [exporting,   setExporting]   = useState(false);
   const [exportDone,  setExportDone]  = useState(false);
   const [exportError, setExportError] = useState('');
@@ -63,7 +63,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
   // ── Focus Trap ────────────────────────────────────────────────────────────────
   const trapRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
-  // ── Import ───────────────────────────────────────────────────────────────────
+  // ── Pulihkan (Import) ─────────────────────────────────────────────────────────
   const fileRef     = useRef<HTMLInputElement>(null);
   const [importPw,      setImportPw]      = useState('');
   const [importPwShow,  setImportPwShow]  = useState(false);
@@ -130,7 +130,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
     }
   };
 
-  // ── Sync ─────────────────────────────────────────────────────────────────────
+  // ── Sinkron (Sync) ────────────────────────────────────────────────────────────
   const [syncText,     setSyncText]     = useState('');
   const [syncPw,       setSyncPw]       = useState('');
   const [syncPwShow,   setSyncPwShow]   = useState(false);
@@ -167,7 +167,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
   };
 
   const handleSyncReceive = async () => {
-    if (!syncText.trim()) { setSyncError('Tempel teks sync di atas'); return; }
+    if (!syncText.trim()) { setSyncError('Tempel teks sinkron di atas terlebih dahulu'); return; }
     if (!syncPw)          { setSyncError('Masukkan master password perangkat pengirim'); return; }
     setSyncing(true); setSyncError(''); setSyncResult('');
     try {
@@ -178,7 +178,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
       store.setCustomCats(payload.customCats);
       store.setLockedIds(payload.lockedIds);
       await saveVault(store.masterPw, payload.vault, payload.recycleBin, payload.meta, payload.customCats, payload.lockedIds);
-      setSyncResult(`✅ Sync berhasil! ${payload.vault.length} entri dimuat.`);
+      setSyncResult(`✅ Sinkron berhasil! ${payload.vault.length} entri dimuat.`);
     } catch (e) {
       setSyncError((e as Error).message);
     } finally {
@@ -193,33 +193,36 @@ export function BackupModal({ onClose }: BackupModalProps) {
 
   return (
     <div className="modal-overlay backup-modal-overlay" onClick={onClose} onKeyDown={handleKeyDown} tabIndex={-1}>
-      <div className="modal backup-modal" ref={trapRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Backup & Sync" aria-labelledby="backup-modal-title">
+      <div className="modal backup-modal" ref={trapRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="backup-modal-title">
         <div className="modal__header">
-          <h2 className="modal__title" id="backup-modal-title"><Cloud size={18} style={{ display:'inline', verticalAlign:'middle', marginRight:6 }} />Backup & Sync</h2>
+          <h2 className="modal__title" id="backup-modal-title">
+            <Cloud size={18} style={{ display:'inline', verticalAlign:'middle', marginRight:6 }} />
+            Backup & Sinkron
+          </h2>
           <button className="icon-btn modal__close" onClick={onClose} aria-label="Tutup"><X size={16} /></button>
         </div>
 
         {/* Tabs */}
         <div className="backup-tabs">
           <button className={`backup-tab ${tab === 'export' ? 'backup-tab--active' : ''}`} onClick={() => setTab('export')}>
-            <Upload size={14} /> Export
+            <Upload size={14} /> Backup
           </button>
           <button className={`backup-tab ${tab === 'import' ? 'backup-tab--active' : ''}`} onClick={() => setTab('import')}>
-            <Download size={14} /> Import
+            <Download size={14} /> Pulihkan
           </button>
           <button className={`backup-tab ${tab === 'sync' ? 'backup-tab--active' : ''}`} onClick={() => setTab('sync')}>
-            <RefreshCw size={14} /> Sync
+            <RefreshCw size={14} /> Sinkron
           </button>
         </div>
 
         <div className="modal__body">
           <div className="backup-tabs-content">
 
-          {/* ── EXPORT — always rendered ── */}
+          {/* ── BACKUP (EXPORT) — always rendered ── */}
           <div className="backup-section backup-section--visible" style={{ display: tab === 'export' ? 'block' : 'none' }}>
               <div className="backup-info-box">
-                <p>Export semua entri ke file <code>.vault</code> yang terenkripsi.</p>
-                <p>File ini bisa diimport kembali di perangkat lain atau sebagai backup.</p>
+                <p>Backup semua entri ke file <code>.vault</code> yang terenkripsi.</p>
+                <p>File ini bisa dipulihkan di perangkat lain atau disimpan sebagai cadangan.</p>
               </div>
 
               <div className="backup-stat-row">
@@ -229,7 +232,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 </div>
                 <div className="backup-stat">
                   <span className="backup-stat__val">{store.recycleBin.length}</span>
-                  <span className="backup-stat__label">Tong Sampah</span>
+                  <span className="backup-stat__label">Sampah</span>
                 </div>
                 <div className="backup-stat">
                   <span className="backup-stat__val">{store.customCats.length}</span>
@@ -239,26 +242,30 @@ export function BackupModal({ onClose }: BackupModalProps) {
 
               {exportError && (
                 <ErrorState
-                  title="Gagal export"
+                  title="Gagal membuat backup"
                   message={exportError}
                   className="backup-error-state"
                 />
               )}
-              {exportDone  && <p className="backup-success"><Check size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> File backup berhasil diunduh!</p>}
+              {exportDone && (
+                <p className="backup-success">
+                  <Check size={14} style={{display:'inline', verticalAlign:'middle', marginRight:4}} /> File backup berhasil diunduh!
+                </p>
+              )}
 
               <Button variant="primary" className="backup-action-btn"
                 onClick={handleExport}
                 disabled={exporting || !store.vaultMeta}
                 loading={exporting}
               >
-                {exporting ? 'Mengekspor…' : <><Download size={14} /> Download Backup (.vault)</>}
+                {exporting ? 'Membuat backup…' : <><Download size={14} /> Unduh Backup (.vault)</>}
               </Button>
             </div>
 
-          {/* ── IMPORT — always rendered ── */}
+          {/* ── PULIHKAN (IMPORT) — always rendered ── */}
           <div className="backup-section" style={{ display: tab === 'import' ? 'block' : 'none' }}>
               <div className="backup-info-box backup-info-box--warn">
-                <p><AlertTriangle size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> Import akan memuat data dari file backup.</p>
+                <p><AlertTriangle size={14} style={{display:'inline', verticalAlign:'middle', marginRight:4}} /> Pulihkan akan memuat data dari file backup.</p>
                 <p>Pilih mode <strong>Ganti</strong> atau <strong>Gabungkan</strong>.</p>
               </div>
 
@@ -321,7 +328,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
                     className="icon-btn pw-toggle"
                     onClick={() => setImportPwShow((v) => !v)}
                     type="button"
-                    aria-label="Toggle visibility"
+                    aria-label={importPwShow ? 'Sembunyikan password' : 'Tampilkan password'}
                   >
                     {importPwShow ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -330,25 +337,27 @@ export function BackupModal({ onClose }: BackupModalProps) {
 
               {importError && (
                 <ErrorState
-                  title="Gagal import"
+                  title="Gagal memulihkan"
                   message={importError}
                   className="backup-error-state"
                 />
               )}
               {importResult && <p className="backup-success">{importResult}</p>}
-                <Button variant="primary" className="backup-action-btn" onClick={handleImport} disabled={importing}>
-                  {importing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Mengimpor…</> : <><Download size={14} /> Import Backup</>}
-                </Button>
+              <Button variant="primary" className="backup-action-btn" onClick={handleImport} disabled={importing}>
+                {importing
+                  ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Memulihkan…</>
+                  : <><Download size={14} /> Pulihkan dari Backup</>}
+              </Button>
             </div>
 
-          {/* ── SYNC — always rendered ── */}
+          {/* ── SINKRON — always rendered ── */}
           <div className="backup-section" style={{ display: tab === 'sync' ? 'block' : 'none' }}>
               <div className="backup-info-box">
-                <p>Sync manual via copy-paste teks terenkripsi.</p>
+                <p>Sinkron manual via copy-paste teks terenkripsi.</p>
                 <p>Tidak butuh internet — 100% offline & aman.</p>
               </div>
 
-              {/* Mode: Send / Receive */}
+              {/* Mode: Kirim / Terima */}
               <div className="backup-mode-row">
                 <button
                   className={`backup-mode-btn ${syncMode === 'send' ? 'backup-mode-btn--active' : ''}`}
@@ -364,15 +373,17 @@ export function BackupModal({ onClose }: BackupModalProps) {
                 </button>
               </div>
 
-              {/* SEND */}
+              {/* KIRIM */}
               {syncMode === 'send' && (
                 <>
                   <p className="backup-mode-desc">
-                    Generate teks terenkripsi, salin, lalu tempel di perangkat penerima.
+                    Buat teks terenkripsi, salin, lalu tempel di perangkat penerima.
                   </p>
                   {!syncText ? (
                      <Button variant="primary" className="backup-action-btn" onClick={handleSyncGenerate} disabled={syncing}>
-                       {syncing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Membuat…</> : <><ShieldCheck size={14} /> Generate Teks Sync</>}
+                       {syncing
+                         ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Membuat…</>
+                         : <><ShieldCheck size={14} /> Buat Teks Sinkron</>}
                      </Button>
                   ) : (
                     <>
@@ -381,32 +392,34 @@ export function BackupModal({ onClose }: BackupModalProps) {
                         readOnly
                         value={syncText}
                         rows={5}
-                        aria-label="Teks sync terenkripsi"
+                        aria-label="Teks sinkron terenkripsi"
                       />
                       <button
                         className={`btn ${syncCopied ? 'btn-success' : 'btn-primary'} backup-action-btn`}
                         onClick={handleSyncCopy}
                       >
-                        {syncCopied ? '<Check size={14} style={{display:"inline",verticalAlign:"middle",marginRight:4}} /> Tersalin!' : <><Copy size={14} /> Salin Teks</>}
+                        {syncCopied
+                          ? <><Check size={14} style={{display:'inline', verticalAlign:'middle', marginRight:4}} /> Tersalin!</>
+                          : <><Copy size={14} /> Salin Teks</>}
                       </button>
                     </>
                   )}
                 </>
               )}
 
-              {/* RECEIVE */}
+              {/* TERIMA */}
               {syncMode === 'receive' && (
                 <>
                   <p className="backup-mode-desc">
-                    Tempel teks sync dari perangkat pengirim, lalu masukkan passwordnya.
+                    Tempel teks sinkron dari perangkat pengirim, lalu masukkan passwordnya.
                   </p>
                   <div className="form-group">
-                    <label className="form-label">Teks Sync (dari perangkat lain)</label>
+                    <label className="form-label">Teks Sinkron (dari perangkat lain)</label>
                     <textarea
                       className="sync-textarea"
                       value={syncText}
                       onChange={(e) => { setSyncText(e.target.value); setSyncError(''); }}
-                      placeholder="Tempel teks sync di sini…"
+                      placeholder="Tempel teks sinkron di sini…"
                       rows={4}
                     />
                   </div>
@@ -426,21 +439,23 @@ export function BackupModal({ onClose }: BackupModalProps) {
                         className="icon-btn pw-toggle"
                         onClick={() => setSyncPwShow((v) => !v)}
                         type="button"
-                        aria-label="Toggle visibility"
+                        aria-label={syncPwShow ? 'Sembunyikan password' : 'Tampilkan password'}
                       >
                         {syncPwShow ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                     </div>
                   </div>
-                   <Button variant="primary" className="backup-action-btn" onClick={handleSyncReceive} disabled={syncing}>
-                     {syncing ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Menyinkronkan…</> : <><RefreshCw size={14} /> Terapkan Sync</>}
-                   </Button>
+                  <Button variant="primary" className="backup-action-btn" onClick={handleSyncReceive} disabled={syncing}>
+                    {syncing
+                      ? <><Loader2 size={14} style={{animation:'spin 1s linear infinite'}} /> Menyinkronkan…</>
+                      : <><RefreshCw size={14} /> Terapkan Sinkron</>}
+                  </Button>
                 </>
               )}
 
               {syncError && (
                 <ErrorState
-                  title="Gagal sync"
+                  title="Gagal sinkron"
                   message={syncError}
                   className="backup-error-state"
                 />

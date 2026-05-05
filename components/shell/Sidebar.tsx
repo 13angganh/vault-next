@@ -123,7 +123,7 @@ export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarP
             <NavItem
               id="bin"
               icon={<Trash2 size={16} />}
-              label="Tong Sampah"
+              label="Sampah"
               count={recycleBin.length}
               active={currentFilter === 'bin'}
               onClick={() => handleNav('bin')}
