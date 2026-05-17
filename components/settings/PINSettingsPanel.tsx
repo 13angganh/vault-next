@@ -10,6 +10,7 @@ import { Lock, Unlock, Plus, Pencil, Trash2, AlertTriangle, Loader2 } from 'luci
 import { setupPin, verifyPin, removePin, hasPinSetup } from '@/lib/vaultService';
 import { useAppStore } from '@/lib/store/appStore';
 import { Button }      from '@/components/ui/primitives';
+import { PIN_MIN_LEN, PIN_MAX_LEN } from '@/lib/constants';
 
 type PINMode = 'idle' | 'setup' | 'change-verify' | 'change-new' | 'remove-verify';
 
@@ -28,7 +29,7 @@ export function PINSettingsPanel() {
   const reset = () => { setMode('idle'); setPin(''); setPinConf(''); setPinErr(''); setPinSuccess(''); };
 
   const handleSetupSubmit = async () => {
-    if (pin.length < 4) { setPinErr('PIN minimal 4 digit'); return; }
+    if (pin.length < PIN_MIN_LEN) { setPinErr(`PIN minimal ${PIN_MIN_LEN} digit`); return; }
     if (pin !== pinConf) { setPinErr('PIN tidak cocok'); return; }
     if (!masterPw) { setPinErr('Tidak dapat membaca master password sesi ini'); return; }
     setLoading(true);
@@ -49,7 +50,7 @@ export function PINSettingsPanel() {
   };
 
   const handleChangeNew = async () => {
-    if (pin.length < 4) { setPinErr('PIN baru minimal 4 digit'); return; }
+    if (pin.length < PIN_MIN_LEN) { setPinErr(`PIN baru minimal ${PIN_MIN_LEN} digit`); return; }
     if (pin !== pinConf) { setPinErr('PIN tidak cocok'); return; }
     if (!masterPw) { setPinErr('Tidak dapat membaca master password sesi ini'); return; }
     setLoading(true);
@@ -77,7 +78,7 @@ export function PINSettingsPanel() {
         </label>
         <input id="ps-pin" className={`input mono ${pinErr ? 'input--error' : ''}`}
           type="password" inputMode="numeric" value={pin}
-          onChange={(e) => { setPin(e.target.value.replace(/\D/g, '').slice(0, 8)); setPinErr(''); }}
+          onChange={(e) => { setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_MAX_LEN)); setPinErr(''); }}
           placeholder="••••" autoFocus
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -95,7 +96,7 @@ export function PINSettingsPanel() {
           <label className="form-label" htmlFor="ps-pin-conf">Ulangi PIN</label>
           <input id="ps-pin-conf" className={`input mono ${pinErr ? 'input--error' : ''}`}
             type="password" inputMode="numeric" value={pinConf}
-            onChange={(e) => { setPinConf(e.target.value.replace(/\D/g, '').slice(0, 8)); setPinErr(''); }}
+            onChange={(e) => { setPinConf(e.target.value.replace(/\D/g, '').slice(0, PIN_MAX_LEN)); setPinErr(''); }}
             placeholder="••••"
             onKeyDown={(e) => { if (e.key === 'Enter') { if (mode === 'setup') handleSetupSubmit(); if (mode === 'change-new') handleChangeNew(); } }}
           />

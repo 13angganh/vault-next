@@ -8,6 +8,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Delete } from 'lucide-react';
+import { PIN_MAX_LEN } from '@/lib/constants';
 
 interface PINPadProps {
   value:        string;
@@ -24,11 +25,11 @@ interface PINPadProps {
   success?:     boolean;   // Sesi D: flash hijau saat unlock berhasil
 }
 
-const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+const KEYS = ['1','2','3','4','5','6','7','8','9','','0','DEL'];
 
 export function PINPad({
   value,
-  maxLen = 6,
+  maxLen = PIN_MAX_LEN,
   onDigit,
   onDelete,
   onSubmit,
@@ -162,7 +163,7 @@ export function PINPad({
       }}>
         {KEYS.map((k, idx) => {
           const isEmpty = k === '';
-          const isDel   = k === '⌫';
+          const isDel   = k === 'DEL';
           return (
             <button
               key={idx}

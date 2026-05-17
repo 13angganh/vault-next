@@ -13,7 +13,7 @@
   max-width: min(280px, 75vw);
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
-  z-index: var(--z-toast);
+  z-index: calc(var(--z-modal) + 100); /* 500 — di atas modal (400), di bawah toast/top */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -31,7 +31,7 @@
   background: rgba(0,0,0,0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: calc(var(--z-toast) - 1);
+  z-index: calc(var(--z-modal) + 99); /* 499 — tepat di bawah sidebar */
   opacity: 0;
   pointer-events: none;
   /* opacity transition handled by Framer Motion */
@@ -145,7 +145,7 @@
 .sidebar-section-label:hover { color: var(--text2); }
 
 .sidebar-section-label__chevron {
-  transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--transition-normal);
   flex-shrink: 0;
   opacity: 0.6;
 }
@@ -168,7 +168,7 @@
   gap: 1px;
   overflow: hidden;
   max-height: 0;
-  transition: max-height 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: max-height var(--transition-normal);
 }
 
 .sidebar-cats--open {

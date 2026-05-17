@@ -11,7 +11,8 @@ import { DEFAULT_CATEGORIES } from '@/lib/types';
 import { EntryCard }         from '@/components/entries/EntryCard';
 import { DetailView }        from '@/components/entries/DetailView';
 import { EntryForm }         from '@/components/entries/EntryForm';
-import { useToast }          from '@/components/ui/Toast';
+import { useToast }          from '@/components/ui/primitives/Toast';
+import { useClipboard }      from '@/lib/hooks/useClipboard';
 import type { VaultEntry }   from '@/lib/types';
 
 export interface VaultListViewRef {
@@ -112,7 +113,19 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       return list;
     }, [vault, recycleBin, currentFilter, searchQuery, isRecycleBin]);
 
-    const handleCopy    = useCallback((_t: string, label: string) => showToast(`${label} disalin!`), [showToast]);
+    const { copy, countdown } = useClipboard({ clearAfterMs: 30_000 });
+
+    // handleCopy: salin via useClipboard (auto-clear 30s) + tampilkan toast
+    // countdown ditampilkan di toast agar user tahu kapan clipboard di-clear
+    const handleCopy = useCallback(async (text: string, label: string) => {
+      try {
+        await copy(text, label);
+        const secStr = countdown !== null ? ` (bersih dalam ${countdown}s)` : '';
+        showToast(`${label} disalin!${secStr}`);
+      } catch {
+        showToast('Gagal menyalin');
+      }
+    }, [copy, countdown, showToast]);
 
     const handleUnlockSubmit = useCallback(async () => {
       if (!unlockEntry || !unlockInput.trim()) return;

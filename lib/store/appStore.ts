@@ -2,6 +2,9 @@
  * Vault Next — App Store (Zustand)
  * Global state untuk seluruh aplikasi.
  * Semua akses state via hook ini — jangan buat state lokal di page.
+ *
+ * Named actions wajib di setiap set() — untuk debuggability di DevTools.
+ * Format: 'domain/actionName'
  */
 
 import { create } from 'zustand';
@@ -10,6 +13,7 @@ import {
   lsGet, lsSet, lsRemove, lsGetNum, lsSetNum, lsGetBool, lsSetBool, lsGetJson, lsSetJson,
   LS_AUTOLOCK, LS_AUTOSAVE, LS_BKPIVL, LS_CATS, LS_BIO_ENABLED, LS_BIO_CRED_ID,
 } from '@/lib/storage';
+import { PIN_MAX_LEN } from '@/lib/constants';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,6 +91,7 @@ interface AppState {
 
   // ── Actions: PIN ──
   appendPin:   (digit: string) => void;
+  deletePin:   () => void;  // hapus digit terakhir dari pinBuffer
   clearPin:    () => void;
   incrementPinAttempts: () => void;
   resetPinAttempts:     () => void;
@@ -144,7 +149,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     lastActivityAt: Date.now(),
     pinBuffer: '',
     pinAttempts: 0,
-  }),
+  }, false, 'auth/unlock'),
 
   lock: () => set({
     isUnlocked: false,
@@ -160,114 +165,118 @@ export const useAppStore = create<AppState>((set, get) => ({
     pinBuffer: '',
     currentFilter: 'all',
     searchQuery: '',
-  }),
+  }, false, 'auth/lock'),
 
-  setMasterPw: (pw) => set({ masterPw: pw }),
+  setMasterPw: (pw) => set({ masterPw: pw }, false, 'auth/setMasterPw'),
 
-  touchActivity: () => set({ lastActivityAt: Date.now() }),
+  touchActivity: () => set({ lastActivityAt: Date.now() }, false, 'auth/touchActivity'),
 
   // ── Actions: Vault ─────────────────────────────────────────────────────────
 
-  setVault:      (entries) => set({ vault: entries }),
-  setRecycleBin: (entries) => set({ recycleBin: entries }),
-  setVaultMeta:  (meta)    => set({ vaultMeta: meta }),
-  setLockedIds:  (ids)     => set({ lockedIds: ids }),
+  setVault:      (entries) => set({ vault: entries },      false, 'vault/setVault'),
+  setRecycleBin: (entries) => set({ recycleBin: entries }, false, 'vault/setRecycleBin'),
+  setVaultMeta:  (meta)    => set({ vaultMeta: meta },    false, 'vault/setVaultMeta'),
+  setLockedIds:  (ids)     => set({ lockedIds: ids },     false, 'vault/setLockedIds'),
 
   toggleLockedId: (id) => {
     const curr = get().lockedIds;
     const next = curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id];
-    set({ lockedIds: next });
+    set({ lockedIds: next }, false, 'vault/toggleLockedId');
   },
 
   // ── Actions: Categories ────────────────────────────────────────────────────
 
   setCustomCats: (cats) => {
     lsSetJson(LS_CATS, cats);
-    set({ customCats: cats });
+    set({ customCats: cats }, false, 'cats/setCustomCats');
   },
 
   addCustomCat: (cat) => {
     const next = [...get().customCats, cat];
     lsSetJson(LS_CATS, next);
-    set({ customCats: next });
+    set({ customCats: next }, false, 'cats/addCustomCat');
   },
 
   removeCustomCat: (id) => {
     const next = get().customCats.filter((c) => c.id !== id);
     lsSetJson(LS_CATS, next);
-    set({ customCats: next });
+    set({ customCats: next }, false, 'cats/removeCustomCat');
   },
 
   // ── Actions: UI ────────────────────────────────────────────────────────────
 
-  setFilter:      (f) => set({ currentFilter: f, searchQuery: '', expandedIds: [], selectedIds: [] }),
-  setSearchQuery: (q) => set({ searchQuery: q }),
+  setFilter:      (f) => set({ currentFilter: f, searchQuery: '', expandedIds: [], selectedIds: [] }, false, 'ui/setFilter'),
+  setSearchQuery: (q) => set({ searchQuery: q }, false, 'ui/setSearchQuery'),
 
   toggleExpanded: (id) => {
     const curr = get().expandedIds;
-    set({ expandedIds: curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id] });
+    set({ expandedIds: curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id] }, false, 'ui/toggleExpanded');
   },
-  clearExpanded: () => set({ expandedIds: [] }),
+  clearExpanded: () => set({ expandedIds: [] }, false, 'ui/clearExpanded'),
 
   toggleSelected: (id) => {
     const curr = get().selectedIds;
-    set({ selectedIds: curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id] });
+    set({ selectedIds: curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id] }, false, 'ui/toggleSelected');
   },
-  clearSelected: () => set({ selectedIds: [] }),
+  clearSelected: () => set({ selectedIds: [] }, false, 'ui/clearSelected'),
 
   // ── Actions: Visibility ────────────────────────────────────────────────────
 
   togglePwVisible: (id) => {
     const curr = get().pwVisible;
-    set({ pwVisible: { ...curr, [id]: !curr[id] } });
+    set({ pwVisible: { ...curr, [id]: !curr[id] } }, false, 'visibility/togglePwVisible');
   },
   toggleSeedVisible: (id) => {
     const curr = get().seedVisible;
-    set({ seedVisible: { ...curr, [id]: !curr[id] } });
+    set({ seedVisible: { ...curr, [id]: !curr[id] } }, false, 'visibility/toggleSeedVisible');
   },
-  clearAllVisible: () => set({ pwVisible: {}, seedVisible: {} }),
+  clearAllVisible: () => set({ pwVisible: {}, seedVisible: {} }, false, 'visibility/clearAll'),
 
   // ── Actions: PIN ───────────────────────────────────────────────────────────
 
   appendPin: (digit) => {
     const curr = get().pinBuffer;
-    if (curr.length < 8) set({ pinBuffer: curr + digit }); // maxLen=8 sesuai PINPad
+    if (curr.length < PIN_MAX_LEN) set({ pinBuffer: curr + digit }, false, 'pin/append');
   },
-  clearPin: () => set({ pinBuffer: '' }),
+  deletePin: () => {
+    const curr = get().pinBuffer;
+    if (curr.length > 0) set({ pinBuffer: curr.slice(0, -1) }, false, 'pin/delete');
+  },
+  clearPin: () => set({ pinBuffer: '' }, false, 'pin/clear'),
 
   incrementPinAttempts: () => {
     const n = get().pinAttempts + 1;
-    set({ pinAttempts: n });
+    set({ pinAttempts: n }, false, 'pin/incrementAttempts');
   },
-  resetPinAttempts: () => set({ pinAttempts: 0, pinLocked: false, pinLockedUntil: 0 }),
+  resetPinAttempts: () => set({ pinAttempts: 0, pinLocked: false, pinLockedUntil: 0 }, false, 'pin/resetAttempts'),
 
-  setPinLocked: (until) => set({ pinLocked: true, pinLockedUntil: until, pinBuffer: '' }),
+  setPinLocked: (until) => set({ pinLocked: true, pinLockedUntil: until, pinBuffer: '' }, false, 'pin/setLocked'),
 
   // ── Actions: Settings ──────────────────────────────────────────────────────
 
   setAutoLockMinutes: (m) => {
     lsSetNum(LS_AUTOLOCK, m);
-    set({ autoLockMinutes: m });
+    set({ autoLockMinutes: m }, false, 'settings/setAutoLockMinutes');
   },
   setBackupIntervalHrs: (h) => {
     lsSetNum(LS_BKPIVL, h);
-    set({ backupIntervalHrs: h });
+    set({ backupIntervalHrs: h }, false, 'settings/setBackupIntervalHrs');
   },
   setAutoSaveEnabled: (v) => {
     lsSetBool(LS_AUTOSAVE, v);
-    set({ autoSaveEnabled: v });
+    set({ autoSaveEnabled: v }, false, 'settings/setAutoSaveEnabled');
   },
 
   // ── Actions: Biometrik ──────────────────────────────────────────────────────
 
   setBiometricEnabled: (v) => {
     lsSetBool(LS_BIO_ENABLED, v);
-    set({ biometricEnabled: v });
+    set({ biometricEnabled: v }, false, 'bio/setEnabled');
   },
   setBiometricCredId: (id) => {
     if (id) lsSet(LS_BIO_CRED_ID, id);
     else lsRemove(LS_BIO_CRED_ID);
-    set({ biometricCredId: id });
+    set({ biometricCredId: id }, false, 'bio/setCredId');
   },
 }));
 

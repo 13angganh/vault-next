@@ -5,12 +5,13 @@ import { X, ArrowLeft } from 'lucide-react';
 import { Button, Toggle }        from '@/components/ui/primitives';
 import { useAppStore }           from '@/lib/store/appStore';
 import { saveVault }              from '@/lib/vaultService';
-import { CategoryIcon }           from '@/components/entries/CategoryIcon';
+import { CategoryIcon }           from '@/components/common/CategoryIcon';
 import { PasswordStrengthMeter }  from '@/components/ui/PasswordStrengthMeter';
 import { PasswordGenerator }      from '@/components/ui/PasswordGenerator';
 import { DEFAULT_CATEGORIES }     from '@/lib/types';
 import type { VaultEntry, CustomCategory } from '@/lib/types';
 import { generateId } from '@/lib/utils';  // F2-11
+import { logger }     from '@/lib/logger';
 
 interface EntryFormProps {
   entry?:   VaultEntry;
@@ -173,7 +174,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
       onSaved(newEntry);
       onClose();
     } catch (err) {
-      console.error('Gagal menyimpan entri:', err);
+      logger.error('Gagal menyimpan entri:', err);
     } finally {
       setSaving(false);
     }

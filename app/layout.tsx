@@ -60,8 +60,17 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
+        {/* Anti-flash: set data-theme sebelum render untuk hindari flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('vault_theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){}})();`,
+          }}
+        />
         <meta name="theme-color" content="#07080f" />
       </head>
+      {/* className hanya inject CSS variables (--font-sans, --font-mono).
+          Font diterapkan ke body via base.css: body { font-family: var(--font-sans); }
+          Ini intentional — app tidak menggunakan Tailwind, jadi tidak ada class font-sans. */}
       <body className={`${outfit.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           {children}

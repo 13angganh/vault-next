@@ -17,7 +17,7 @@ import {
 } from '@/lib/storage';
 import type {
   VaultEntry, VaultMeta, CustomCategory,
-  VaultBackup, VaultBackupPayload,
+  VaultBackup, VaultBackupPayload, BackupFormat,
 } from '@/lib/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -251,17 +251,24 @@ export async function importBackup(
     throw new Error('File backup tidak valid (bukan JSON)');
   }
 
-  if (backup.format !== 'vault2') {
-    throw new Error(`Format tidak dikenal: ${(backup as { format?: string }).format ?? 'unknown'}`);
+  // Dukung vault2 (current) dan vault3 (future)
+  // vault2 = format aktif saat ini (data user ada di vault2)
+  // vault3 = format masa depan dengan schemaVersion — backward-compatible
+  const SUPPORTED_FORMATS: BackupFormat[] = ['vault2', 'vault3'];
+  if (!SUPPORTED_FORMATS.includes(backup.format)) {
+    const fmt = (backup as { format?: string }).format ?? 'unknown';
+    throw new Error(
+      `Format backup '${fmt}' tidak didukung. Format yang didukung: ${SUPPORTED_FORMATS.join(', ')}.`,
+    );
   }
 
   let plain: string | null = null;
 
-  // Coba format baru (Vault Next) dulu
+  // Coba format baru (Vault Next AES-256-GCM double-round) dulu
   try {
     plain = await decrypt(backup.data, masterPw);
   } catch {
-    // Format baru gagal — coba format lama (vault-private-offline)
+    // Format baru gagal — coba format lama (vault-private-offline legacy)
     try {
       plain = await decryptLegacy(backup.data, masterPw);
     } catch {

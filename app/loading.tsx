@@ -1,5 +1,6 @@
-/* app/loading.tsx — Vault Next — Sesi C final */
+/* app/loading.tsx — Vault Next */
 /* Next.js route-level loading UI */
+/* CSS variables tersedia — tidak perlu inline styles dengan nilai hardcoded. */
 
 import { Shield } from 'lucide-react';
 
@@ -11,8 +12,8 @@ export default function Loading() {
           <Shield size={32} strokeWidth={1.5} />
         </div>
         <div className="app-loading-bars">
-          <div className="skeleton app-loading-bar" style={{ width: '140px', height: '14px' }} />
-          <div className="skeleton app-loading-bar" style={{ width: '96px', height: '10px' }} />
+          <div className="skeleton app-loading-bar app-loading-bar--wide" />
+          <div className="skeleton app-loading-bar app-loading-bar--narrow" />
         </div>
       </div>
     </div>

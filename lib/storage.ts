@@ -4,6 +4,8 @@
  * Semua akses localStorage via fungsi di sini — TIDAK langsung.
  */
 
+import { logger } from '@/lib/logger';
+
 // ─── Key Constants ─────────────────────────────────────────────────────────────
 export const LS_KEY        = 'vault_data';       // data vault terenkripsi
 export const LS_META       = 'vault_meta';       // metadata (hint, recovery hash, dll)
@@ -44,7 +46,7 @@ export function lsSet(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    console.warn('[Vault] localStorage.setItem gagal:', key);
+    logger.warn('localStorage.setItem gagal — data tidak akan persisten:', key);
   }
 }
 

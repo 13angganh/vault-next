@@ -20,15 +20,16 @@
  */
 
 import { useState, useEffect } from 'react';
-import { lsGet, lsSet, lsRemove, LS_BIO_CRED_ID, LS_BIO_SESSION } from '@/lib/storage';
+import { lsGet, lsSet, lsRemove, LS_BIO_CRED_ID, LS_BIO_SESSION, SS_MASTER_PW } from '@/lib/storage';
 import { Button } from '@/components/ui/primitives';
 import { X, Fingerprint, CheckCircle2, AlertCircle, Loader2, Shield } from 'lucide-react';
+import { bufToB64, b64ToBuf } from '@/lib/crypto';
+import { useMounted } from '@/lib/hooks/useMounted';
 
 /* ── Constants ── */
 const RP_NAME    = 'Vault Next';
 const USER_NAME  = 'vault-user';
 const USER_ID    = new TextEncoder().encode('vault-next-user-001');
-const SS_KEY     = 'vault_ss_mpw';
 
 /* ── Session helpers (dual storage) ── */
 
@@ -43,7 +44,7 @@ function xorObfuscate(text: string, key: string): string {
   return btoa(String.fromCharCode(...out));
 }
 
-function xorDeobfuscate(b64: string, key: string): string {
+function xorDeobfuscate(b64: string, key: string): string | null {
   try {
     const bytes   = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
     const keyBytes = new TextEncoder().encode(key);
@@ -51,15 +52,17 @@ function xorDeobfuscate(b64: string, key: string): string {
     for (let i = 0; i < bytes.length; i++) {
       out[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
     }
-    return new TextDecoder().decode(out);
+    const result = new TextDecoder().decode(out);
+    // Return null jika hasil decode kosong (data corrupt atau key salah)
+    return result.length > 0 ? result : null;
   } catch {
-    return '';
+    return null;
   }
 }
 
 /** Simpan master pw ke sessionStorage (primary) + localStorage fallback */
-function saveBioSession(masterPw: string): void {
-  sessionStorage.setItem(SS_KEY, masterPw);
+export function saveBioSession(masterPw: string): void {
+  sessionStorage.setItem(SS_MASTER_PW, masterPw);
   const credId = lsGet(LS_BIO_CRED_ID);
   if (credId) {
     lsSet(LS_BIO_SESSION, xorObfuscate(masterPw, credId));
@@ -69,7 +72,7 @@ function saveBioSession(masterPw: string): void {
 /** Ambil master pw dari sessionStorage, fallback ke localStorage */
 function loadBioSession(): string | null {
   // Cek sessionStorage dulu
-  const ss = sessionStorage.getItem(SS_KEY);
+  const ss = sessionStorage.getItem(SS_MASTER_PW);
   if (ss) return ss;
   // Fallback: ambil dari localStorage dan restore ke sessionStorage
   const credId = lsGet(LS_BIO_CRED_ID);
@@ -77,8 +80,8 @@ function loadBioSession(): string | null {
   const raw = lsGet(LS_BIO_SESSION);
   if (!raw) return null;
   const recovered = xorDeobfuscate(raw, credId);
-  if (recovered) {
-    sessionStorage.setItem(SS_KEY, recovered); // restore ke SS
+  if (recovered !== null) {
+    sessionStorage.setItem(SS_MASTER_PW, recovered); // restore ke SS
     return recovered;
   }
   return null;
@@ -86,22 +89,11 @@ function loadBioSession(): string | null {
 
 /** Hapus semua session data biometrik (dipanggil saat hapus biometrik di pengaturan) */
 export function clearBioSession(): void {
-  sessionStorage.removeItem(SS_KEY);
+  sessionStorage.removeItem(SS_MASTER_PW);
   lsRemove(LS_BIO_SESSION);
 }
 
 /* ── Helpers ── */
-function bufToB64(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)));
-}
-
-function b64ToBuf(b64: string): ArrayBuffer {
-  const bin = atob(b64);
-  const buf = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-  return buf.buffer;
-}
-
 function isWebAuthnSupported(): boolean {
   return typeof window !== 'undefined' &&
     !!window.PublicKeyCredential &&
@@ -124,7 +116,9 @@ export function BiometricHintModal({
 }: BiometricHintModalProps) {
   const [step,    setStep]    = useState<'idle' | 'loading' | 'success' | 'error' | 'session_expired'>('idle');
   const [errMsg,  setErrMsg]  = useState('');
-  const supported = isWebAuthnSupported();
+  const mounted   = useMounted();
+  // isWebAuthnSupported mengakses window/navigator — hanya aman setelah mount
+  const supported = mounted ? isWebAuthnSupported() : false;
 
   /* Auto-trigger auth saat modal dibuka dalam mode auth */
   useEffect(() => {
@@ -237,14 +231,8 @@ export function BiometricHintModal({
   /* ── Render ── */
   return (
     <div
+      className="biometric-hint-overlay"
       style={{
-        position: 'fixed', inset: 0,
-        background: 'var(--bg-overlay)',
-        zIndex: 1200,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '0 var(--space-5)',
         animation: 'fadeIn 0.2s ease',
       }}
       onClick={step !== 'loading' ? onClose : undefined}
@@ -268,8 +256,8 @@ export function BiometricHintModal({
             <div style={{
               width: 40, height: 40,
               borderRadius: 'var(--radius-md)',
-              background: 'rgba(0,212,170,0.1)',
-              border: '1px solid rgba(0,212,170,0.2)',
+              background: 'var(--notice-bg)',
+              border: '1px solid var(--notice-border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <Fingerprint size={20} style={{ color: 'var(--teal)' }} />
@@ -309,8 +297,8 @@ export function BiometricHintModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             <div style={{
               padding: '10px 12px',
-              background: 'rgba(0,212,170,0.06)',
-              border: '1px solid rgba(0,212,170,0.18)',
+              background: 'var(--notice-bg)',
+              border: '1px solid var(--notice-border)',
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--text-xs)',
               color: 'var(--notice-text)',
@@ -342,7 +330,7 @@ export function BiometricHintModal({
               <div style={{
                 width: 64, height: 64,
                 borderRadius: '50%',
-                background: 'rgba(0,212,170,0.08)',
+                background: 'var(--notice-bg)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Fingerprint size={32} style={{ color: 'var(--teal)' }} />
@@ -386,8 +374,8 @@ export function BiometricHintModal({
             <div style={{
               display: 'flex', alignItems: 'flex-start', gap: 8,
               padding: '12px 14px',
-              background: 'rgba(245,158,11,0.07)',
-              border: '1px solid rgba(245,158,11,0.25)',
+              background: 'var(--gold-dim)',
+              border: '1px solid var(--gold-border)',
               borderRadius: 'var(--radius-md)',
             }}>
               <Fingerprint size={16} style={{ color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
@@ -405,8 +393,8 @@ export function BiometricHintModal({
             <div style={{
               display: 'flex', alignItems: 'flex-start', gap: 8,
               padding: '10px 12px',
-              background: 'rgba(255,77,109,0.07)',
-              border: '1px solid rgba(255,77,109,0.3)',
+              background: 'var(--danger-bg)',
+              border: '1px solid var(--danger-border)',
               borderRadius: 'var(--radius-md)',
             }}>
               <AlertCircle size={14} style={{ color: 'var(--red)', flexShrink: 0, marginTop: 2 }} />

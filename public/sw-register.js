@@ -19,6 +19,8 @@ if ('serviceWorker' in navigator) {
           });
         });
       })
-      .catch((err) => console.warn('SW registration failed:', err));
+      // console.warn intentional: file ini plain JS (tidak bisa import logger.ts).
+      // SW registration failure adalah info kritis yang harus visible.
+      .catch((err) => console.warn('[vault-sw] SW registration failed:', err));
   });
 }

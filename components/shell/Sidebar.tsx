@@ -16,7 +16,7 @@ import { VaultIcon }          from '@/components/common/LoadingScreen';
 import { useAppStore }        from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import type { FilterType }    from '@/lib/store/appStore';
-import { CategoryIcon }       from '@/components/entries/CategoryIcon';
+import { CategoryIcon }       from '@/components/common/CategoryIcon';
 
 interface SidebarProps {
   open:            boolean;

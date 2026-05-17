@@ -10,6 +10,7 @@ import { useAppStore }          from '@/lib/store/appStore';
 import { lsSet, lsGetNum, LS_BACKUP, LS_BKPDISM, LS_BKPIVL } from '@/lib/storage';
 import { useFocusTrap }         from '@/lib/hooks/useFocusTrap';
 import { Button }               from '@/components/ui/primitives';
+import { formatDate }           from '@/lib/format';
 
 interface BackupReminderModalProps {
   onOpenBackup: () => void;
@@ -46,10 +47,10 @@ export function BackupReminderModal({ onOpenBackup }: BackupReminderModalProps) 
   const lastBackupTs  = lsGetNum(LS_BACKUP, 0);
   const lastBackupStr = lastBackupTs === 0
     ? 'Belum pernah'
-    : new Date(lastBackupTs).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    : formatDate(lastBackupTs);
 
   return (
-    <div className="modal-overlay backup-reminder-overlay" style={{ zIndex: 9999 }} onClick={handleDismiss}>
+    <div className="modal-overlay backup-reminder-overlay" onClick={handleDismiss}>
       <div
         ref={trapRef}
         className="modal backup-reminder-modal"

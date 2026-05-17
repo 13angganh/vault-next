@@ -23,8 +23,8 @@ export function RecoveryPanel({ loading, error, onSubmit, onBack }: RecoveryPane
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%' }}>
       <div style={{
-        padding: '12px 14px', background: 'rgba(255,77,109,0.06)',
-        border: '1px solid rgba(255,77,109,0.2)', borderRadius: 'var(--radius-md)',
+        padding: '12px 14px', background: 'color-mix(in srgb, var(--red) 6%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--red) 20%, transparent)', borderRadius: 'var(--radius-md)',
         display: 'flex', gap: 10, alignItems: 'flex-start',
       }}>
         <TriangleAlert size={14} style={{ color: 'var(--red)', marginTop: 2, flexShrink: 0 }} />

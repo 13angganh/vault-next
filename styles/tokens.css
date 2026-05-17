@@ -68,14 +68,9 @@
   --modal-width:      480px;
   --modal-width-sm:   360px;
 
-  /* Strength meter colors (F2-01) */
-  --str-1: #ef4444;
-  --str-2: #f97316;
-  --str-3: #eab308;
-  --str-4: #84cc16;
-  --str-5: #22c55e;
-  --str-6: #10b981;
-  --str-7: var(--gold);
+  /* Strength meter colors — TIDAK didefinisikan di sini. */
+  /* --str-1 s/d --str-7 didefinisikan per-tema di base.css (:root dark + [data-theme=light]). */
+  /* Mendefinisikan di sini akan langsung di-override oleh base.css — dead code. */
 
   /* Category icon colors (F2-02) */
   --cat-sosmed:  #818cf8;
@@ -87,13 +82,43 @@
   --cat-wifi:    #c084fc;
   --cat-lainnya: var(--muted);
 
-  /* Z-index tokens (F3-02) */
-  --z-base:     0;
-  --z-content:  10;
-  --z-sticky:   100;
-  --z-sidebar:  200;
-  --z-dropdown: 300;
-  --z-modal:    400;
-  --z-toast:    500;
-  --z-top:      9999;
+  /* Category icon backgrounds — dark mode default */
+  --cat-sosmed-bg:  rgba(129, 140, 248, 0.15);
+  --cat-email-bg:   rgba(96, 165, 250, 0.15);
+  --cat-bank-bg:    rgba(52, 211, 153, 0.15);
+  --cat-game-bg:    rgba(248, 113, 113, 0.15);
+  --cat-crypto-bg:  rgba(240, 165, 0, 0.18);
+  --cat-kartu-bg:   rgba(56, 189, 248, 0.15);
+  --cat-wifi-bg:    rgba(192, 132, 252, 0.15);
+  --cat-lainnya-bg: rgba(156, 163, 175, 0.15);
+
+  /* Z-index tokens (F3-02, Audit fix) */
+  --z-behind:       -1;  /* pseudo-element dekoratif di belakang parent */
+  --z-base:          0;
+  --z-raised-local:  1;  /* SVG/konten di atas pseudo-element dalam stacking context yang sama */
+  --z-content:      10;
+  --z-sticky:      100;
+  --z-sidebar:     200;
+  --z-dropdown:    300;
+  --z-modal:       400;
+  --z-toast:       500;
+  --z-top:        9999;
+
+  /* Button text on gold/gradient background — always dark for contrast */
+  --btn-on-gold: #000;
+
+  /* Toast semantic colors */
+  --toast-success-bg:    #166534;
+  --toast-success-text:  #86efac;
+  --toast-error-bg:      #7f1d1d;
+  --toast-error-text:    #fca5a5;
+  --toast-info-bg:       #1e3a5f;
+  --toast-info-text:     #93c5fd;
+
+  /* Semantic action colors (entry card / detail actions) */
+  --action-blue:    #60a5fa;
+  --action-amber:   #f59e0b;
+  --action-green:   #34d399;
+  --action-red:     #f87171;
+  --action-success: #4ade80;
 }

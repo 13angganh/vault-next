@@ -11,6 +11,7 @@ import { lsGet, LS_BIO_CRED_ID } from '@/lib/storage';
 import { AUTOLOCK_OPTIONS_MIN } from '@/lib/constants';
 import { useAppStore }         from '@/lib/store/appStore';
 import { useTheme }            from '@/components/providers/ThemeProvider';
+import { useMounted }          from '@/lib/hooks/useMounted';
 import { PINSettingsPanel }    from '@/components/settings/PINSettingsPanel';
 import { CategoryManager }     from '@/components/settings/CategoryManager';
 import { BackupModal }         from '@/components/settings/BackupModal';
@@ -43,9 +44,11 @@ export function SettingsView({ onClose }: SettingsViewProps) {
   const [subView,      setSubView]      = useState<SubView>('main');
   const [showBackup,   setShowBackup]   = useState(false);
   const [showBioModal, setShowBioModal] = useState(false);
+  const mounted = useMounted();
 
-  const isWebAuthnSupported = typeof window !== 'undefined' && !!window.PublicKeyCredential;
-  const hasBioCredential    = typeof window !== 'undefined' && !!lsGet(LS_BIO_CRED_ID);  // F2-07
+  // isWebAuthnSupported dan hasBioCredential mengakses window/navigator — hanya aman setelah mount
+  const isWebAuthnSupported = mounted && !!window.PublicKeyCredential;
+  const hasBioCredential    = mounted && !!lsGet(LS_BIO_CRED_ID);  // F2-07
 
   const backupOptions = [
     { value: 0, label: 'Nonaktif' },   { value: 24, label: 'Setiap hari' },

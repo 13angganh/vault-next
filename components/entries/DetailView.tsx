@@ -13,9 +13,10 @@
 import { useState, useEffect } from 'react';
 
 import { X, Star, Lock, Unlock, Eye, EyeOff, Copy, Pencil, Trash2 } from 'lucide-react';
+import { formatDateTime } from '@/lib/format';
 import { useAppStore }       from '@/lib/store/appStore';
 import { saveVault }          from '@/lib/vaultService';
-import { CategoryIcon }       from '@/components/entries/CategoryIcon';
+import { CategoryIcon }       from '@/components/common/CategoryIcon';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import type { VaultEntry }    from '@/lib/types';
 
@@ -53,7 +54,9 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
 
   const copy = (text: string | undefined, label: string) => {
     if (!text) return;
-    navigator.clipboard.writeText(text).then(() => onCopy(text, label));
+    // Delegasikan clipboard write ke parent (VaultListView) via onCopy
+    // agar auto-clear 30s dari useClipboard diterapkan secara terpusat
+    onCopy(text, label);
   };
 
   const handleFav = async () => {
@@ -244,7 +247,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
 
           {entry.ts && (
             <p className="detail-ts">
-              Terakhir diperbarui: {new Date(entry.ts).toLocaleString('id-ID')}
+              Terakhir diperbarui: {formatDateTime(entry.ts)}
             </p>
           )}
         </div>

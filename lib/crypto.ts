@@ -19,11 +19,11 @@ const PBKDF2_ITER_2 = 100_000;
 const SALT_LEN = 16;
 const IV_LEN   = 12;
 
-function bufToB64(buf: ArrayBuffer): string {
+export function bufToB64(buf: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)));
 }
 
-function b64ToBuf(b64: string): Uint8Array {
+export function b64ToBuf(b64: string): Uint8Array {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 

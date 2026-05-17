@@ -484,11 +484,7 @@
   flex: 1;
 }
 
-.form-hint {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  margin-top: 4px;
-}
+/* .form-hint — kanonik di entries.css */
 
 /* BackupModal */
 
@@ -642,7 +638,7 @@
 
 .backup-success {
   font-size: var(--text-sm);
-  color: #4ade80;
+  color: var(--action-success);
   background: rgba(74, 222, 128, 0.08);
   border: 1px solid rgba(74, 222, 128, 0.25);
   border-radius: var(--radius-md);
@@ -684,13 +680,14 @@
 
 .backup-reminder-overlay {
   background: rgba(0, 0, 0, 0.7);
+  z-index: var(--z-top); /* 9999 — di atas semua layer */
 }
 
 .backup-reminder-modal {
   width: min(360px, 92vw);
   padding: 28px 24px;
   text-align: center;
-  animation: fadeScaleIn 0.25s ease;
+  animation: fadeScaleIn var(--transition-normal);
 }
 
 .backup-reminder__icon {
@@ -770,7 +767,7 @@
 
 .btn--danger {
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  color: var(--action-red);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -779,7 +776,7 @@
 }
 
 .btn--danger-ghost {
-  color: #f87171;
+  color: var(--action-red);
 }
 
 .btn--danger-ghost:hover {
@@ -845,7 +842,7 @@
 
 .btn-success {
   background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
+  color: var(--action-success);
   border: 1px solid rgba(74, 222, 128, 0.3);
 }
 
