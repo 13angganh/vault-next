@@ -672,3 +672,20 @@ Semua justified exceptions dari Fix Fase 10 tetap berlaku.
 ✅ noUnusedLocals    : 0 violation di seluruh codebase
 ✅ PIN attempt reset : dipanggil setelah verifyPinAndGetMaster berhasil
 ✅ Logic             : attempt counter reset ke 0 setiap successful PIN unlock
+
+---
+
+## Fix Fase 11-HF4 — Hotfix Zustand set() 3-arg TypeError
+**Tanggal**: 2026-05-17
+**Deskripsi**: Build error TypeScript — `set()` dipanggil dengan 3 argumen padahal store tidak pakai devtools middleware.
+
+### Bug yang Diperbaiki (1)
+- **HF4-01** `lib/store/appStore.ts`: hapus semua argumen ke-3 (named action strings) dari 32 pemanggilan `set()`. Root cause: argumen ke-3 pada `set(state, replace, actionName)` hanya valid jika store dibungkus `devtools()` middleware dari Zustand. Store ini pakai `create<AppState>((set, get) => ...)` tanpa middleware — `set` hanya terima 1-2 argumen. Named action strings ditambahkan di fase sebelumnya dengan asumsi devtools aktif, padahal tidak. Semua 32 call dibersihkan via `sed`.
+
+### File yang Diubah (1 file)
+- `lib/store/appStore.ts` — hapus semua argumen ke-3 dari 32 set() calls
+
+### Self-Audit
+✅ set() calls      : 0 dengan argumen ke-3
+✅ Store structure  : intact, semua actions berfungsi normal
+✅ TypeScript       : set() signature 1-2 args sesuai create() tanpa middleware

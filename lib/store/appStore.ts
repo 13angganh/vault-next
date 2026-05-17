@@ -149,7 +149,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     lastActivityAt: Date.now(),
     pinBuffer: '',
     pinAttempts: 0,
-  }, false, 'auth/unlock'),
+  }),
 
   lock: () => set({
     isUnlocked: false,
@@ -165,118 +165,118 @@ export const useAppStore = create<AppState>((set, get) => ({
     pinBuffer: '',
     currentFilter: 'all',
     searchQuery: '',
-  }, false, 'auth/lock'),
+  }),
 
-  setMasterPw: (pw) => set({ masterPw: pw }, false, 'auth/setMasterPw'),
+  setMasterPw: (pw) => set({ masterPw: pw }),
 
-  touchActivity: () => set({ lastActivityAt: Date.now() }, false, 'auth/touchActivity'),
+  touchActivity: () => set({ lastActivityAt: Date.now() }),
 
   // ── Actions: Vault ─────────────────────────────────────────────────────────
 
-  setVault:      (entries) => set({ vault: entries },      false, 'vault/setVault'),
-  setRecycleBin: (entries) => set({ recycleBin: entries }, false, 'vault/setRecycleBin'),
-  setVaultMeta:  (meta)    => set({ vaultMeta: meta },    false, 'vault/setVaultMeta'),
-  setLockedIds:  (ids)     => set({ lockedIds: ids },     false, 'vault/setLockedIds'),
+  setVault:      (entries) => set({ vault: entries }),
+  setRecycleBin: (entries) => set({ recycleBin: entries }),
+  setVaultMeta:  (meta)    => set({ vaultMeta: meta }),
+  setLockedIds:  (ids)     => set({ lockedIds: ids }),
 
   toggleLockedId: (id) => {
     const curr = get().lockedIds;
     const next = curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id];
-    set({ lockedIds: next }, false, 'vault/toggleLockedId');
+    set({ lockedIds: next });
   },
 
   // ── Actions: Categories ────────────────────────────────────────────────────
 
   setCustomCats: (cats) => {
     lsSetJson(LS_CATS, cats);
-    set({ customCats: cats }, false, 'cats/setCustomCats');
+    set({ customCats: cats });
   },
 
   addCustomCat: (cat) => {
     const next = [...get().customCats, cat];
     lsSetJson(LS_CATS, next);
-    set({ customCats: next }, false, 'cats/addCustomCat');
+    set({ customCats: next });
   },
 
   removeCustomCat: (id) => {
     const next = get().customCats.filter((c) => c.id !== id);
     lsSetJson(LS_CATS, next);
-    set({ customCats: next }, false, 'cats/removeCustomCat');
+    set({ customCats: next });
   },
 
   // ── Actions: UI ────────────────────────────────────────────────────────────
 
-  setFilter:      (f) => set({ currentFilter: f, searchQuery: '', expandedIds: [], selectedIds: [] }, false, 'ui/setFilter'),
-  setSearchQuery: (q) => set({ searchQuery: q }, false, 'ui/setSearchQuery'),
+  setFilter:      (f) => set({ currentFilter: f, searchQuery: '', expandedIds: [], selectedIds: [] }),
+  setSearchQuery: (q) => set({ searchQuery: q }),
 
   toggleExpanded: (id) => {
     const curr = get().expandedIds;
-    set({ expandedIds: curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id] }, false, 'ui/toggleExpanded');
+    set({ expandedIds: curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id] });
   },
-  clearExpanded: () => set({ expandedIds: [] }, false, 'ui/clearExpanded'),
+  clearExpanded: () => set({ expandedIds: [] }),
 
   toggleSelected: (id) => {
     const curr = get().selectedIds;
-    set({ selectedIds: curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id] }, false, 'ui/toggleSelected');
+    set({ selectedIds: curr.includes(id) ? curr.filter((x) => x !== id) : [...curr, id] });
   },
-  clearSelected: () => set({ selectedIds: [] }, false, 'ui/clearSelected'),
+  clearSelected: () => set({ selectedIds: [] }),
 
   // ── Actions: Visibility ────────────────────────────────────────────────────
 
   togglePwVisible: (id) => {
     const curr = get().pwVisible;
-    set({ pwVisible: { ...curr, [id]: !curr[id] } }, false, 'visibility/togglePwVisible');
+    set({ pwVisible: { ...curr, [id]: !curr[id] } });
   },
   toggleSeedVisible: (id) => {
     const curr = get().seedVisible;
-    set({ seedVisible: { ...curr, [id]: !curr[id] } }, false, 'visibility/toggleSeedVisible');
+    set({ seedVisible: { ...curr, [id]: !curr[id] } });
   },
-  clearAllVisible: () => set({ pwVisible: {}, seedVisible: {} }, false, 'visibility/clearAll'),
+  clearAllVisible: () => set({ pwVisible: {}, seedVisible: {} }),
 
   // ── Actions: PIN ───────────────────────────────────────────────────────────
 
   appendPin: (digit) => {
     const curr = get().pinBuffer;
-    if (curr.length < PIN_MAX_LEN) set({ pinBuffer: curr + digit }, false, 'pin/append');
+    if (curr.length < PIN_MAX_LEN) set({ pinBuffer: curr + digit });
   },
   deletePin: () => {
     const curr = get().pinBuffer;
-    if (curr.length > 0) set({ pinBuffer: curr.slice(0, -1) }, false, 'pin/delete');
+    if (curr.length > 0) set({ pinBuffer: curr.slice(0, -1) });
   },
-  clearPin: () => set({ pinBuffer: '' }, false, 'pin/clear'),
+  clearPin: () => set({ pinBuffer: '' }),
 
   incrementPinAttempts: () => {
     const n = get().pinAttempts + 1;
-    set({ pinAttempts: n }, false, 'pin/incrementAttempts');
+    set({ pinAttempts: n });
   },
-  resetPinAttempts: () => set({ pinAttempts: 0, pinLocked: false, pinLockedUntil: 0 }, false, 'pin/resetAttempts'),
+  resetPinAttempts: () => set({ pinAttempts: 0, pinLocked: false, pinLockedUntil: 0 }),
 
-  setPinLocked: (until) => set({ pinLocked: true, pinLockedUntil: until, pinBuffer: '' }, false, 'pin/setLocked'),
+  setPinLocked: (until) => set({ pinLocked: true, pinLockedUntil: until, pinBuffer: '' }),
 
   // ── Actions: Settings ──────────────────────────────────────────────────────
 
   setAutoLockMinutes: (m) => {
     lsSetNum(LS_AUTOLOCK, m);
-    set({ autoLockMinutes: m }, false, 'settings/setAutoLockMinutes');
+    set({ autoLockMinutes: m });
   },
   setBackupIntervalHrs: (h) => {
     lsSetNum(LS_BKPIVL, h);
-    set({ backupIntervalHrs: h }, false, 'settings/setBackupIntervalHrs');
+    set({ backupIntervalHrs: h });
   },
   setAutoSaveEnabled: (v) => {
     lsSetBool(LS_AUTOSAVE, v);
-    set({ autoSaveEnabled: v }, false, 'settings/setAutoSaveEnabled');
+    set({ autoSaveEnabled: v });
   },
 
   // ── Actions: Biometrik ──────────────────────────────────────────────────────
 
   setBiometricEnabled: (v) => {
     lsSetBool(LS_BIO_ENABLED, v);
-    set({ biometricEnabled: v }, false, 'bio/setEnabled');
+    set({ biometricEnabled: v });
   },
   setBiometricCredId: (id) => {
     if (id) lsSet(LS_BIO_CRED_ID, id);
     else lsRemove(LS_BIO_CRED_ID);
-    set({ biometricCredId: id }, false, 'bio/setCredId');
+    set({ biometricCredId: id });
   },
 }));
 
