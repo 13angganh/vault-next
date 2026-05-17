@@ -1,3 +1,5 @@
+'use client';
+
 // app/offline/page.tsx
 // Halaman offline — ditampilkan service worker saat tidak ada koneksi
 // dan cache belum tersedia.
