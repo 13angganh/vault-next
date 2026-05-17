@@ -654,3 +654,21 @@ Semua justified exceptions dari Fix Fase 10 tetap berlaku.
 ✅ `b64ToBuf` return type : `Uint8Array<ArrayBuffer>` — compatible dengan `BufferSource`
 ✅ Semua pemakai internal : `b64ToBuf` di crypto.ts line 144 & 161 tetap valid
 ✅ BiometricHintModal     : type error resolved tanpa local cast
+
+---
+
+## Fix Fase 11-HF3 — Hotfix noUnusedLocals + Logic Bug PIN Reset
+**Tanggal**: 2026-05-17
+**Deskripsi**: Build error TypeScript noUnusedLocals + bug logika attempt counter tidak pernah di-reset.
+
+### Bug yang Diperbaiki (2)
+- **HF3-01** `components/lock/LockScreen.tsx:62`: rename `_resetPinAttempts` → `resetPinAttempts` (hapus underscore prefix). Dengan `noUnusedLocals: true` di tsconfig, variabel yang dideklarasikan tapi tidak dipakai menyebabkan Type error. Dengan `_` prefix pun TypeScript tetap flag untuk `const` declarations (bukan params).
+- **HF3-02** `components/lock/LockScreen.tsx:115`: panggil `resetPinAttempts()` setelah PIN sukses unlock (setelah `clearPin()`). Ini sekaligus memperbaiki **bug logika**: attempt counter tidak pernah di-reset setelah unlock berhasil — jika user gagal 4x lalu berhasil di ke-5, counter tetap di 4, sehingga satu gagal berikutnya langsung lockout. Kini counter selalu kembali ke 0 setelah unlock sukses.
+
+### File yang Diubah (1 file)
+- `components/lock/LockScreen.tsx` — rename _resetPinAttempts + panggil resetPinAttempts() on success
+
+### Self-Audit
+✅ noUnusedLocals    : 0 violation di seluruh codebase
+✅ PIN attempt reset : dipanggil setelah verifyPinAndGetMaster berhasil
+✅ Logic             : attempt counter reset ke 0 setiap successful PIN unlock
