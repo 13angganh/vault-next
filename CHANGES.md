@@ -618,3 +618,22 @@ Semua justified exceptions dari Fix Fase 10 tetap berlaku.
 ✅ Named actions         : 31/31 set() calls punya named action string
 ✅ Light mode coverage   : --action-* override ada di [data-theme="light"]
 ✅ ROUTES constants      : semua URL via ROUTES, 0 hardcoded href string
+
+---
+
+## Fix Fase 11-HF — Hotfix Build Error
+**Tanggal**: 2026-05-17
+**Deskripsi**: Dua error yang menyebabkan `next build` gagal dan Vercel deploy error.
+
+### Bug yang Diperbaiki (2)
+- **HF-01** `components/entries/index.ts`: hapus `export { CategoryIcon } from './CategoryIcon'` — file tersebut tidak ada di folder `entries/`. `CategoryIcon` berlokasi di `components/common/CategoryIcon.tsx` dan diimport langsung dari sana di semua komponen yang memakainya. Bug ini menyebabkan `Type error: Cannot find module './CategoryIcon'` saat `next build`.
+- **HF-02** `next.config.ts`: hapus opsi `eslint: { ignoreDuringBuilds: false }` — opsi `eslint` dalam `next.config.ts` tidak lagi didukung di Next.js 16+ dan menyebabkan warning `Unrecognized key(s) in object: 'eslint'`. ESLint dijalankan terpisah via `next lint`.
+
+### File yang Diubah (2 file)
+- `components/entries/index.ts` — hapus re-export CategoryIcon yang salah path
+- `next.config.ts` — hapus deprecated eslint config key
+
+### Self-Audit
+✅ `next build` : Type error resolved (no missing module)
+✅ next.config  : 0 unrecognized keys
+✅ CategoryIcon : masih diimport langsung dari `@/components/common/CategoryIcon` di semua pemakai
