@@ -637,3 +637,20 @@ Semua justified exceptions dari Fix Fase 10 tetap berlaku.
 ✅ `next build` : Type error resolved (no missing module)
 ✅ next.config  : 0 unrecognized keys
 ✅ CategoryIcon : masih diimport langsung dari `@/components/common/CategoryIcon` di semua pemakai
+
+---
+
+## Fix Fase 11-HF2 — Hotfix TypeScript Strict Type Error
+**Tanggal**: 2026-05-17
+**Deskripsi**: Build error TypeScript strict — WebAuthn `allowCredentials[].id` type incompatibility.
+
+### Bug yang Diperbaiki (1)
+- **HF2-01** `lib/crypto.ts`: perbaiki return type `b64ToBuf` dari `Uint8Array` (implisit `Uint8Array<ArrayBufferLike>`) menjadi `Uint8Array<ArrayBuffer>` dengan explicit cast. Root cause: `Uint8Array.from()` di TypeScript strict inferring `ArrayBufferLike` yang mencakup `SharedArrayBuffer` — tidak assignable ke WebAuthn `BufferSource` = `ArrayBufferView<ArrayBuffer>`. Semua pemakai `b64ToBuf` di `BiometricHintModal.tsx` (line 194) dan `crypto.ts` internal (line 144, 161) kini mendapat type yang benar.
+
+### File yang Diubah (1 file)
+- `lib/crypto.ts` — return type `b64ToBuf` narrowed ke `Uint8Array<ArrayBuffer>`
+
+### Self-Audit
+✅ `b64ToBuf` return type : `Uint8Array<ArrayBuffer>` — compatible dengan `BufferSource`
+✅ Semua pemakai internal : `b64ToBuf` di crypto.ts line 144 & 161 tetap valid
+✅ BiometricHintModal     : type error resolved tanpa local cast
