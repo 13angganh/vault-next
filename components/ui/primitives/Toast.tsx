@@ -2,32 +2,64 @@
 
 /**
  * components/ui/primitives/Toast.tsx — Vault Next
- * Primitif Toast (refactor dari components/ui/Toast.tsx).
- * Auto-dismiss, slide-in animation, Lucide icons.
+ * Toast system dengan dua mode:
  *
- * Usage:
- *   const { showToast, ToastContainer } = useToast();
- *   showToast('Password disalin!');
- *   showToast('Gagal simpan', 'error');
+ * 1. GLOBAL (direkomendasikan): ToastProvider dipasang di AppShell,
+ *    komponen manapun cukup import useGlobalToast() — tidak perlu ToastContainer lokal.
  *
- * Sesi B — M-05
+ * 2. LOCAL (backward compat): useToast() seperti sebelumnya,
+ *    harus render <ToastContainer /> di komponen yang sama.
+ *
+ * Sesi B — M-05 | v4 upgrade: global context
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import { CheckCircle2, XCircle, Info } from 'lucide-react';
 import type { ToastType } from '@/lib/design-tokens';
 
 interface ToastItem {
-  id:     number;
+  id:      number;
   message: string;
-  type:   ToastType;
+  type:    ToastType;
 }
 
-const ICONS: Record<ToastType, React.ReactNode> = {
+const ICONS: Record<ToastType, ReactNode> = {
   success: <CheckCircle2 size={15} />,
   error:   <XCircle size={15} />,
   info:    <Info size={15} />,
 };
+
+/* ── GLOBAL CONTEXT ─────────────────────────────────────────────────── */
+
+type ShowToastFn = (message: string, type?: ToastType) => void;
+
+const ToastContext = createContext<ShowToastFn | null>(null);
+
+/**
+ * Pasang sekali di AppShell. Semua komponen di bawahnya bisa pakai useGlobalToast().
+ */
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const { showToast, ToastContainer } = useToast();
+  return (
+    <ToastContext.Provider value={showToast}>
+      {children}
+      <ToastContainer />
+    </ToastContext.Provider>
+  );
+}
+
+/**
+ * Hook global — gunakan di komponen manapun di bawah ToastProvider.
+ * Tidak perlu render <ToastContainer /> lokal.
+ */
+export function useGlobalToast(): ShowToastFn {
+  const ctx = useContext(ToastContext);
+  if (!ctx) throw new Error('useGlobalToast harus dipakai di dalam <ToastProvider>');
+  return ctx;
+}
+
+/* ── LOCAL HOOK (backward compat) ──────────────────────────────────── */
 
 export function useToast(duration = 2200) {
   const [toasts,  setToasts]  = useState<ToastItem[]>([]);

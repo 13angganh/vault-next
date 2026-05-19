@@ -468,7 +468,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 .error-state__action { margin-top: var(--space-2); }
 
 /* IconButton sm */
-.ibtn--sm { width: 32px; height: 32px; } /* sm = 32px visual, tap area diperluas ::after */
+.ibtn--sm { width: 36px; height: 36px; }
 
 /* ─── Sesi D — Input focus ring animation (M-12) ─────────────────────────── */
 .input:focus,

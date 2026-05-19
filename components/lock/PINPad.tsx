@@ -25,7 +25,7 @@ interface PINPadProps {
   success?:     boolean;   // Sesi D: flash hijau saat unlock berhasil
 }
 
-const KEYS = ['1','2','3','4','5','6','7','8','9','','0','DEL'];
+const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
 
 export function PINPad({
   value,
@@ -163,7 +163,7 @@ export function PINPad({
       }}>
         {KEYS.map((k, idx) => {
           const isEmpty = k === '';
-          const isDel   = k === 'DEL';
+          const isDel   = k === '⌫';
           return (
             <button
               key={idx}

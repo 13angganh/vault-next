@@ -36,8 +36,7 @@ const config: NextConfig = {
   reactStrictMode: true,
 
   // Error saat ada TS error — tidak pernah ignore
-  // Note: opsi `eslint` dihapus — tidak lagi didukung di Next.js 16+
-  // ESLint dijalankan terpisah via `next lint` atau CI pipeline
+  // Note: opsi `eslint` dihapus — tidak lagi didukung Next.js 16+
   typescript: { ignoreBuildErrors: false },
 
   images: {

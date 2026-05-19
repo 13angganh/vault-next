@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter }             from 'next/navigation';
 import { useRipple }            from '@/lib/hooks/useRipple';
 import { AutoLockManager }      from '@/components/shell/AutoLockManager';
 import { Sidebar }              from '@/components/shell/Sidebar';
@@ -10,6 +11,7 @@ import type { VaultListViewRef } from '@/components/vault/VaultListView';
 import { SettingsView }         from '@/components/settings/SettingsView';
 import { BackupReminderModal }  from '@/components/settings/BackupReminderModal';
 import { BackupModal }          from '@/components/settings/BackupModal';
+import { ToastProvider }        from '@/components/ui/primitives/Toast';
 import { useAppStore }          from '@/lib/store/appStore';
 
 type ShellView = 'vault' | 'settings';
@@ -21,22 +23,37 @@ export function AppShell() {
   const [swUpdate,    setSwUpdate]    = useState(false);
   const vaultListRef = useRef<VaultListViewRef>(null);
 
+  const router = useRouter();
+
   const autoLockMinutes = useAppStore((s) => s.autoLockMinutes);
   const lastActivityAt  = useAppStore((s) => s.lastActivityAt);
   const setFilter       = useAppStore((s) => s.setFilter);
 
   useRipple();
 
-  /* ── SW update listener ── */
+  /* ── SW update listener ──
+   * SW baru aktif (skipWaiting di install + clients.claim di activate sudah ada di sw.js).
+   * controllerchange = SW baru sudah mengambil alih → soft refresh via router.refresh()
+   * agar Next.js re-fetch data terbaru tanpa full page reload. */
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
-    const handleSWUpdate = () => {
+    let refreshing = false;
+    const handleControllerChange = () => {
+      if (refreshing) return;
+      refreshing = true;
       setSwUpdate(true);
-      setTimeout(() => window.location.reload(), 3000);
+      // Soft refresh: Next.js router re-render tanpa hard reload
+      // Jika router.refresh() tidak cukup (misal ada critical asset update),
+      // fallback ke reload setelah 1.5s
+      router.refresh();
+      setTimeout(() => {
+        if (document.hidden) return; // jangan reload saat tab di-background
+        window.location.reload();
+      }, 1500);
     };
-    navigator.serviceWorker.addEventListener('controllerchange', handleSWUpdate);
-    return () => navigator.serviceWorker.removeEventListener('controllerchange', handleSWUpdate);
-  }, []);
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+  }, [router]);
 
   const handleAddEntry = useCallback(() => {
     setShellView('vault');
@@ -92,6 +109,7 @@ export function AppShell() {
   const viewTitle = shellView === 'settings' ? 'Pengaturan' : 'Vault Next';
 
   return (
+    <ToastProvider>
     <div className="app-shell">
       <AutoLockManager />
 
@@ -140,5 +158,6 @@ export function AppShell() {
       <BackupReminderModal onOpenBackup={() => setShowBackup(true)} />
       {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
     </div>
+    </ToastProvider>
   );
 }

@@ -1,22 +1,25 @@
 import type { Metadata, Viewport } from 'next';
-import { Outfit, JetBrains_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import '@/styles/globals.css';
 
 /* Google Fonts via next/font (no CDN, no layout shift) */
-const outfit = Outfit({
+/* Inter: lebih readable di ukuran kecil untuk data sensitif (password, nomor kartu) */
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
-  variable: '--font-outfit',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-sans',
   display: 'swap',
+  fallback: ['system-ui', 'sans-serif'],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400', '600', '700'],
-  variable: '--font-jetbrains',
+  variable: '--font-mono',
   display: 'swap',
+  fallback: ['Fira Code', 'Consolas', 'monospace'],
 });
 
 export const metadata: Metadata = {
@@ -68,10 +71,10 @@ export default function RootLayout({
         />
         <meta name="theme-color" content="#07080f" />
       </head>
-      {/* className hanya inject CSS variables (--font-sans, --font-mono).
-          Font diterapkan ke body via base.css: body { font-family: var(--font-sans); }
-          Ini intentional — app tidak menggunakan Tailwind, jadi tidak ada class font-sans. */}
-      <body className={`${outfit.variable} ${jetbrainsMono.variable}`}>
+      {/* className inject CSS variables font ke body.
+          base.css: body { font-family: var(--font-sans); }
+          tokens.css: --font-sans: var(--font-sans), sans-serif */}
+      <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           {children}
         </ThemeProvider>

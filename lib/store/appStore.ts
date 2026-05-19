@@ -91,7 +91,6 @@ interface AppState {
 
   // ── Actions: PIN ──
   appendPin:   (digit: string) => void;
-  deletePin:   () => void;  // hapus digit terakhir dari pinBuffer
   clearPin:    () => void;
   incrementPinAttempts: () => void;
   resetPinAttempts:     () => void;
@@ -237,10 +236,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   appendPin: (digit) => {
     const curr = get().pinBuffer;
     if (curr.length < PIN_MAX_LEN) set({ pinBuffer: curr + digit });
-  },
-  deletePin: () => {
-    const curr = get().pinBuffer;
-    if (curr.length > 0) set({ pinBuffer: curr.slice(0, -1) });
   },
   clearPin: () => set({ pinBuffer: '' }),
 

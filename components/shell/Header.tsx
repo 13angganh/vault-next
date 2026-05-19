@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Search, X, Plus, Sun, Moon, Lock, Timer, Menu } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { useTheme }           from '@/components/providers/ThemeProvider';
+import { formatCountdown }    from '@/lib/format';
 
 interface HeaderProps {
   onAddEntry:       () => void;
@@ -53,9 +54,7 @@ export function Header({
     const update = () => {
       const remaining = autoLockMinutes * 60 - (Date.now() - lastActivityAt) / 1000;
       if (remaining <= 0) { setCountdown(''); return; }
-      const m = Math.floor(remaining / 60);
-      const s = Math.floor(remaining % 60);
-      setCountdown(remaining <= 120 ? `${m}:${String(s).padStart(2, '0')}` : '');
+      setCountdown(remaining <= 120 ? formatCountdown(Math.floor(remaining)) : '');
     };
     update();
     const id = setInterval(update, 1000);
@@ -85,6 +84,7 @@ export function Header({
           value={localQuery}
           onChange={(e) => handleSearch(e.target.value)}
           aria-label="Cari entri"
+          aria-keyshortcuts="Control+k Meta+k"
           data-search-input
         />
         {localQuery && (
@@ -112,7 +112,8 @@ export function Header({
             className="icon-btn"
             onClick={onAddEntry}
             aria-label="Tambah entri baru"
-            title="Tambah entri"
+            aria-keyshortcuts="Control+n Meta+n"
+            title="Tambah entri (Ctrl+N)"
           >
             <Plus size={16} />
           </button>

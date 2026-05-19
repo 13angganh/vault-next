@@ -11,7 +11,7 @@ import { DEFAULT_CATEGORIES } from '@/lib/types';
 import { EntryCard }         from '@/components/entries/EntryCard';
 import { DetailView }        from '@/components/entries/DetailView';
 import { EntryForm }         from '@/components/entries/EntryForm';
-import { useToast }          from '@/components/ui/primitives/Toast';
+import { useGlobalToast }    from '@/components/ui/primitives/Toast';
 import { useClipboard }      from '@/lib/hooks/useClipboard';
 import type { VaultEntry }   from '@/lib/types';
 
@@ -71,7 +71,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       }
     }, [isVaultLoading]);
 
-    const { showToast, ToastContainer } = useToast();
+    const showToast = useGlobalToast();
 
     useImperativeHandle(ref, () => ({
       openAddForm: () => setShowAddForm(true),
@@ -222,7 +222,15 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
         <EmptyState
           icon={<PackageOpen size={40} strokeWidth={1.2} />}
           title="Vault masih kosong"
-          description="Tap + untuk menambahkan entri pertama"
+          description="Simpan akun pertama Anda dengan aman"
+          action={
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowAddForm(true)}
+            >
+              + Tambah Entri Pertama
+            </button>
+          }
         />
       );
     };
@@ -282,8 +290,6 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
             </div>
           )}
         </div>
-
-        <ToastContainer />
 
         {/* ── Unlock Modal — di root VaultListView, bebas dari overflow clip ── */}
         {unlockEntry && (

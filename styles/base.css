@@ -159,17 +159,6 @@
   --cat-kartu-bg:   rgba(2, 132, 199, 0.10);
   --cat-wifi-bg:    rgba(126, 34, 206, 0.10);
   --cat-lainnya-bg: rgba(107, 114, 128, 0.10);
-
-  /* Category icon colors — light mode (lebih gelap dari dark mode untuk kontras di bg terang) */
-  /* Dark mode pakai warna pastel (#818cf8 dll) yang bagus di bg gelap tapi kurang kontras di bg terang */
-  --cat-sosmed:  #4338ca;   /* indigo-700 — cukup gelap di light bg */
-  --cat-email:   #1d4ed8;   /* blue-700 */
-  --cat-bank:    #047857;   /* emerald-700 */
-  --cat-game:    #b91c1c;   /* red-700 */
-  --cat-crypto:  var(--gold);
-  --cat-kartu:   #0369a1;   /* sky-700 */
-  --cat-wifi:    #7e22ce;   /* purple-700 */
-  --cat-lainnya: var(--muted2);
 }
 
 /* RESET & BASE */

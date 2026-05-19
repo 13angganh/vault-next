@@ -2,7 +2,7 @@
  * components/entries/index.ts — Vault Next
  * Barrel exports untuk folder entries.
  * Sesi B — M-07
- * Note: CategoryIcon ada di components/common/, bukan di folder ini.
+ * Note: CategoryIcon ada di components/common/CategoryIcon.tsx
  */
 
 export { EntryCard }    from './EntryCard';

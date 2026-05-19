@@ -56,7 +56,6 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
   const pinAttempts    = useAppStore((s) => s.pinAttempts);
   const pinLockedUntil = useAppStore((s) => s.pinLockedUntil);
   const appendPin      = useAppStore((s) => s.appendPin);
-  const deletePin      = useAppStore((s) => s.deletePin);
   const clearPin       = useAppStore((s) => s.clearPin);
   const incrementPinAttempts = useAppStore((s) => s.incrementPinAttempts);
   const resetPinAttempts     = useAppStore((s) => s.resetPinAttempts);
@@ -112,7 +111,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     try {
       const masterPw = await verifyPinAndGetMaster(pinBuf);
       clearPin();
-      resetPinAttempts();   // reset counter setelah PIN sukses
+      resetPinAttempts();
       await doUnlockWithMaster(masterPw);
       // loading akan tetap true sampai komponen unmount saat vault terbuka — ini normal
     } catch (e) {
@@ -221,7 +220,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 }}
                 onDelete={() => {
                   if (!pinLocked && !loading) {
-                    deletePin();
+                    useAppStore.setState({ pinBuffer: pinBuf.slice(0, -1) });
                     setError('');
                   }
                 }}

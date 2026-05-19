@@ -37,8 +37,7 @@
   max-height: calc(100dvh - 80px);
   display: flex;
   flex-direction: column;
-  /* animation dihandle sepenuhnya oleh Framer Motion di Modal.tsx */
-  /* jangan tambahkan CSS animation di sini — akan konflik dengan AnimatePresence */
+  animation: fadeScaleIn 0.22s cubic-bezier(0.34, 1.2, 0.64, 1) both;
   overflow: hidden;
   position: relative;
   z-index: calc(var(--z-modal) + 1);

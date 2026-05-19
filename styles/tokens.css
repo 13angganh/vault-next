@@ -27,9 +27,9 @@
   --ls-label:  0.05em;  /* ALL CAPS label */
   --ls-tight:  -0.02em; /* display heading */
 
-  /* Font Families */
-  --font-sans: var(--font-outfit), 'Outfit', sans-serif;
-  --font-mono: var(--font-jetbrains), 'JetBrains Mono', monospace;
+  /* Font Families — --font-sans dari Inter, --font-mono dari JetBrains Mono */
+  --font-sans: var(--font-sans), 'Inter', sans-serif;
+  --font-mono: var(--font-mono), 'JetBrains Mono', monospace;
 
   /* Spacing Scale (4px base) */
   --space-1:  4px;
@@ -68,9 +68,14 @@
   --modal-width:      480px;
   --modal-width-sm:   360px;
 
-  /* Strength meter colors — TIDAK didefinisikan di sini. */
-  /* --str-1 s/d --str-7 didefinisikan per-tema di base.css (:root dark + [data-theme=light]). */
-  /* Mendefinisikan di sini akan langsung di-override oleh base.css — dead code. */
+  /* Strength meter colors (F2-01) */
+  --str-1: #ef4444;
+  --str-2: #f97316;
+  --str-3: #eab308;
+  --str-4: #84cc16;
+  --str-5: #22c55e;
+  --str-6: #10b981;
+  --str-7: var(--gold);
 
   /* Category icon colors (F2-02) */
   --cat-sosmed:  #818cf8;

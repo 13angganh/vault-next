@@ -46,3 +46,10 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1_048_576)   return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1_048_576).toFixed(1)} MB`;
 }
+
+/** Format detik ke string hitung mundur: "2:05", "0:30" */
+export function formatCountdown(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
