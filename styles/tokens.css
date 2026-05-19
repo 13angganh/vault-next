@@ -27,9 +27,11 @@
   --ls-label:  0.05em;  /* ALL CAPS label */
   --ls-tight:  -0.02em; /* display heading */
 
-  /* Font Families — --font-sans dari Inter, --font-mono dari JetBrains Mono */
-  --font-sans: var(--font-sans), 'Inter', sans-serif;
-  --font-mono: var(--font-mono), 'JetBrains Mono', monospace;
+  /* Font Families — --font-inter dan --font-jetbrains di-inject Next.js via body className.
+     Nama token BERBEDA dari nama variabel Next.js agar tidak terjadi circular reference.
+     Sebelumnya Outfit, sekarang Inter untuk keterbacaan data sensitif lebih baik. */
+  --font-sans: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), 'JetBrains Mono', 'Fira Code', monospace;
 
   /* Spacing Scale (4px base) */
   --space-1:  4px;

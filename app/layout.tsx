@@ -9,7 +9,7 @@ import '@/styles/globals.css';
 const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-sans',
+  variable: '--font-inter',   // Next.js inject sebagai --font-inter, BUKAN --font-sans
   display: 'swap',
   fallback: ['system-ui', 'sans-serif'],
 });
@@ -17,7 +17,7 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400', '600', '700'],
-  variable: '--font-mono',
+  variable: '--font-jetbrains',  // Next.js inject sebagai --font-jetbrains
   display: 'swap',
   fallback: ['Fira Code', 'Consolas', 'monospace'],
 });
@@ -71,9 +71,6 @@ export default function RootLayout({
         />
         <meta name="theme-color" content="#07080f" />
       </head>
-      {/* className inject CSS variables font ke body.
-          base.css: body { font-family: var(--font-sans); }
-          tokens.css: --font-sans: var(--font-sans), sans-serif */}
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           {children}

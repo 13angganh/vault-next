@@ -9,7 +9,7 @@
  * Locked:    tampilkan gembok, klik → expand minta PIN/master password
  */
 
-import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { useState, memo } from 'react';
 import { Pencil, Lock, Unlock, Star, RotateCcw, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
 import { useAppStore }      from '@/lib/store/appStore';
 import { saveVault }         from '@/lib/vaultService';
@@ -43,65 +43,16 @@ export function EntryCard({
   const isLocked   = lockedIds.includes(entry.id);
   const isExpanded = expandedIds.includes(entry.id);
 
-  // Local: show unlock prompt overlay
-  const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
-  const [unlockInput,      setUnlockInput]      = useState('');
-  const [_unlockError,      setUnlockError]      = useState('');
-  const [_unlockLoading,    setUnlockLoading]    = useState(false);
-  const [delConfirm,       setDelConfirm]       = useState(false);
-  const unlockRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (showUnlockPrompt && unlockRef.current) {
-      unlockRef.current.focus();
-    }
-  }, [showUnlockPrompt]);
+  const [delConfirm, setDelConfirm] = useState(false);
 
   const handleToggleExpand = () => {
     if (isLocked && !isExpanded) {
-      // Pakai callback ke parent (VaultListView) yang render overlay di luar transform context
-      if (onRequestUnlock) {
-        onRequestUnlock(entry);
-      } else {
-        setShowUnlockPrompt(true);
-      }
+      // Selalu delegasikan ke VaultListView via onRequestUnlock
+      onRequestUnlock?.(entry);
       return;
     }
     store.toggleExpanded(entry.id);
   };
-
-  // handleUnlockEntry: fallback unlock in-card jika onRequestUnlock tidak tersedia
-  // Dipanggil via setShowUnlockPrompt(true) path di handleToggleExpand
-  const handleUnlockEntry = useCallback(async () => {
-    if (!unlockInput.trim()) return;
-    setUnlockLoading(true);
-    setUnlockError('');
-
-    try {
-      const { verifyPin, hasPinSetup } = await import('@/lib/vaultService');
-      let ok = false;
-
-      if (hasPinSetup()) {
-        ok = await verifyPin(unlockInput);
-      }
-      if (!ok && unlockInput === store.masterPw) {
-        ok = true;
-      }
-
-      if (ok) {
-        setShowUnlockPrompt(false);
-        setUnlockInput('');
-        // Setelah verifikasi berhasil, expand entry (tanpa unlock permanen)
-        store.toggleExpanded(entry.id);
-      } else {
-        setUnlockError('PIN atau password salah');
-      }
-    } catch {
-      setUnlockError('Terjadi kesalahan');
-    } finally {
-      setUnlockLoading(false);
-    }
-  }, [unlockInput, store, entry.id]);
 
   const handleFav = async () => {
     const updated = store.vault.map((e) =>
@@ -395,7 +346,7 @@ export function EntryCard({
 
             {!isRecycleBin && (
               <button className="entry-action-btn entry-action-btn--lock"
-                onClick={isLocked && showUnlockPrompt ? handleUnlockEntry : handleToggleLock}
+                onClick={handleToggleLock}
                 title={isLocked ? 'Lepas kunci' : 'Kunci entri'}>
                 {isLocked ? <><Unlock size={13} /> Lepas</> : <><Lock size={13} /> Kunci</>}
               </button>

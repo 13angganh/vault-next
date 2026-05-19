@@ -52,11 +52,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 /**
  * Hook global — gunakan di komponen manapun di bawah ToastProvider.
  * Tidak perlu render <ToastContainer /> lokal.
+ * Fallback ke noop jika dipanggil di luar ToastProvider (SSR/hydration safe).
  */
 export function useGlobalToast(): ShowToastFn {
   const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useGlobalToast harus dipakai di dalam <ToastProvider>');
-  return ctx;
+  // Jangan throw — fallback ke noop agar tidak crash saat SSR/hydration mismatch
+  return ctx ?? (() => {});
 }
 
 /* ── LOCAL HOOK (backward compat) ──────────────────────────────────── */

@@ -140,7 +140,7 @@ export function BiometricHintModal({
     setStep('loading');
     setErrMsg('');
     try {
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const challenge = crypto.getRandomValues(new Uint8Array(32)) as Uint8Array<ArrayBuffer>;
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
@@ -187,7 +187,7 @@ export function BiometricHintModal({
       const credId = lsGet(LS_BIO_CRED_ID);
       if (!credId) throw new Error('Belum ada sidik jari terdaftar. Daftarkan di Pengaturan terlebih dahulu.');
 
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const challenge = crypto.getRandomValues(new Uint8Array(32)) as Uint8Array<ArrayBuffer>;
       const assertion = await navigator.credentials.get({
         publicKey: {
           challenge,
