@@ -10,9 +10,9 @@ import { useState, useRef }  from 'react';
 import { X, Cloud, Upload, Download, RefreshCw, Eye, EyeOff, Copy, Check, AlertTriangle, Plus, FolderOpen, ShieldCheck , Loader2 } from 'lucide-react';
 import { useAppStore }        from '@/lib/store/appStore';
 import { exportBackup, importBackup, saveVault } from '@/lib/vaultService';
+import { lsSet, LS_BACKUP }  from '@/lib/storage';
 import { Button, ErrorState }  from '@/components/ui/primitives';
 import { useFocusTrap }       from '@/lib/hooks/useFocusTrap';
-import { useClipboard }       from '@/lib/hooks/useClipboard';
 
 type Tab = 'export' | 'import' | 'sync';
 
@@ -50,7 +50,8 @@ export function BackupModal({ onClose }: BackupModalProps) {
       a.download = `vault-backup-${ts}.vault`;
       a.click();
       URL.revokeObjectURL(url);
-      // Timestamp backup sudah ditulis oleh exportBackup() di vaultService.ts
+      // Simpan timestamp backup
+      lsSet(LS_BACKUP, String(Date.now()));
       setExportDone(true);
     } catch (e) {
       setExportError((e as Error).message);
@@ -119,8 +120,8 @@ export function BackupModal({ onClose }: BackupModalProps) {
         : payload.vault.length;
       setImportResult(
         importMode === 'merge'
-          ? `Berhasil! ${added} entri baru ditambahkan (total: ${finalVault.length})`
-          : `Berhasil! Vault diganti dengan ${finalVault.length} entri dari backup.`,
+          ? `✅ Berhasil! ${added} entri baru ditambahkan (total: ${finalVault.length})`
+          : `✅ Berhasil! Vault diganti dengan ${finalVault.length} entri dari backup.`,
       );
     } catch (e) {
       setImportError((e as Error).message);
@@ -134,11 +135,10 @@ export function BackupModal({ onClose }: BackupModalProps) {
   const [syncPw,       setSyncPw]       = useState('');
   const [syncPwShow,   setSyncPwShow]   = useState(false);
   const [syncMode,     setSyncMode]     = useState<'send' | 'receive'>('send');
+  const [syncCopied,   setSyncCopied]   = useState(false);
   const [syncing,      setSyncing]      = useState(false);
   const [syncResult,   setSyncResult]   = useState('');
   const [syncError,    setSyncError]    = useState('');
-  const { copy: clipboardCopy, copiedId } = useClipboard({ clearAfterMs: 30_000 });
-  const syncCopied = copiedId === 'sync-text';
 
   const handleSyncGenerate = async () => {
     setSyncing(true); setSyncError(''); setSyncResult('');
@@ -161,7 +161,9 @@ export function BackupModal({ onClose }: BackupModalProps) {
   };
 
   const handleSyncCopy = async () => {
-    await clipboardCopy(syncText, 'sync-text');
+    await navigator.clipboard.writeText(syncText);
+    setSyncCopied(true);
+    setTimeout(() => setSyncCopied(false), 2000);
   };
 
   const handleSyncReceive = async () => {
@@ -176,7 +178,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
       store.setCustomCats(payload.customCats);
       store.setLockedIds(payload.lockedIds);
       await saveVault(store.masterPw, payload.vault, payload.recycleBin, payload.meta, payload.customCats, payload.lockedIds);
-      setSyncResult(`Sinkron berhasil! ${payload.vault.length} entri dimuat.`);
+      setSyncResult(`✅ Sinkron berhasil! ${payload.vault.length} entri dimuat.`);
     } catch (e) {
       setSyncError((e as Error).message);
     } finally {

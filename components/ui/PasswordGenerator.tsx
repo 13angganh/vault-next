@@ -14,7 +14,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/primitives';
 import { Copy, Check, X } from 'lucide-react';
 import { PasswordStrengthMeter } from '@/components/ui/PasswordStrengthMeter';
-import { useClipboard } from '@/lib/hooks/useClipboard';
 
 const CHARS = {
   lower:  'abcdefghijklmnopqrstuvwxyz',
@@ -61,11 +60,11 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
   const [useDigits,  setUseDigits]  = useState(true);
   const [useSymbols, setUseSymbols] = useState(true);
   const [password,   setPassword]   = useState('');
-  const { copy, copiedId } = useClipboard({ clearAfterMs: 30_000 });
-  const copied = copiedId === 'pw-gen';
+  const [copied,     setCopied]     = useState(false);
 
   const regenerate = useCallback(() => {
     setPassword(generatePassword(length, useUpper, useDigits, useSymbols));
+    setCopied(false);
   }, [length, useUpper, useDigits, useSymbols]);
 
   // Generate on mount and option change
@@ -73,7 +72,9 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
 
   const handleCopy = async () => {
     if (!password) return;
-    await copy(password, 'pw-gen');
+    await navigator.clipboard.writeText(password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleUse = () => {

@@ -10,7 +10,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff, ShieldCheck, KeyRound, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/primitives';
-import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 
 interface SetupFlowProps {
   onComplete: (masterPw: string, hint: string, recoveryPhrase: string) => Promise<void>;
@@ -33,7 +32,7 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
 
   const handlePasswordNext = () => {
     setError('');
-    if (pw.length < MIN_PASSWORD_LENGTH) { setError(`Password minimal ${MIN_PASSWORD_LENGTH} karakter`); return; }
+    if (pw.length < 6) { setError('Password minimal 6 karakter'); return; }
     if (pw !== pwConfirm) { setError('Password tidak cocok'); return; }
     setStep('hint');
   };
@@ -105,11 +104,12 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
                   {Array.from({ length: 7 }, (_, i) => (
                     <div
                       key={i}
-                      className={`setup-strength__bar${i < pwStrength.level ? ` setup-strength__bar--${pwStrength.level}` : ''}`}
+                      className="setup-strength__bar"
+                      style={{ background: i < pwStrength.level ? pwStrength.color : undefined }}
                     />
                   ))}
                 </div>
-                <span className={`setup-strength__label setup-strength__label--${pwStrength.level}`}>
+                <span className="setup-strength__label" style={{ color: pwStrength.color }}>
                   {pwStrength.label}
                 </span>
               </div>

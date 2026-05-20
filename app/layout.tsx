@@ -1,25 +1,22 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Outfit, JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import '@/styles/globals.css';
 
 /* Google Fonts via next/font (no CDN, no layout shift) */
-/* Inter: lebih readable di ukuran kecil untuk data sensitif (password, nomor kartu) */
-const inter = Inter({
+const outfit = Outfit({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-inter',   // Next.js inject sebagai --font-inter, BUKAN --font-sans
+  weight: ['300', '400', '500', '600', '700', '800'],
+  variable: '--font-outfit',
   display: 'swap',
-  fallback: ['system-ui', 'sans-serif'],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400', '600', '700'],
-  variable: '--font-jetbrains',  // Next.js inject sebagai --font-jetbrains
+  variable: '--font-jetbrains',
   display: 'swap',
-  fallback: ['Fira Code', 'Consolas', 'monospace'],
 });
 
 export const metadata: Metadata = {
@@ -63,15 +60,9 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
-        {/* Anti-flash: set data-theme sebelum render untuk hindari flash */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('vault_theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){}})();`,
-          }}
-        />
         <meta name="theme-color" content="#07080f" />
       </head>
-      <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${outfit.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           {children}
         </ThemeProvider>

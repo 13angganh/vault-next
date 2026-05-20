@@ -9,11 +9,11 @@
  * Locked:    tampilkan gembok, klik → expand minta PIN/master password
  */
 
-import { useState, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { Pencil, Lock, Unlock, Star, RotateCcw, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
 import { useAppStore }      from '@/lib/store/appStore';
 import { saveVault }         from '@/lib/vaultService';
-import { CategoryIcon }      from '@/components/common/CategoryIcon';
+import { CategoryIcon }      from '@/components/entries/CategoryIcon';
 import type { VaultEntry }   from '@/lib/types';
 
 interface EntryCardProps {
@@ -43,15 +43,61 @@ export function EntryCard({
   const isLocked   = lockedIds.includes(entry.id);
   const isExpanded = expandedIds.includes(entry.id);
 
-  const [delConfirm, setDelConfirm] = useState(false);
+  // Local: show unlock prompt overlay
+  const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
+  const [unlockInput,      setUnlockInput]      = useState('');
+  const [_unlockError,      setUnlockError]      = useState('');
+  const [_unlockLoading,    setUnlockLoading]    = useState(false);
+  const unlockRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showUnlockPrompt && unlockRef.current) {
+      unlockRef.current.focus();
+    }
+  }, [showUnlockPrompt]);
 
   const handleToggleExpand = () => {
     if (isLocked && !isExpanded) {
-      // Selalu delegasikan ke VaultListView via onRequestUnlock
-      onRequestUnlock?.(entry);
+      // Pakai callback ke parent (VaultListView) yang render overlay di luar transform context
+      if (onRequestUnlock) {
+        onRequestUnlock(entry);
+      } else {
+        setShowUnlockPrompt(true);
+      }
       return;
     }
     store.toggleExpanded(entry.id);
+  };
+
+  const _handleUnlockEntry = async () => {
+    if (!unlockInput.trim()) return;
+    setUnlockLoading(true);
+    setUnlockError('');
+
+    try {
+      const { verifyPin, hasPinSetup } = await import('@/lib/vaultService');
+      let ok = false;
+
+      if (hasPinSetup()) {
+        ok = await verifyPin(unlockInput);
+      }
+      if (!ok && unlockInput === store.masterPw) {
+        ok = true;
+      }
+
+      if (ok) {
+        setShowUnlockPrompt(false);
+        setUnlockInput('');
+        // Setelah verifikasi berhasil, expand entry (tanpa unlock permanen)
+        store.toggleExpanded(entry.id);
+      } else {
+        setUnlockError('PIN atau password salah');
+      }
+    } catch {
+      setUnlockError('Terjadi kesalahan');
+    } finally {
+      setUnlockLoading(false);
+    }
   };
 
   const handleFav = async () => {
@@ -67,15 +113,7 @@ export function EntryCard({
 
   const handleDelete = async () => {
     if (isRecycleBin) {
-      // Permanent delete — perlu konfirmasi
-      if (!delConfirm) {
-        setDelConfirm(true);
-        // Auto-reset konfirmasi setelah 3 detik
-        setTimeout(() => setDelConfirm(false), 3000);
-        return;
-      }
-      // Confirmed — hapus permanen
-      setDelConfirm(false);
+      // Permanent delete
       const updated = store.recycleBin.filter((e) => e.id !== entry.id);
       store.setRecycleBin(updated);
       if (store.autoSaveEnabled) {
@@ -129,9 +167,9 @@ export function EntryCard({
 
   const copy = (text: string | undefined, label: string) => {
     if (!text) return;
-    // Delegasikan clipboard write ke parent (VaultListView) via onCopy
-    // agar auto-clear 30s dari useClipboard diterapkan secara terpusat
-    onCopy?.(text, label);
+    navigator.clipboard.writeText(text).then(() => {
+      onCopy?.(text, label);
+    });
   };
 
   const pwShow   = pwVisible[entry.id]   ?? false;
@@ -369,14 +407,11 @@ export function EntryCard({
               </button>
             )}
 
-            <button
-              className={`entry-action-btn entry-action-btn--delete${delConfirm ? ' entry-action-btn--confirm' : ''}`}
+            <button className="entry-action-btn entry-action-btn--delete"
               onClick={handleDelete}
-              title={isRecycleBin && delConfirm ? 'Klik sekali lagi untuk konfirmasi' : isRecycleBin ? 'Hapus permanen' : 'Hapus'}>
+              title={isRecycleBin ? 'Hapus permanen' : 'Hapus'}>
               <Trash2 size={13} />
-              {isRecycleBin
-                ? (delConfirm ? 'Yakin? Klik lagi' : 'Hapus Permanen')
-                : 'Hapus'}
+              {isRecycleBin ? 'Hapus Permanen' : 'Hapus'}
             </button>
           </div>
           </div>

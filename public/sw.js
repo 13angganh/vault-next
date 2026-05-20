@@ -4,10 +4,9 @@
  * Auto update: saat ada versi baru, notif muncul lalu reload
  */
 
-const CACHE_NAME = 'vault-next-20260505-1908';
+const CACHE_NAME = 'vault-next-v1';
 const STATIC_ASSETS = [
   '/',
-  '/offline',
   '/manifest.json',
 ];
 
@@ -65,7 +64,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigasi: network-first dengan fallback ke cache, lalu ke /offline
+  // Navigasi: network-first dengan fallback cache
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -76,10 +75,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() =>
-          caches.match(request)
-            .then((cached) => cached || caches.match('/offline'))
-        )
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/')))
     );
     return;
   }

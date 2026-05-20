@@ -27,11 +27,9 @@
   --ls-label:  0.05em;  /* ALL CAPS label */
   --ls-tight:  -0.02em; /* display heading */
 
-  /* Font Families — --font-inter dan --font-jetbrains di-inject Next.js via body className.
-     Nama token BERBEDA dari nama variabel Next.js agar tidak terjadi circular reference.
-     Sebelumnya Outfit, sekarang Inter untuk keterbacaan data sensitif lebih baik. */
-  --font-sans: var(--font-inter), 'Inter', system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), 'JetBrains Mono', 'Fira Code', monospace;
+  /* Font Families */
+  --font-sans: var(--font-outfit), 'Outfit', sans-serif;
+  --font-mono: var(--font-jetbrains), 'JetBrains Mono', monospace;
 
   /* Spacing Scale (4px base) */
   --space-1:  4px;
@@ -89,43 +87,13 @@
   --cat-wifi:    #c084fc;
   --cat-lainnya: var(--muted);
 
-  /* Category icon backgrounds — dark mode default */
-  --cat-sosmed-bg:  rgba(129, 140, 248, 0.15);
-  --cat-email-bg:   rgba(96, 165, 250, 0.15);
-  --cat-bank-bg:    rgba(52, 211, 153, 0.15);
-  --cat-game-bg:    rgba(248, 113, 113, 0.15);
-  --cat-crypto-bg:  rgba(240, 165, 0, 0.18);
-  --cat-kartu-bg:   rgba(56, 189, 248, 0.15);
-  --cat-wifi-bg:    rgba(192, 132, 252, 0.15);
-  --cat-lainnya-bg: rgba(156, 163, 175, 0.15);
-
-  /* Z-index tokens (F3-02, Audit fix) */
-  --z-behind:       -1;  /* pseudo-element dekoratif di belakang parent */
-  --z-base:          0;
-  --z-raised-local:  1;  /* SVG/konten di atas pseudo-element dalam stacking context yang sama */
-  --z-content:      10;
-  --z-sticky:      100;
-  --z-sidebar:     200;
-  --z-dropdown:    300;
-  --z-modal:       400;
-  --z-toast:       500;
-  --z-top:        9999;
-
-  /* Button text on gold/gradient background — always dark for contrast */
-  --btn-on-gold: #000;
-
-  /* Toast semantic colors */
-  --toast-success-bg:    #166534;
-  --toast-success-text:  #86efac;
-  --toast-error-bg:      #7f1d1d;
-  --toast-error-text:    #fca5a5;
-  --toast-info-bg:       #1e3a5f;
-  --toast-info-text:     #93c5fd;
-
-  /* Semantic action colors (entry card / detail actions) */
-  --action-blue:    #60a5fa;
-  --action-amber:   #f59e0b;
-  --action-green:   #34d399;
-  --action-red:     #f87171;
-  --action-success: #4ade80;
+  /* Z-index tokens (F3-02) */
+  --z-base:     0;
+  --z-content:  10;
+  --z-sticky:   100;
+  --z-sidebar:  200;
+  --z-dropdown: 300;
+  --z-modal:    400;
+  --z-toast:    500;
+  --z-top:      9999;
 }

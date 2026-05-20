@@ -88,10 +88,17 @@ export function LoadingScreen({ onComplete, duration = 2200 }: LoadingScreenProp
 
   return (
     <div
-      className="loading-screen"
       style={{
+        position: 'fixed', inset: 0,
+        background: 'var(--bg)',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
         opacity: hiding ? 0 : 1,
         visibility: hiding ? 'hidden' : 'visible',
+        transition: 'opacity 400ms ease, visibility 400ms ease',
       }}
     >
       {/* Logo icon */}

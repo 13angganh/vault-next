@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { ErrorState } from '@/components/ui/primitives';
 import { Button }     from '@/components/ui/primitives';
-import { logger }     from '@/lib/logger';
 
 export default function Error({
   error,
@@ -13,7 +12,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    logger.error('App error:', error);
+    console.error('[Vault] App error:', error);
   }, [error]);
 
   return (

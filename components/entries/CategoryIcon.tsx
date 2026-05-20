@@ -36,16 +36,16 @@ const CAT_ICONS: Record<string, LucideIcon> = {
   lainnya: MoreHorizontal,
 };
 
-/* ── Background CSS variable per kategori default (ikut tema) ── */
-const CAT_BG_VAR: Record<string, string> = {
-  sosmed:  'var(--cat-sosmed-bg)',
-  email:   'var(--cat-email-bg)',
-  bank:    'var(--cat-bank-bg)',
-  game:    'var(--cat-game-bg)',
-  crypto:  'var(--cat-crypto-bg)',
-  kartu:   'var(--cat-kartu-bg)',
-  wifi:    'var(--cat-wifi-bg)',
-  lainnya: 'var(--cat-lainnya-bg)',
+/* ── Warna background per kategori default ── */
+const CAT_COLORS: Record<string, string> = {
+  sosmed:  'rgba(99,102,241,0.15)',
+  email:   'rgba(59,130,246,0.15)',
+  bank:    'rgba(16,185,129,0.15)',
+  game:    'rgba(239,68,68,0.15)',
+  crypto:  'rgba(245,158,11,0.18)',
+  kartu:   'rgba(14,165,233,0.15)',
+  wifi:    'rgba(168,85,247,0.15)',
+  lainnya: 'rgba(156,163,175,0.15)',
 };
 
 /* ── Warna icon per kategori default — pakai CSS variables (F2-02) ── */
@@ -114,7 +114,7 @@ export function CategoryIcon({
         className={`cat-icon cat-icon--${size} ${className}`}
         style={{
           width: box, height: box,
-          backgroundColor: 'var(--cat-lainnya-bg)',
+          backgroundColor: 'rgba(156,163,175,0.15)',
           borderRadius: radius,
           display: 'inline-flex',
           alignItems: 'center',
@@ -130,8 +130,8 @@ export function CategoryIcon({
   }
 
   /* Default kategori dengan Lucide icon */
-  const bg        = CAT_BG_VAR[catId]      ?? 'var(--cat-lainnya-bg)';
-  const iconColor = CAT_ICON_COLORS[catId] ?? 'var(--muted)';
+  const bg        = CAT_COLORS[catId]      ?? 'rgba(156,163,175,0.15)';
+  const iconColor = CAT_ICON_COLORS[catId] ?? '#9ca3af';
   const Icon      = CAT_ICONS[catId];
 
   return (

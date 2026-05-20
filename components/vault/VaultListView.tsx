@@ -11,8 +11,7 @@ import { DEFAULT_CATEGORIES } from '@/lib/types';
 import { EntryCard }         from '@/components/entries/EntryCard';
 import { DetailView }        from '@/components/entries/DetailView';
 import { EntryForm }         from '@/components/entries/EntryForm';
-import { useGlobalToast }    from '@/components/ui/primitives/Toast';
-import { useClipboard }      from '@/lib/hooks/useClipboard';
+import { useToast }          from '@/components/ui/Toast';
 import type { VaultEntry }   from '@/lib/types';
 
 export interface VaultListViewRef {
@@ -71,7 +70,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       }
     }, [isVaultLoading]);
 
-    const showToast = useGlobalToast();
+    const { showToast, ToastContainer } = useToast();
 
     useImperativeHandle(ref, () => ({
       openAddForm: () => setShowAddForm(true),
@@ -113,19 +112,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       return list;
     }, [vault, recycleBin, currentFilter, searchQuery, isRecycleBin]);
 
-    const { copy, countdown } = useClipboard({ clearAfterMs: 30_000 });
-
-    // handleCopy: salin via useClipboard (auto-clear 30s) + tampilkan toast
-    // countdown ditampilkan di toast agar user tahu kapan clipboard di-clear
-    const handleCopy = useCallback(async (text: string, label: string) => {
-      try {
-        await copy(text, label);
-        const secStr = countdown !== null ? ` (bersih dalam ${countdown}s)` : '';
-        showToast(`${label} disalin!${secStr}`);
-      } catch {
-        showToast('Gagal menyalin');
-      }
-    }, [copy, countdown, showToast]);
+    const handleCopy    = useCallback((_t: string, label: string) => showToast(`${label} disalin!`), [showToast]);
 
     const handleUnlockSubmit = useCallback(async () => {
       if (!unlockEntry || !unlockInput.trim()) return;
@@ -222,15 +209,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
         <EmptyState
           icon={<PackageOpen size={40} strokeWidth={1.2} />}
           title="Vault masih kosong"
-          description="Simpan akun pertama Anda dengan aman"
-          action={
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowAddForm(true)}
-            >
-              + Tambah Entri Pertama
-            </button>
-          }
+          description="Tap + untuk menambahkan entri pertama"
         />
       );
     };
@@ -290,6 +269,8 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
             </div>
           )}
         </div>
+
+        <ToastContainer />
 
         {/* ── Unlock Modal — di root VaultListView, bebas dari overflow clip ── */}
         {unlockEntry && (

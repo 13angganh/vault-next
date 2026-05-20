@@ -11,16 +11,19 @@ import { useTheme }           from '@/components/providers/ThemeProvider';
 import { PINPad }             from './PINPad';
 import { RecoveryPanel }      from './RecoveryPanel';
 import { SetupFlow }          from './SetupFlow';
-import { BiometricHintModal, saveBioSession } from './BiometricHintModal';
-import { lsGet, LS_BIO_CRED_ID } from '@/lib/storage';
+import { BiometricHintModal } from './BiometricHintModal';
+import { lsGet, lsSet, LS_BIO_CRED_ID, LS_BIO_SESSION } from '@/lib/storage';
 import { useAppStore } from '@/lib/store/appStore';
-import { useMounted } from '@/lib/hooks/useMounted';
-import { PIN_MIN_LEN, PIN_MAX_LEN } from '@/lib/constants';
 import {
   unlockVault, setupVault, verifyPinAndGetMaster,
   hasPinSetup, recoverMasterPw, hasVaultData, getVaultHint,
 } from '@/lib/vaultService';
 import type { UnlockPayload } from '@/lib/vaultService';
+
+function hasBiometricCredential(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!lsGet(LS_BIO_CRED_ID) && !!window.PublicKeyCredential;  // F2-07
+}
 
 type Panel = 'pin' | 'master' | 'seed' | 'recovery' | 'setup';
 
@@ -33,12 +36,6 @@ interface LockScreenProps {
 
 export function LockScreen({ onUnlocked }: LockScreenProps) {
   const { theme, toggleTheme } = useTheme();
-  const mounted = useMounted();
-
-  // Biometric availability — hanya dicek setelah mount (client-only APIs)
-  const hasBiometricCredential = mounted
-    ? !!lsGet(LS_BIO_CRED_ID) && !!window.PublicKeyCredential
-    : false;
 
   const initialPanel = (): Panel => {
     if (!hasVaultData()) return 'setup';
@@ -58,7 +55,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
   const appendPin      = useAppStore((s) => s.appendPin);
   const clearPin       = useAppStore((s) => s.clearPin);
   const incrementPinAttempts = useAppStore((s) => s.incrementPinAttempts);
-  const resetPinAttempts     = useAppStore((s) => s.resetPinAttempts);
+  const _resetPinAttempts    = useAppStore((s) => s.resetPinAttempts);
   const setPinLocked         = useAppStore((s) => s.setPinLocked);
   const [lockRemain,     setLockRemain]     = useState(0);
 
@@ -89,9 +86,17 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     setLoading(true); setError('');
     try {
       const payload = await unlockVault(masterPw);
-      // Simpan ke dual storage (sessionStorage primary + LS fallback) via saveBioSession
-      // agar sidik jari tetap bekerja setelah app di-background
-      saveBioSession(masterPw);
+      // Simpan ke sessionStorage + LS fallback agar sidik jari tetap bekerja setelah background
+      sessionStorage.setItem('vault_ss_mpw', masterPw);
+      const credId = lsGet(LS_BIO_CRED_ID);
+      if (credId) {
+        // XOR obfuscate sederhana pakai credId sebagai key
+        const textBytes = new TextEncoder().encode(masterPw);
+        const keyBytes  = new TextEncoder().encode(credId);
+        const out = new Uint8Array(textBytes.length);
+        for (let i = 0; i < textBytes.length; i++) out[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
+        lsSet(LS_BIO_SESSION, btoa(String.fromCharCode(...out)));
+      }
       onUnlocked(payload, masterPw);
     } catch (e) {
       setError((e as Error).message ?? 'Password salah');
@@ -106,12 +111,11 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
   const handlePinSubmit = useCallback(async () => {
     if (pinLocked) { setError(`PIN dikunci. Coba lagi dalam ${lockRemain} detik.`); return; }
-    if (pinBuf.length < PIN_MIN_LEN) { setError(`PIN minimal ${PIN_MIN_LEN} digit`); return; }
+    if (pinBuf.length < 4) { setError('PIN minimal 4 digit'); return; }
     setLoading(true); setError('');
     try {
       const masterPw = await verifyPinAndGetMaster(pinBuf);
       clearPin();
-      resetPinAttempts();
       await doUnlockWithMaster(masterPw);
       // loading akan tetap true sampai komponen unmount saat vault terbuka — ini normal
     } catch (e) {
@@ -211,7 +215,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
               <PINPad
                 value={pinBuf}
-                maxLen={PIN_MAX_LEN}
+                maxLen={8}
                 onDigit={(d) => {
                   if (!pinLocked && !loading) {
                     appendPin(d);
@@ -374,7 +378,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
               </div>
 
               {/* Tombol sidik jari — di tengah, hanya jika tersedia */}
-              {hasBiometricCredential && (
+              {hasBiometricCredential() && (
                 <button className="ls-bio-btn" onClick={() => setShowBiometric(true)}
                   aria-label="Buka dengan sidik jari">
                   <Fingerprint size={20} />

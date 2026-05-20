@@ -2,9 +2,6 @@
  * Vault Next — App Store (Zustand)
  * Global state untuk seluruh aplikasi.
  * Semua akses state via hook ini — jangan buat state lokal di page.
- *
- * Named actions wajib di setiap set() — untuk debuggability di DevTools.
- * Format: 'domain/actionName'
  */
 
 import { create } from 'zustand';
@@ -13,7 +10,6 @@ import {
   lsGet, lsSet, lsRemove, lsGetNum, lsSetNum, lsGetBool, lsSetBool, lsGetJson, lsSetJson,
   LS_AUTOLOCK, LS_AUTOSAVE, LS_BKPIVL, LS_CATS, LS_BIO_ENABLED, LS_BIO_CRED_ID,
 } from '@/lib/storage';
-import { PIN_MAX_LEN } from '@/lib/constants';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -235,7 +231,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   appendPin: (digit) => {
     const curr = get().pinBuffer;
-    if (curr.length < PIN_MAX_LEN) set({ pinBuffer: curr + digit });
+    if (curr.length < 8) set({ pinBuffer: curr + digit }); // maxLen=8 sesuai PINPad
   },
   clearPin: () => set({ pinBuffer: '' }),
 

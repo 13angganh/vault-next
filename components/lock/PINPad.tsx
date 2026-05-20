@@ -8,7 +8,6 @@
 
 import { useEffect, useRef } from 'react';
 import { Delete } from 'lucide-react';
-import { PIN_MAX_LEN } from '@/lib/constants';
 
 interface PINPadProps {
   value:        string;
@@ -29,7 +28,7 @@ const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
 
 export function PINPad({
   value,
-  maxLen = PIN_MAX_LEN,
+  maxLen = 6,
   onDigit,
   onDelete,
   onSubmit,

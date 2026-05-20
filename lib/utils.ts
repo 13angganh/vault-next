@@ -26,6 +26,9 @@ export function truncate(str: string, max: number): string {
 
 /**
  * Format bytes ke string yang readable.
- * Re-export dari lib/format.ts sebagai single source of truth.
  */
-export { formatFileSize as formatBytes } from '@/lib/format';
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { MotionConfig, useReducedMotion } from 'framer-motion';
 import { lsGet, lsSet, LS_THEME } from '@/lib/storage';
 
 type Theme = 'dark' | 'light';
@@ -35,8 +34,6 @@ const getInitialTheme = (): Theme => {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
-  // S-7: Respek prefers-reduced-motion untuk semua Framer Motion animations
-  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     // F4-01: Baca dari data-theme (anti-flash script) ATAU fallback ke system preference
@@ -61,13 +58,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // TIDAK return null — langsung render children
   // Tema awal sudah ditangani anti-flash script di layout.tsx
-  // MotionConfig membungkus semua children agar semua Framer Motion
-  // animation otomatis respek prefers-reduced-motion
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
-      <MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>
-        {children}
-      </MotionConfig>
+      {children}
     </ThemeContext.Provider>
   );
 }

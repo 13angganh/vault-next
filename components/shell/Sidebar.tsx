@@ -10,13 +10,13 @@
  */
 
 import { useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { LayoutGrid, Star, Trash2, Settings, X, ChevronDown } from 'lucide-react';
 import { VaultIcon }          from '@/components/common/LoadingScreen';
 import { useAppStore }        from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import type { FilterType }    from '@/lib/store/appStore';
-import { CategoryIcon }       from '@/components/common/CategoryIcon';
+import { CategoryIcon }       from '@/components/entries/CategoryIcon';
 
 interface SidebarProps {
   open:            boolean;
@@ -27,7 +27,6 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarProps) {
   const [catsOpen, setCatsOpen] = useState(true);
-  const prefersReduced = useReducedMotion();
 
   const currentFilter = useAppStore((s) => s.currentFilter);
   const setFilter     = useAppStore((s) => s.setFilter);
@@ -66,7 +65,7 @@ export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarP
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: prefersReduced ? 0 : 0.2 }}
+            transition={{ duration: 0.2 }}
           />
         )}
       </AnimatePresence>
@@ -79,10 +78,10 @@ export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarP
           aria-label="Menu navigasi"
           aria-hidden={!open}
           role="navigation"
-          initial={{ x: prefersReduced ? 0 : '-100%', opacity: prefersReduced ? 0 : 1 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: prefersReduced ? 0 : '-100%', opacity: prefersReduced ? 0 : 1 }}
-          transition={{ duration: prefersReduced ? 0.01 : 0.25, ease: [0.4, 0, 0.2, 1] }}
+          initial={{ x: '-100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '-100%' }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         >
         {/* ── Header sidebar ── */}
         <div className="sidebar-header">

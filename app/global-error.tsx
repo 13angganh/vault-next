@@ -2,12 +2,7 @@
 
 // app/global-error.tsx
 // Menangkap error di root layout (ThemeProvider crash, dll).
-//
-// ⚠️  INTENTIONAL EXCEPTION: File ini menggunakan inline styles dengan hardcoded hex.
-// Ini adalah constraint Next.js — global-error.tsx render DI LUAR React tree normal,
-// sehingga CSS stylesheets (globals.css, tokens.css) dan CSS variables tidak tersedia.
-// Inline styles dengan nilai fallback adalah satu-satunya cara yang reliable di sini.
-// Jangan ubah ke CSS class — akan tidak berfungsi saat error terjadi di root layout.
+// CSS variables mungkin tidak tersedia — gunakan inline styles sebagai fallback.
 
 export default function GlobalError({
   error,
@@ -49,23 +44,10 @@ export default function GlobalError({
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.5rem',
+              fontSize: 24,
             }}
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#f87171"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
+            ⚠
           </div>
 
           <h1

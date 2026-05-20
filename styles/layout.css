@@ -165,7 +165,7 @@
   background: var(--gold);
   border: none;
   border-radius: var(--radius-md);
-  color: var(--btn-on-gold);
+  color: #000;
   cursor: pointer;
   flex-shrink: 0;
   transition: background var(--transition-fast), transform var(--transition-fast);
@@ -198,7 +198,7 @@
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   position: relative;
-  z-index: var(--z-base);
+  z-index: 0;
 }
 
 /* Visual border — di belakang icon (z-index negatif) */
@@ -210,11 +210,11 @@
   border: 1px solid var(--border);
   background: transparent;
   transition: background var(--transition-fast), border-color var(--transition-fast);
-  z-index: var(--z-behind);
+  z-index: -1;
 }
 
 /* Icon SVG selalu di atas ::before */
-.icon-btn > svg { position: relative; z-index: var(--z-raised-local); }
+.icon-btn > svg { position: relative; z-index: 1; }
 
 .icon-btn:hover::before { background: var(--bg-s2); border-color: var(--border2); }
 .icon-btn--danger:hover::before { border-color: var(--red); background: rgba(255,77,109,0.08); }
@@ -386,7 +386,7 @@
 
 /* View transition (Vault ↔ Settings) */
 .view-transition {
-  animation: viewFadeIn var(--transition-fast) both;
+  animation: viewFadeIn 0.2s ease both;
   height: 100%;
 }
 
@@ -454,7 +454,7 @@
   left: 0; right: 0;
   z-index: var(--z-toast);
   background: var(--gold);
-  color: var(--btn-on-gold);
+  color: #000;
   padding: 8px var(--space-4);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -506,7 +506,7 @@
   flex: 1;
   min-height: 0;
   background: var(--bg);
-  animation: fadeScaleIn var(--transition-fast) both;
+  animation: fadeScaleIn 0.2s ease both;
 }
 
 /* Header sticky */
@@ -736,12 +736,7 @@
 
 .app-loading-bar {
   display: block;
-  height: 14px;
 }
-
-/* Modifier classes — menggantikan inline style width di loading.tsx */
-.app-loading-bar--wide   { width: 140px; }
-.app-loading-bar--narrow { width: 96px; height: 10px; }
 
 /* app/error.tsx root */
 .app-error-root {

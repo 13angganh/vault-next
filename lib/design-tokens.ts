@@ -7,13 +7,6 @@
  * M-04 — Sesi B
  */
 
-/**
- * Versi token — naikkan MAJOR saat ada breaking change token yang sudah dipakai komponen.
- * Naikkan MINOR saat menambah token baru.
- * Dokumentasikan perubahan di CHANGES.md.
- */
-export const TOKEN_VERSION = '1.1.0'; // 1.1.0: tambah --action-* light mode, --z-behind, --z-raised-local
-
 // ─── Type Scale ───────────────────────────────────────────────────────────────
 export const fontSize = {
   xs:   '10px',

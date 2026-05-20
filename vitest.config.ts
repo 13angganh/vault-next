@@ -4,12 +4,8 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    globals:     true,
-    setupFiles:  [],
-    exclude: [
-      'node_modules/**',
-      '.next/**',
-    ],
+    globals: true,
+    setupFiles: [],
   },
   resolve: {
     alias: {

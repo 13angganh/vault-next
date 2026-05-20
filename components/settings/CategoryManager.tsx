@@ -12,8 +12,7 @@ import { useAppStore }           from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES }    from '@/lib/types';
 import type { CustomCategory }   from '@/lib/types';
 import { Button, IconButton }    from '@/components/ui/primitives';
-import { CUSTOM_CAT_ICONS, CategoryIcon } from '@/components/common/CategoryIcon';
-import { generateId }            from '@/lib/utils';
+import { CUSTOM_CAT_ICONS, CategoryIcon } from '@/components/entries/CategoryIcon';
 
 /* ── Daftar icon yang tersedia di picker ── */
 const ICON_LIST: Array<{ key: string; label: string }> = [
@@ -112,7 +111,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     if (allLabels.includes(trimmed.toLowerCase())) { setLabelErr('Nama kategori sudah ada'); return; }
 
     const newCat: CustomCategory = {
-      id:      mode === 'add' ? generateId() : (editTarget?.id ?? generateId()),
+      id:      mode === 'add' ? `cat_${Date.now()}` : (editTarget?.id ?? `cat_${Date.now()}`),
       label:   trimmed,
       emoji:   iconKey,   // keep emoji field filled for backward-compat
       iconKey: iconKey,

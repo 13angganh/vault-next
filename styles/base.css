@@ -56,8 +56,6 @@
   --success:     #00d4aa;
   --warning:     #f0a500;
   --danger:      #ff4d6d;
-  --danger-bg:     rgba(255, 77, 109, 0.07);
-  --danger-border: rgba(255, 77, 109, 0.30);
   --info:        #4d8eff;
 
   /* Notice */
@@ -113,13 +111,6 @@
   --border2:     #9CA3AF;
   --border-gold: rgba(200,134,10,0.3);
 
-  /* Semantic action colors — light mode override (kontras di bg terang) */
-  --action-blue:    #2563EB;
-  --action-amber:   #D97706;
-  --action-green:   #059669;
-  --action-red:     #DC2626;
-  --action-success: #059669;
-
   --str-1: #DC2626;
   --str-2: #EA580C;
   --str-3: #D97706;
@@ -131,8 +122,6 @@
   --success:     #059669;
   --warning:     #D97706;
   --danger:      #DC2626;
-  --danger-bg:     rgba(220, 38, 38, 0.07);
-  --danger-border: rgba(220, 38, 38, 0.30);
   --info:        #2563EB;
 
   --notice-bg:     rgba(5,150,105,0.06);
@@ -149,16 +138,6 @@
   --pin-key-bg:     #F3F2EF;
   --pin-key-border: #DDD9D0;
   --sidebar-bg:     #F0EFE9;
-
-  /* Category icon backgrounds — light mode (lebih gelap agar kontras di bg terang) */
-  --cat-sosmed-bg:  rgba(99, 102, 241, 0.12);
-  --cat-email-bg:   rgba(37, 99, 235, 0.10);
-  --cat-bank-bg:    rgba(5, 150, 105, 0.10);
-  --cat-game-bg:    rgba(220, 38, 38, 0.10);
-  --cat-crypto-bg:  rgba(200, 134, 10, 0.12);
-  --cat-kartu-bg:   rgba(2, 132, 199, 0.10);
-  --cat-wifi-bg:    rgba(126, 34, 206, 0.10);
-  --cat-lainnya-bg: rgba(107, 114, 128, 0.10);
 }
 
 /* RESET & BASE */
@@ -192,13 +171,13 @@ body {
     radial-gradient(ellipse 60% 40% at 20% 10%, rgba(240,165,0,0.035) 0%, transparent 60%),
     radial-gradient(ellipse 50% 30% at 80% 90%, rgba(0,212,170,0.03) 0%, transparent 60%);
   pointer-events: none;
-  z-index: var(--z-base);
+  z-index: 0;
 }
 
 /* Transisi tema — semua elemen kecuali yang punya animasi sendiri */
 *, *::before, *::after {
   transition-property: background-color, border-color, color, box-shadow;
-  transition-duration: 250ms; /* = --transition-normal duration */
+  transition-duration: 200ms;
   transition-timing-function: var(--ease-default);
 }
 
@@ -229,18 +208,3 @@ body {
 
 /* Tap highlight mobile */
 * { -webkit-tap-highlight-color: transparent; }
-
-/* Scrollbar hide on mobile — global, satu definisi */
-@media (max-width: 768px) {
-  ::-webkit-scrollbar { display: none; }
-  * { scrollbar-width: none; }
-}
-
-/* Reduced motion — global accessibility, satu definisi */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}

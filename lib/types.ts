@@ -52,17 +52,12 @@ export interface CustomCategory {
 
 // ─── Backup Format ────────────────────────────────────────────────────────────
 
-/** Format versi yang didukung untuk backup file */
-export type BackupFormat = 'vault2' | 'vault3';
-
 export interface VaultBackup {
-  format:     BackupFormat;
+  format:     'vault2';
   hint:       string;
   data:       string;           // ciphertext base64
   count:      number;
   exportedAt: string;           // ISO string
-  /** vault3+: versi schema entri. Diisi saat export vault3. */
-  schemaVersion?: number;
 }
 
 /** Isi plaintext yang dienkripsi di VaultBackup.data */
