@@ -85,6 +85,7 @@ export function Header({
           value={localQuery}
           onChange={(e) => handleSearch(e.target.value)}
           aria-label="Cari entri"
+          aria-keyshortcuts="Control+k Meta+k"
           data-search-input
         />
         {localQuery && (
@@ -112,7 +113,8 @@ export function Header({
             className="icon-btn"
             onClick={onAddEntry}
             aria-label="Tambah entri baru"
-            title="Tambah entri"
+            aria-keyshortcuts="Control+n Meta+n"
+            title="Tambah entri (Ctrl+N)"
           >
             <Plus size={16} />
           </button>

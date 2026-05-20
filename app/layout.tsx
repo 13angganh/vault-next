@@ -1,14 +1,15 @@
 import type { Metadata, Viewport } from 'next';
-import { Outfit, JetBrains_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import '@/styles/globals.css';
 
 /* Google Fonts via next/font (no CDN, no layout shift) */
-const outfit = Outfit({
+/* Inter menggantikan Outfit — lebih readable di ukuran kecil untuk data sensitif */
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
-  variable: '--font-outfit',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-outfit',  /* Nama variabel SAMA — tokens.css tidak perlu diubah */
   display: 'swap',
 });
 
@@ -62,7 +63,7 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#07080f" />
       </head>
-      <body className={`${outfit.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           {children}
         </ThemeProvider>
