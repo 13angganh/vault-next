@@ -15,7 +15,7 @@ import {
 
 export type AppView = 'lock' | 'app';
 export type FilterType = 'all' | 'fav' | 'bin' | string;
-export type SortType    = 'default'|'name_asc'|'name_desc'|'newest'|'oldest'|'fav_first';
+export type SortType    = 'default'|'name_asc'|'name_desc'|'newest'|'oldest'|'fav_first'|'cat_group';
 
 interface AppState {
   // ── Auth & Lock ──

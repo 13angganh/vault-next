@@ -7,7 +7,7 @@
  * agar cache lama otomatis bersih saat SW baru aktif.
  */
 
-const CACHE_VER   = 'v1.4.5'; // Sinkron dengan APP_VERSION di lib/constants.ts
+const CACHE_VER   = 'v1.5.1'; // Sinkron dengan APP_VERSION di lib/constants.ts
 const CACHE_NAME  = `vault-next-${CACHE_VER}`;
 const STATIC_ASSETS = [
   '/',

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, forwardRef, useImperativeHandle, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, forwardRef, useImperativeHandle, useMemo, useCallback, useEffect } from 'react';
 import { Search as SearchIcon, Trash2, Lock, X,
-  Star, FolderOpen, PackageOpen, ArrowUpDown, Check as CheckIcon,
+  Star, FolderOpen, PackageOpen, SortAsc, Check as CheckIcon,
 } from 'lucide-react';
 import { verifyPinAndGetMaster, saveVault } from '@/lib/vaultService';
 import { Button, EmptyState, Skeleton, ConfirmDialog } from '@/components/ui/primitives';
@@ -127,6 +127,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       case 'newest':    copy.sort((a,b)=>(b.ts??0)-(a.ts??0)); break;
       case 'oldest':    copy.sort((a,b)=>(a.ts??0)-(b.ts??0)); break;
       case 'fav_first': copy.sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)); break;
+      case 'cat_group':  copy.sort((a,b)=>a.cat.localeCompare(b.cat,'id')||a.name.localeCompare(b.name,'id')); break;
     }
     return copy;
     }, [vault, recycleBin, currentFilter, searchQuery, isRecycleBin, sortBy, activeFilter]);
@@ -298,14 +299,14 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
                 <div className="vault-sort-wrap">
                   <button className={`vault-sort-btn${showSortMenu?' vault-sort-btn--active':''}`}
                     onClick={() => setShowSortMenu(v=>!v)} aria-label="Urutkan entri">
-                    <ArrowUpDown size={14} />
+                    <SortAsc size={14} />
                   </button>
                   {showSortMenu && (
                     <>
                       <div className="vault-sort-backdrop" onClick={() => setShowSortMenu(false)} />
                       <div className="vault-sort-menu">
-                        {(['default','fav_first','name_asc','name_desc','newest','oldest'] as SortType[]).map(val => {
-                          const labels:Record<SortType,string>={default:'Default',fav_first:'Favorit dulu',name_asc:'Nama A–Z',name_desc:'Nama Z–A',newest:'Terbaru',oldest:'Terlama'};
+                        {(['default','fav_first','name_asc','name_desc','newest','oldest','cat_group'] as SortType[]).map(val => {
+                          const labels:Record<SortType,string>={default:'Default',fav_first:'Favorit dulu',name_asc:'Nama A–Z',name_desc:'Nama Z–A',newest:'Terbaru',oldest:'Terlama',cat_group:'Per Kategori'};
                           return (
                             <button key={val} className={`vault-sort-item${sortBy===val?' vault-sort-item--active':''}`}
                               onClick={()=>{setSortBy(val);setShowSortMenu(false);}}>
@@ -347,18 +348,50 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
             </div>
           ) : (
             <div className="vault-entries">
-              {entries.map((entry) => (
-                <div className="vault-entry-item" key={entry.id}>
-                  <EntryCard
-                    entry={entry}
-                    isRecycleBin={isRecycleBin}
-                    onEdit={handleEdit}
-                    onDetail={(e) => setDetailEntry(e)}
-                    onCopy={handleCopy}
-                    onRequestUnlock={(e) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }}
-                  />
-                </div>
-              ))}
+              {sortBy === 'cat_group' ? (
+                // Mode per kategori: tampilkan sub-header kategori di antara grup
+                (() => {
+                  const items: React.ReactNode[] = [];
+                  let lastCat = '';
+                  entries.forEach((entry) => {
+                    if (entry.cat !== lastCat) {
+                      const cat = allCats.find(c => c.id === entry.cat);
+                      items.push(
+                        <div key={`cat-${entry.cat}`} className="vault-cat-group-header">
+                          <span className="vault-cat-group-label">{cat?.label ?? entry.cat}</span>
+                        </div>
+                      );
+                      lastCat = entry.cat;
+                    }
+                    items.push(
+                      <div className="vault-entry-item" key={entry.id}>
+                        <EntryCard
+                          entry={entry}
+                          isRecycleBin={isRecycleBin}
+                          onEdit={handleEdit}
+                          onDetail={(e) => setDetailEntry(e)}
+                          onCopy={handleCopy}
+                          onRequestUnlock={(e) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }}
+                        />
+                      </div>
+                    );
+                  });
+                  return items;
+                })()
+              ) : (
+                entries.map((entry) => (
+                  <div className="vault-entry-item" key={entry.id}>
+                    <EntryCard
+                      entry={entry}
+                      isRecycleBin={isRecycleBin}
+                      onEdit={handleEdit}
+                      onDetail={(e) => setDetailEntry(e)}
+                      onCopy={handleCopy}
+                      onRequestUnlock={(e) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }}
+                    />
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

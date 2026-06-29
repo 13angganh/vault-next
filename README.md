@@ -2,7 +2,7 @@
 
 **PWA password manager offline-first** berbasis Next.js (App Router), TypeScript strict, Zustand, dan enkripsi AES-256-GCM.
 
-> **Versi saat ini:** v1.4.5  
+> **Versi saat ini:** v1.5.1  
 > **Repo:** https://github.com/13angganh/vault-next  
 > **Deploy:** Vercel (auto-deploy dari GitHub push)
 
@@ -190,6 +190,65 @@ Ketiganya punya `:hover`, `:active` (scale 0.88), dan `aria-label` yang konsiste
 ---
 
 ## Changelog
+
+### v1.5.1 — Sort Per Kategori + Fix Icon Sort (2026-06-29)
+
+**Tambah opsi sort Per Kategori:**
+- Opsi baru `Per Kategori` di dropdown sort
+- Entri dikelompokkan dengan sub-header nama kategori di antara grup
+  (contoh: BANK → [entri bank], CRYPTO → [entri crypto], dst)
+- Sub-header styling: uppercase, muted, letter-spacing — subtle dan bersih
+- Sort sekunder dalam grup: alphabetical by name
+
+**Fix icon sort:**
+- `ArrowUpDown` (ikon swap/switch akun) → `SortAsc` (ikon sort yang benar)
+- `SortAsc` dari Lucide secara universal dikenali sebagai ikon pengurutan
+
+### v1.5.0 — 6 Fitur Baru + Fix Chevron + Fix Ripple (2026-06-29)
+
+**Fix dari v1.4.6:**
+- Chevron settings bergetar: `motion.span` → `<span>` dengan CSS `transition: transform`
+  murni — tidak ada konflik antara Framer Motion dan React re-render saat klik
+- Ripple kuning sidebar: `rgba(240,165,0,0.22)` → `rgba(255,255,255,0.10)` netral
+
+**1. Quick copy di card collapsed:**
+- 2 tombol kecil (User icon, Key icon) di kanan card header
+- Copy username atau password langsung tanpa expand card
+- Feedback visual 1.5 detik: ikon berganti ke Check + warna teal
+- Hanya tampil saat card collapsed, tidak terkunci, tidak di recycle bin
+
+**2. Password health check (Settings → Kesehatan Password):**
+- `lib/healthCheck.ts`: scan duplikat password, password lemah (<8 karakter
+  atau terlalu umum), entri tanpa password, entri tua (>1 tahun tidak diupdate)
+- `HealthCheckPanel`: score ring 0–100 dengan warna teal/gold/red
+- Summary pills per kategori masalah
+- Issue list top 6 dengan detail masalah per entri
+
+**3. Sort & filter vault:**
+- Dropdown sort di header dengan 7 opsi: Default, Favorit dulu, Nama A–Z,
+  Nama Z–A, Terbaru, Terlama, Per Kategori
+- Filter chips 4 opsi: Semua, Favorit, Terkunci, Tanpa Password
+- `SortType` disimpan di appStore (persistent selama sesi)
+
+**4. Kosongkan sampah massal:**
+- Tombol "Kosongkan" di header saat view Recycle Bin dan ada isi
+- ConfirmDialog menampilkan jumlah entri yang akan dihapus permanen
+- `saveVault` dipanggil setelah berhasil hapus
+
+**5. Catatan khusus (kategori Note):**
+- Kategori baru `note` di `DEFAULT_CATEGORIES`
+- Fields: Isi Catatan (textarea panjang) + Referensi/URL
+- Tersedia di category picker form tambah/edit entri
+
+**6. Export PDF:**
+- `lib/exportPdf.ts` via `pdf-lib` — sepenuhnya client-side, 100% offline
+- Cover page gelap dengan info export dan warning SENSITIF
+- Halaman entri: dikelompokkan per kategori, field sesuai tipe entri
+- Watermark CONFIDENTIAL diagonal di setiap halaman
+- Tombol "Export PDF" di BackupModal di bawah tombol Export .vault
+- Catatan: `pdf-lib` tidak support password encryption di browser —
+  perlindungan melalui: (1) hanya bisa di-generate saat vault terbuka
+  (sudah terautentikasi), (2) watermark CONFIDENTIAL di setiap halaman
 
 ### v1.4.5 — Animasi Smooth + PINPad Refactor (2026-06-14)
 
