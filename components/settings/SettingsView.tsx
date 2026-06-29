@@ -5,23 +5,90 @@
  * Sesi B: refactor pakai Button + Toggle primitives.
  */
 
-import { useState }            from 'react';
-import { ArrowLeft, Cloud, LayoutGrid, Lock, Shield, Sun, Moon, Fingerprint } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { ArrowLeft, Cloud, LayoutGrid, Shield, Sun, Moon, Fingerprint, ChevronDown } from 'lucide-react';
 import { lsGet, LS_BIO_CRED_ID } from '@/lib/storage';
-import { AUTOLOCK_OPTIONS_MIN } from '@/lib/constants';
+import { AUTOLOCK_OPTIONS_MIN, APP_VERSION } from '@/lib/constants';
 import { useAppStore }         from '@/lib/store/appStore';
 import { useTheme }            from '@/components/providers/ThemeProvider';
 import { PINSettingsPanel }    from '@/components/settings/PINSettingsPanel';
 import { CategoryManager }     from '@/components/settings/CategoryManager';
 import { BackupModal }         from '@/components/settings/BackupModal';
 import { BiometricHintModal, clearBioSession } from '@/components/lock/BiometricHintModal';
-import { Button, Toggle } from '@/components/ui/primitives';
+import { Button, Toggle, ConfirmDialog } from '@/components/ui/primitives';
+import { HealthCheckPanel } from '@/components/settings/HealthCheckPanel';
+import { EASE } from '@/lib/animation';
 
 interface SettingsViewProps {
   onClose?: () => void;
 }
 
 type SubView = 'main' | 'categories';
+
+/* ── SectionItem: komponen section collapsible di luar SettingsView ──────
+   Harus di LUAR SettingsView agar tidak dibuat ulang setiap render.
+   Re-creation komponen = semua children unmount+mount → berkedip.
+   ─────────────────────────────────────────────────────────────────────── */
+interface SectionItemProps {
+  skey:           string;
+  title:          string;
+  badge?:         React.ReactNode;
+  dynamicHeight?: boolean;
+  openSections:   Record<string, boolean>;
+  onToggle:       (key: string) => void;
+  prefersReduced: boolean;
+  children:       React.ReactNode;
+}
+
+function SectionItem({
+  skey, title, badge, dynamicHeight,
+  openSections, onToggle, prefersReduced, children,
+}: SectionItemProps) {
+  const isOpen = openSections[skey] ?? false;
+  const MUTED_BADGES = ['Nonaktif', 'Auto-save Mati', 'Belum Terdaftar'];
+
+  return (
+    <div className="settings-section settings-section--collapsible">
+      <button
+        className={"settings-section__header" + (isOpen ? " settings-section__header--open" : "")}
+        onClick={() => onToggle(skey)}
+        aria-expanded={isOpen}
+        type="button"
+      >
+        <span className="settings-section-title">{title}</span>
+        {badge && !isOpen && (
+          <span className={
+            "settings-section__badge" +
+            (typeof badge === "string" && MUTED_BADGES.includes(badge)
+              ? " settings-section__badge--muted" : "")
+          }>{badge}</span>
+        )}
+        <span
+          className={"settings-section__chevron" + (isOpen ? " settings-section__chevron--open" : "")}
+          aria-hidden="true"
+        >
+          <ChevronDown size={13} />
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="body"
+            className="settings-section__body"
+            initial={{ opacity: 0, height: dynamicHeight ? "auto" : 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: dynamicHeight ? "auto" : 0 }}
+            transition={{ duration: prefersReduced ? 0 : 0.22, ease: EASE.inOut }}
+            style={{ overflow: dynamicHeight ? "visible" : "hidden" }}
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export function SettingsView({ onClose }: SettingsViewProps) {
   const autoLockMinutes   = useAppStore((s) => s.autoLockMinutes);
@@ -33,16 +100,26 @@ export function SettingsView({ onClose }: SettingsViewProps) {
   const vault             = useAppStore((s) => s.vault);
   const recycleBin        = useAppStore((s) => s.recycleBin);
   const customCats        = useAppStore((s) => s.customCats);
-  const lock              = useAppStore((s) => s.lock);
   const biometricEnabled  = useAppStore((s) => s.biometricEnabled);
   const setBiometricEnabled = useAppStore((s) => s.setBiometricEnabled);
   const setBiometricCredId  = useAppStore((s) => s.setBiometricCredId);
   const masterPw          = useAppStore((s) => s.masterPw);
   const { theme, toggleTheme } = useTheme();
 
-  const [subView,      setSubView]      = useState<SubView>('main');
-  const [showBackup,   setShowBackup]   = useState(false);
-  const [showBioModal, setShowBioModal] = useState(false);
+  const [subView,           setSubView]           = useState<SubView>('main');
+
+  // Collapsible sections
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    tampilan: false, biometrik: false, keamanan: false,
+    penyimpanan: false, backup: false, kategori: false, info: false, health: false,
+  });
+  const prefersReduced = useReducedMotion();
+  const toggleSection = useCallback((key: string) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+  const [showBackup,        setShowBackup]        = useState(false);
+  const [showBioModal,      setShowBioModal]      = useState(false);
+  const [confirmDeleteBio,  setConfirmDeleteBio]  = useState(false);
 
   const isWebAuthnSupported = typeof window !== 'undefined' && !!window.PublicKeyCredential;
   const hasBioCredential    = typeof window !== 'undefined' && !!lsGet(LS_BIO_CRED_ID);  // F2-07
@@ -63,50 +140,46 @@ export function SettingsView({ onClose }: SettingsViewProps) {
               <ArrowLeft size={18} />
             </button>
           )}
-          <h2 className="page-header__title">
-            Pengaturan
-          </h2>
+          <h2 className="page-header__title">Pengaturan</h2>
         </div>
         <div className="settings-page__body">
 
-          {/* Tampilan */}
-          <section className="settings-section">
-            <h3 className="settings-section-title">Tampilan</h3>
+          {/* ── Tampilan ── */}
+          <SectionItem skey="tampilan" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Tampilan" badge={theme === "dark" ? "Gelap" : "Terang"}>
             <div className="settings-row">
               <div className="settings-row__info">
-                <span className="settings-row__label">Tema</span>
-                <span className="settings-row__desc">Mode {theme === 'dark' ? 'gelap' : 'terang'} aktif</span>
+                <span className="settings-row__label">Tema Tampilan</span>
+                <span className="settings-row__desc">Aktif: <strong>{theme === "dark" ? "Gelap" : "Terang"}</strong> — klik untuk mengganti</span>
               </div>
               <Button variant="ghost" size="sm" className="settings-row__action" onClick={toggleTheme}
-                leftIcon={theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}>
-                {theme === 'dark' ? 'Terang' : 'Gelap'}
+                leftIcon={theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}>
+                {theme === "dark" ? "Ke Terang" : "Ke Gelap"}
               </Button>
             </div>
-          </section>
+          </SectionItem>
 
-          {/* Biometrik */}
+          {/* ── Biometrik ── */}
           {isWebAuthnSupported && (
-            <section className="settings-section">
-              <h3 className="settings-section-title">Biometrik</h3>
+            <SectionItem skey="biometrik" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Biometrik" badge={hasBioCredential ? (biometricEnabled ? "Aktif" : "Nonaktif") : "Belum Terdaftar"}>
               <div className="settings-row">
                 <div className="settings-row__info">
                   <span className="settings-row__label">
-                    <Fingerprint size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
+                    <Fingerprint size={14} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
                     Login Sidik Jari
                   </span>
                   <span className="settings-row__desc">
                     {hasBioCredential
-                      ? biometricEnabled ? 'Aktif — buka vault dengan sidik jari' : 'Terdaftar tapi nonaktif'
-                      : 'Belum didaftarkan'}
+                      ? biometricEnabled ? "Aktif — buka vault dengan sidik jari" : "Terdaftar tapi nonaktif"
+                      : "Belum didaftarkan"}
                   </span>
                 </div>
                 {hasBioCredential ? (
                   <Toggle checked={biometricEnabled} onChange={setBiometricEnabled}
-                    label={biometricEnabled ? 'Nonaktifkan biometrik' : 'Aktifkan biometrik'} />
+                    label={biometricEnabled ? "Nonaktifkan biometrik" : "Aktifkan biometrik"} />
                 ) : (
                   <Button variant="ghost" size="sm" className="settings-row__action"
                     onClick={() => setShowBioModal(true)} disabled={!masterPw}
-                    title={!masterPw ? 'Tidak bisa mendaftarkan — sesi tidak aktif' : undefined}>
+                    title={!masterPw ? "Tidak bisa mendaftarkan — sesi tidak aktif" : undefined}>
                     Daftarkan
                   </Button>
                 )}
@@ -117,21 +190,17 @@ export function SettingsView({ onClose }: SettingsViewProps) {
                     <span className="settings-row__label">Hapus Registrasi</span>
                     <span className="settings-row__desc">Hapus data sidik jari dari perangkat ini</span>
                   </div>
-                  <Button variant="danger" size="sm" className="settings-row__action" onClick={() => {
-                    setBiometricEnabled(false);
-                    setBiometricCredId(null);
-                    clearBioSession(); // hapus sessionStorage + LS_BIO_SESSION sekaligus
-                  }}>
+                  <Button variant="danger" size="sm" className="settings-row__action"
+                    onClick={() => setConfirmDeleteBio(true)}>
                     Hapus
                   </Button>
                 </div>
               )}
-            </section>
+            </SectionItem>
           )}
 
-          {/* Keamanan */}
-          <section className="settings-section">
-            <h3 className="settings-section-title">Keamanan</h3>
+          {/* ── Keamanan ── */}
+          <SectionItem skey="keamanan" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Keamanan" badge={AUTOLOCK_OPTIONS_MIN.find((o) => o.value === autoLockMinutes)?.label ?? ""} dynamicHeight>
             <div className="settings-row">
               <div className="settings-row__info">
                 <span className="settings-row__label">Auto-lock</span>
@@ -149,11 +218,10 @@ export function SettingsView({ onClose }: SettingsViewProps) {
               </div>
               <PINSettingsPanel />
             </div>
-          </section>
+          </SectionItem>
 
-          {/* Penyimpanan */}
-          <section className="settings-section">
-            <h3 className="settings-section-title">Penyimpanan</h3>
+          {/* ── Penyimpanan ── */}
+          <SectionItem skey="penyimpanan" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Penyimpanan" badge={autoSaveEnabled ? "Auto-save Aktif" : "Auto-save Mati"}>
             <div className="settings-row">
               <div className="settings-row__info">
                 <span className="settings-row__label">Auto-save</span>
@@ -171,41 +239,49 @@ export function SettingsView({ onClose }: SettingsViewProps) {
                 {backupOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
-          </section>
+          </SectionItem>
 
-          {/* Backup & Sync */}
-          <section className="settings-section">
-            <h3 className="settings-section-title">Backup & Sync</h3>
+          {/* ── Backup & Sync ── */}
+          <SectionItem skey="backup" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Backup & Sync">
             <div className="settings-row">
               <div className="settings-row__info">
-                <span className="settings-row__label">Backup & Sync</span>
-                <span className="settings-row__desc">Backup & pulihkan .vault · Sinkron antar perangkat</span>
+                <span className="settings-row__label">Export &amp; Import</span>
+                <span className="settings-row__desc">Simpan file .vault atau pulihkan dari backup</span>
               </div>
               <Button variant="ghost" size="sm" className="settings-row__action"
                 onClick={() => setShowBackup(true)} leftIcon={<Cloud size={14} />}>
                 Buka
               </Button>
             </div>
-          </section>
+            <div className="settings-row">
+              <div className="settings-row__info">
+                <span className="settings-row__label">Sinkron Antar Perangkat</span>
+                <span className="settings-row__desc">Salin teks terenkripsi ke perangkat lain</span>
+              </div>
+              <Button variant="ghost" size="sm" className="settings-row__action"
+                onClick={() => setShowBackup(true)} leftIcon={<Cloud size={14} />}>
+                Buka
+              </Button>
+            </div>
+          </SectionItem>
 
-          {/* Kategori */}
-          <section className="settings-section">
-            <h3 className="settings-section-title">Kategori</h3>
+          {/* ── Kategori ── */}
+          <SectionItem skey="kategori" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Kategori" badge={customCats.length > 0 ? `+${customCats.length} custom` : "8 bawaan"}>
             <div className="settings-row">
               <div className="settings-row__info">
                 <span className="settings-row__label">Kelola Kategori</span>
                 <span className="settings-row__desc">{customCats.length} custom · 8 bawaan</span>
               </div>
               <Button variant="ghost" size="sm" className="settings-row__action"
-                onClick={() => setSubView('categories')} leftIcon={<LayoutGrid size={14} />}>
+                onClick={() => setSubView("categories")} leftIcon={<LayoutGrid size={14} />}>
                 Buka
               </Button>
             </div>
-          </section>
+          </SectionItem>
 
-          {/* Info Vault */}
-          <section className="settings-section">
-            <h3 className="settings-section-title">Info Vault</h3>
+          {/* ── Info Vault ── */}
+          <SectionItem skey="info" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Info Vault" badge={`${vault.length} entri`}>
+            <div className="settings-info-grid-wrap">
             <div className="settings-info-grid">
               <div className="settings-info-item">
                 <span className="settings-info-item__val">{vault.length}</span>
@@ -220,25 +296,24 @@ export function SettingsView({ onClose }: SettingsViewProps) {
                 <span className="settings-info-item__label">Enkripsi</span>
               </div>
               <div className="settings-info-item">
-                <span className="settings-info-item__val">v1.0</span>
+                <span className="settings-info-item__val">v{APP_VERSION}</span>
                 <span className="settings-info-item__label">Versi</span>
               </div>
             </div>
-          </section>
+            </div>
+          </SectionItem>
 
-          {/* Sesi */}
-          <section className="settings-section">
-            <h3 className="settings-section-title">Sesi</h3>
-            <Button variant="ghost" className="settings-lock-btn" onClick={lock} leftIcon={<Lock size={15} />}>
-              Kunci Vault Sekarang
-            </Button>
-          </section>
+          <SectionItem skey="health" title="Kesehatan Password"
+            badge={`${vault.length} entri`}
+            openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced}>
+            <HealthCheckPanel />
+          </SectionItem>
 
           <div className="settings-signature">
             <Shield size={13} />
-            <span>Vault Next v1.0</span>
+            <span>Vault Next v{APP_VERSION}</span>
             <span>·</span>
-            <span>100% Offline · AES-256-GCM · PBKDF2</span>
+            <span>100% Offline · AES-256-GCM</span>
           </div>
         </div>
       </div>
@@ -247,6 +322,23 @@ export function SettingsView({ onClose }: SettingsViewProps) {
       {showBioModal && (
         <BiometricHintModal mode="register" masterPw={masterPw} onClose={() => setShowBioModal(false)} />
       )}
+
+      {/* ── Confirm: Hapus Registrasi Biometrik ── */}
+      <ConfirmDialog
+        open={confirmDeleteBio}
+        onCancel={() => setConfirmDeleteBio(false)}
+        onConfirm={() => {
+          setBiometricEnabled(false);
+          setBiometricCredId(null);
+          clearBioSession();
+          setConfirmDeleteBio(false);
+        }}
+        title="Hapus Registrasi Biometrik?"
+        message="Data sidik jari akan dihapus dari perangkat ini. Login biometrik tidak bisa digunakan sebelum didaftarkan ulang."
+        confirmLabel="Hapus Registrasi"
+        variant="danger"
+      />
+
     </>
   );
 }

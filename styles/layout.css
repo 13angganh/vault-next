@@ -7,7 +7,7 @@
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  height: calc(var(--vh, 1vh) * 100);
+  height: calc(var(--vh, 1dvh) * 100);
   max-height: 100dvh;
   background: var(--bg);
   padding-top: env(safe-area-inset-top);
@@ -165,7 +165,7 @@
   background: var(--gold);
   border: none;
   border-radius: var(--radius-md);
-  color: #000;
+  color: var(--text);
   cursor: pointer;
   flex-shrink: 0;
   transition: background var(--transition-fast), transform var(--transition-fast);
@@ -220,6 +220,8 @@
 .icon-btn--danger:hover::before { border-color: var(--red); background: rgba(255,77,109,0.08); }
 .icon-btn:hover { color: var(--text); }
 .icon-btn--danger:hover { color: var(--red); }
+.icon-btn:active { transform: scale(0.88); }
+.icon-btn--danger:active { transform: scale(0.88); }
 
 
 
@@ -308,7 +310,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: var(--text-xl);
   background: var(--bg-s2);
   border-radius: var(--radius-md);
   flex-shrink: 0;
@@ -353,7 +355,7 @@
 }
 
 .entry-card-placeholder__badge {
-  font-size: 14px;
+  font-size: var(--text-base);
   opacity: 0.4;
 }
 
@@ -386,7 +388,7 @@
 
 /* View transition (Vault ↔ Settings) */
 .view-transition {
-  animation: viewFadeIn 0.2s ease both;
+  animation: viewFadeIn 0.2s var(--ease-default) both;
   height: 100%;
 }
 
@@ -454,7 +456,7 @@
   left: 0; right: 0;
   z-index: var(--z-toast);
   background: var(--gold);
-  color: #000;
+  color: var(--text);
   padding: 8px var(--space-4);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -506,7 +508,7 @@
   flex: 1;
   min-height: 0;
   background: var(--bg);
-  animation: fadeScaleIn 0.2s ease both;
+  animation: fadeScaleIn 0.2s var(--ease-default) both;
 }
 
 /* Header sticky */
@@ -586,7 +588,7 @@
 .entry-form-page__footer {
   flex-shrink: 0;
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
   justify-content: flex-end;
   align-items: center;
   padding: 12px 16px;
@@ -604,7 +606,7 @@
 .cat-picker--full {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
   max-height: none !important;
   overflow: visible !important;
 }
@@ -622,7 +624,7 @@
   align-items: flex-start;
   justify-content: center;
   padding: calc(var(--appbar-height) + env(safe-area-inset-top, 0px) + 16px) 16px 16px;
-  animation: fadeIn 0.18s ease both;
+  animation: fadeIn 0.18s var(--ease-default) both;
 }
 
 .vl-unlock-card {
@@ -633,16 +635,16 @@
   max-width: 360px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
   padding: 20px;
   box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-  animation: fadeScaleIn 0.22s cubic-bezier(0.34,1.2,0.64,1) both;
+  animation: fadeScaleIn 0.22s var(--ease-spring) both;
 }
 
 .vl-unlock-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .vl-unlock-title {
@@ -692,7 +694,7 @@
 
 .vl-unlock-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
   margin-top: 4px;
 }
 
@@ -754,7 +756,7 @@
 }
 
 .vault-skeleton-card {
-  padding: 14px;
+  padding: var(--space-4);
   cursor: default;
 }
 
@@ -768,7 +770,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 /* Wrapper untuk empty state — centered di scroll area */
@@ -856,3 +858,79 @@
 .page-header__action {
   flex-shrink: 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v1.3.0 — VAULT LIST STAGGER + LAYOUT POLISH
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Stagger entrance untuk vault list items ─────────────────────────── */
+
+.vault-entry-item {
+  animation: entryStaggerIn 0.32s var(--ease-out) both;
+}
+
+@keyframes entryStaggerIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* Delay per item: 0–9 (lebih dari itu pakai default) */
+.vault-entry-item:nth-child(1)  { animation-delay: 0ms;   }
+.vault-entry-item:nth-child(2)  { animation-delay: 40ms;  }
+.vault-entry-item:nth-child(3)  { animation-delay: 70ms;  }
+.vault-entry-item:nth-child(4)  { animation-delay: 95ms;  }
+.vault-entry-item:nth-child(5)  { animation-delay: 115ms; }
+.vault-entry-item:nth-child(6)  { animation-delay: 130ms; }
+.vault-entry-item:nth-child(7)  { animation-delay: 145ms; }
+.vault-entry-item:nth-child(8)  { animation-delay: 158ms; }
+.vault-entry-item:nth-child(9)  { animation-delay: 170ms; }
+.vault-entry-item:nth-child(n+10) { animation-delay: 180ms; }
+
+/* Reduksi motion: hilangkan semua stagger jika user prefer */
+@media (prefers-reduced-motion: reduce) {
+  .vault-entry-item {
+    animation: none !important;
+  }
+}
+
+/* ── vault-entries: perbaiki gap & padding ────────────────────────────── */
+
+.vault-entries {
+  gap: 8px;
+}
+
+/* ── vault-list-header: subtle glassmorphism ─────────────────────────── */
+
+.vault-list-header {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── Empty state: fade-up entrance ──────────────────────────────────── */
+
+.vault-empty-wrap {
+  animation: fadeUp 0.3s var(--ease-out) both;
+}
+
+/* ── filter badge count pulse ─────────────────────────────────────────── */
+
+.vault-list-subtitle {
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+/* ── Sort, filter chips, empty bin — v1.5.0 ─────────────────────────── */
+.vault-list-header__top { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3); }
+.vault-sort-wrap { position:relative; flex-shrink:0; }
+.vault-sort-btn { width:34px; height:34px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--bg-s2); color:var(--muted); cursor:pointer; transition:color var(--transition-fast),border-color var(--transition-fast),background var(--transition-fast); }
+.vault-sort-btn:hover,.vault-sort-btn--active { color:var(--gold); border-color:var(--gold-border); background:var(--gold-dim); }
+.vault-sort-backdrop { position:fixed; inset:0; z-index:var(--z-dropdown); }
+.vault-sort-menu { position:absolute; top:calc(100% + var(--space-2)); right:0; background:var(--bg-s2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:var(--space-1); min-width:150px; z-index:calc(var(--z-dropdown) + 1); box-shadow:0 8px 24px rgba(0,0,0,0.3); animation:fadeScaleIn 0.15s var(--ease-spring) both; }
+.vault-sort-item { display:flex; align-items:center; gap:var(--space-2); width:100%; padding:var(--space-2) var(--space-3); border:none; background:none; border-radius:var(--radius-md); font-size:var(--text-sm); color:var(--text2); cursor:pointer; text-align:left; transition:background var(--transition-fast),color var(--transition-fast); }
+.vault-sort-item:hover { background:var(--bg-s3); color:var(--text); }
+.vault-sort-item--active { color:var(--gold); font-weight:600; }
+.vault-filter-chips { display:flex; gap:var(--space-2); flex-wrap:wrap; margin-top:var(--space-2); }
+.vault-chip { display:inline-flex; align-items:center; padding:3px var(--space-3); border-radius:999px; border:1px solid var(--border); background:var(--bg-s2); font-size:var(--text-xs); font-weight:500; color:var(--muted2); cursor:pointer; white-space:nowrap; transition:all var(--transition-fast); }
+.vault-chip:hover { border-color:var(--gold-border); color:var(--gold); }
+.vault-chip--active { border-color:var(--gold-border); background:var(--gold-dim); color:var(--gold); font-weight:600; }
+.vault-empty-bin-btn { padding:var(--space-2) var(--space-3); border:1px solid rgba(255,77,109,0.3); border-radius:var(--radius-md); background:rgba(255,77,109,0.08); color:var(--red); font-size:var(--text-xs); font-weight:600; cursor:pointer; white-space:nowrap; transition:all var(--transition-fast); flex-shrink:0; }
+.vault-empty-bin-btn:hover { background:rgba(255,77,109,0.15); border-color:rgba(255,77,109,0.5); }

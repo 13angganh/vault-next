@@ -57,7 +57,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   // TIDAK return null — langsung render children
-  // Tema awal sudah ditangani anti-flash script di layout.tsx
+  // v1.4.0: Tema awal kini benar-benar ditangani anti-flash inline script
+  // di app/layout.tsx <head> (dieksekusi sync sebelum paint pertama).
+  // useEffect di atas hanya sinkronisasi React state dengan attribute
+  // yang sudah di-set script tersebut — tidak perlu setAttribute lagi disini
+  // kecuali sebagai fallback jika script gagal jalan (browser sangat lawas).
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}

@@ -2,9 +2,13 @@
  * Vault Next — Service Worker
  * Cache-first untuk assets statis, network-first untuk navigasi
  * Auto update: saat ada versi baru, notif muncul lalu reload
+ *
+ * Cache versioning: ganti CACHE_VER saat ada perubahan besar
+ * agar cache lama otomatis bersih saat SW baru aktif.
  */
 
-const CACHE_NAME = 'vault-next-v1';
+const CACHE_VER   = 'v1.4.5'; // Sinkron dengan APP_VERSION di lib/constants.ts
+const CACHE_NAME  = `vault-next-${CACHE_VER}`;
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

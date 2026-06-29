@@ -1,38 +1,12 @@
 /* styles/components/modal.css — Vault Next */
 /* Modal overlay, modal base, entry unlock overlay, form overlays */
 
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: var(--bg-overlay);
-  z-index: var(--z-modal);
-  display: flex; align-items: center; justify-content: center;
-  padding: var(--space-4);
-  animation: fadeIn 200ms var(--ease-default) both;
-}
-/* .modal utama — lihat definisi di section MODAL di bawah */
-.modal-sm { max-width: var(--modal-width-sm); }
-.modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.modal-title {
-  font-size: var(--text-md);
-  font-weight: 700;
-  color: var(--text);
-}
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-5) var(--space-6);
-}
-.modal-footer {
-  padding: var(--space-4) var(--space-6);
-  border-top: 1px solid var(--border);
-  display: flex; gap: var(--space-3);
-  flex-shrink: 0;
-}
+/* v1.4.0: .modal-overlay sebelumnya didefinisikan 3x di file ini (v1.0, lalu
+   "Bug 4 FIX" override, lalu "satu definisi bersih sesi 7"). Hanya definisi
+   terakhir (sesi 7, di bawah) yang dipertahankan sebagai sumber tunggal.
+   .modal-sm, .modal-header, .modal-title, .modal-body, .modal-footer
+   (dash-style naming) juga dihapus — dead code, tidak pernah dipakai.
+   Sistem aktif memakai BEM-style: .modal__header, .modal__title, dst. */
 
 /* FORM UTILS */
 .form-group { margin-bottom: var(--space-4); }
@@ -114,16 +88,9 @@
   color: var(--red);
 }
 
-/* BADGE / CHIP */
-.badge {
-  display: inline-flex; align-items: center;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  font-family: var(--font-mono);
-  flex-shrink: 0;
-}
+/* BADGE / CHIP — v1.4.0: definisi dipindahkan ke ui.css sebagai sumber tunggal.
+   Sebelumnya duplikat di sini menyebabkan font-family: mono menimpa Badge primitive
+   karena modal.css diimport setelah ui.css. */
 
 /* DIVIDER */
 .divider {
@@ -164,19 +131,8 @@
 
 
 /* Modal overlay & base modal */
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 16px;
-  animation: fadeIn 0.15s ease;
-}
+/* .modal-overlay: lihat definisi tunggal di bawah (sesi 7) — z-index 200 literal
+   di sini sebelumnya konflik dengan var(--z-modal) di definisi final. */
 
 .modal {
   background: var(--bg-s2);
@@ -186,7 +142,7 @@
   max-height: calc(100dvh - 80px);
   display: flex;
   flex-direction: column;
-  animation: fadeScaleIn 0.22s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  animation: fadeScaleIn 0.22s var(--ease-spring) both;
   overflow: hidden; /* perlu untuk border-radius, tapi body & footer handle scroll */
   position: relative;
   z-index: calc(var(--z-modal) + 1);
@@ -293,7 +249,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  animation: fadeIn 0.18s ease both;
+  animation: fadeIn 0.18s var(--ease-default) both;
 }
 
 [data-theme="light"] .modal-overlay {
@@ -345,7 +301,7 @@
 .backup-section {
   /* semua tab section pakai visibility bukan conditional render */
   padding: 16px 0 4px;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s var(--ease-default);
 }
 
 .backup-section[style*="none"] {
@@ -378,7 +334,7 @@
 }
 
 .backup-section--visible {
-  animation: tabFadeIn 0.18s ease both;
+  animation: tabFadeIn 0.18s var(--ease-default) both;
 }
 
 /* Input focus: pastikan tidak ada yang intercept focus saat ketik */
@@ -387,4 +343,120 @@
   /* Hindari re-focus dari focus trap saat nilai berubah */
   -webkit-user-select: text;
   user-select: text;
+}
+
+/* ── CONFIRM DIALOG — v1.2.0 ─────────────────────────────────────────────── */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: var(--z-top);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+[data-theme="light"] .confirm-overlay {
+  background: rgba(0,0,0,0.45);
+}
+
+.confirm-card {
+  background: var(--bg-s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  width: min(340px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+}
+
+/* Aksen warna kiri sesuai variant */
+.confirm-card--danger  { border-left: 3px solid var(--red); }
+.confirm-card--warning { border-left: 3px solid var(--gold); }
+.confirm-card--lock    { border-left: 3px solid var(--gold); }
+
+.confirm-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.confirm-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.confirm-icon--danger  { background: rgba(255,77,109,0.12);  color: var(--red); }
+.confirm-icon--warning { background: rgba(240,165,0,0.12);   color: var(--gold); }
+.confirm-icon--lock    { background: rgba(240,165,0,0.12);   color: var(--gold); }
+
+.confirm-title {
+  flex: 1;
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.confirm-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--muted);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.confirm-close:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(255,77,109,0.08);
+}
+
+.confirm-body {
+  padding: var(--space-4) var(--space-5);
+}
+
+.confirm-message {
+  font-size: var(--text-base);
+  color: var(--text2);
+  line-height: var(--lh-loose);
+  margin: 0;
+}
+
+.confirm-message strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.confirm-footer {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 400px) {
+  .confirm-card { width: calc(100vw - 24px); }
+  .confirm-footer { flex-direction: column-reverse; }
+  .confirm-footer .btn { width: 100%; justify-content: center; }
 }

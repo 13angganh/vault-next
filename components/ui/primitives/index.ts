@@ -37,3 +37,6 @@ export { ErrorState }   from './ErrorState';
 export type { ErrorStateProps } from './ErrorState';
 
 export { useToast }     from './Toast';
+
+export { ConfirmDialog }    from './ConfirmDialog';
+export type { ConfirmDialogProps, ConfirmVariant } from './ConfirmDialog';

@@ -28,7 +28,10 @@
   --ls-tight:  -0.02em; /* display heading */
 
   /* Font Families */
-  --font-sans: var(--font-outfit), 'Outfit', sans-serif;
+  --font-sans: var(--font-inter), 'Inter', sans-serif;
+  /* v1.4.0: nama variable --font-outfit dipertahankan untuk backward-compat
+     tapi fallback string diperbaiki dari 'Outfit' ke 'Inter' — font yang
+     sebenarnya dimuat via next/font/google sejak beberapa versi lalu. */
   --font-mono: var(--font-jetbrains), 'JetBrains Mono', monospace;
 
   /* Spacing Scale (4px base) */
@@ -68,14 +71,9 @@
   --modal-width:      480px;
   --modal-width-sm:   360px;
 
-  /* Strength meter colors (F2-01) */
-  --str-1: #ef4444;
-  --str-2: #f97316;
-  --str-3: #eab308;
-  --str-4: #84cc16;
-  --str-5: #22c55e;
-  --str-6: #10b981;
-  --str-7: var(--gold);
+  /* Strength meter colors (F2-01) — didefinisikan di base.css per tema (dark/light).
+     v1.4.0: definisi di sini dihapus — tokens.css diimport sebelum base.css di
+     globals.css, sehingga nilai di sini selalu di-override oleh base.css. Dead code. */
 
   /* Category icon colors (F2-02) */
   --cat-sosmed:  #818cf8;

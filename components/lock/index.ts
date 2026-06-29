@@ -6,7 +6,6 @@
 
 export { LockScreen }         from './LockScreen';
 export { SetupFlow }          from './SetupFlow';
-export { MasterPwPanel }      from './MasterPwPanel';
 export { RecoveryPanel }      from './RecoveryPanel';
 export { PINPad }             from './PINPad';
 export { BiometricHintModal } from './BiometricHintModal';

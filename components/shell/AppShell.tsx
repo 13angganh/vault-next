@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { DUR, EASE }               from '@/lib/animation';
 import { useRipple }            from '@/lib/hooks/useRipple';
 import { AutoLockManager }      from '@/components/shell/AutoLockManager';
 import { Sidebar }              from '@/components/shell/Sidebar';
@@ -11,6 +13,7 @@ import { SettingsView }         from '@/components/settings/SettingsView';
 import { BackupReminderModal }  from '@/components/settings/BackupReminderModal';
 import { BackupModal }          from '@/components/settings/BackupModal';
 import { useAppStore }          from '@/lib/store/appStore';
+import { APP_NAME }             from '@/lib/constants';
 
 type ShellView = 'vault' | 'settings';
 
@@ -89,10 +92,16 @@ export function AppShell() {
     setShellView('settings');
   }, []);
 
-  const viewTitle = shellView === 'settings' ? 'Pengaturan' : 'Vault Next';
+  const viewTitle      = shellView === 'settings' ? 'Pengaturan' : APP_NAME;
+  const prefersReduced = useReducedMotion();
 
   return (
-    <div className="app-shell">
+    <motion.div
+      className="app-shell"
+      initial={prefersReduced ? false : { opacity: 0, y: 6 }}
+      animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
+      transition={{ duration: DUR.expand, ease: EASE.out }}
+    >
       <AutoLockManager />
 
       {/* SW update bar */}
@@ -139,6 +148,6 @@ export function AppShell() {
 
       <BackupReminderModal onOpenBackup={() => setShowBackup(true)} />
       {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
-    </div>
+    </motion.div>
   );
 }

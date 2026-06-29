@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { LayoutGrid, Star, Trash2, Settings, X, ChevronDown } from 'lucide-react';
 import { VaultIcon }          from '@/components/common/LoadingScreen';
+import { APP_VERSION }        from '@/lib/constants';
 import { useAppStore }        from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import type { FilterType }    from '@/lib/store/appStore';
@@ -89,8 +90,11 @@ export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarP
           <div className="sidebar-logo">
             <VaultIcon size={26} />
             <div className="sidebar-logo__text">
-              <span className="sidebar-logo__name">Vault</span>
-              <span className="sidebar-logo__name sidebar-logo__name--gold"> Next</span>
+              <div className="sidebar-logo__name-row">
+                <span className="sidebar-logo__name">Vault</span>
+                <span className="sidebar-logo__name sidebar-logo__name--gold"> Next</span>
+              </div>
+              <span className="sidebar-logo__version">v{APP_VERSION}</span>
             </div>
           </div>
           <button
@@ -168,7 +172,7 @@ export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarP
           </nav>
         </div>
 
-        {/* ── Footer: Pengaturan — fixed di bawah ── */}
+        {/* ── Footer: Pengaturan + versi — fixed di bawah ── */}
         <div className="sidebar-divider" />
         <div className="sidebar-footer">
           <NavItem
@@ -178,6 +182,7 @@ export function Sidebar({ open, onClose, onSettingsClick, onNavVault }: SidebarP
             active={false}
             onClick={handleSettings}
           />
+
         </div>
         </motion.aside>
         )}

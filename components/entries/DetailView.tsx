@@ -8,14 +8,19 @@
  * Semua field, show/hide per field sensitif, copy semua field.
  * Edit / Hapus / Lock / Favorit action.
  * Escape key dismiss.
+ *
+ * v1.4.0: FieldRow & SeedSection dipindah ke top-level (di luar DetailView)
+ * untuk cegah re-creation komponen setiap render — pola yang sama dengan
+ * fix SectionWrap di SettingsView (v1.3.6). Delete diganti dari pola
+ * double-tap ke ConfirmDialog agar konsisten dengan EntryCard/CategoryManager.
  */
 
 import { useState, useEffect } from 'react';
-
 import { X, Star, Lock, Unlock, Eye, EyeOff, Copy, Pencil, Trash2 } from 'lucide-react';
 import { useAppStore }       from '@/lib/store/appStore';
 import { saveVault }          from '@/lib/vaultService';
 import { CategoryIcon }       from '@/components/entries/CategoryIcon';
+import { ConfirmDialog }      from '@/components/ui/primitives';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import type { VaultEntry }    from '@/lib/types';
 
@@ -24,6 +29,85 @@ interface DetailViewProps {
   onClose: () => void;
   onEdit:  (entry: VaultEntry) => void;
   onCopy:  (text: string, label: string) => void;
+}
+
+/* ── FieldRow: top-level component, bukan dideklarasikan di dalam DetailView ──
+   Re-creation komponen tiap render = children unmount+mount = berkedip.
+   ─────────────────────────────────────────────────────────────────────────── */
+interface FieldRowProps {
+  label:            string;
+  value?:           string;
+  sensitive?:       boolean;
+  isVisible?:       boolean;
+  onToggleVisible?: () => void;
+  onCopy:           (value: string, label: string) => void;
+  mono?:            boolean;
+}
+
+function FieldRow({
+  label, value, sensitive = false, isVisible, onToggleVisible, onCopy, mono = false,
+}: FieldRowProps) {
+  if (!value) return null;
+  const display = sensitive && !isVisible ? '••••••••' : value;
+  return (
+    <div className="detail-field">
+      <span className="detail-field__label">{label}</span>
+      <div className="detail-field__row">
+        <span className={`detail-field__value ${mono ? 'mono' : ''}`}>{display}</span>
+        <div className="detail-field__btns">
+          {sensitive && (
+            <button className="ibtn" onClick={onToggleVisible} aria-label={isVisible ? 'Sembunyikan' : 'Tampilkan'}>
+              {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          )}
+          <button className="ibtn" onClick={() => onCopy(value, label)} aria-label={`Salin ${label}`} title="Salin">
+            <Copy size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── SeedSection: top-level component ── */
+interface SeedSectionProps {
+  seedPhrase?:     string[];
+  seedShow:        boolean;
+  onToggleVisible: () => void;
+  onCopy:          (value: string, label: string) => void;
+}
+
+function SeedSection({ seedPhrase, seedShow, onToggleVisible, onCopy }: SeedSectionProps) {
+  if (!seedPhrase?.length) return null;
+  const words = seedPhrase;
+  return (
+    <div className="detail-field">
+      <div className="detail-field__label-row">
+        <span className="detail-field__label">Seed Phrase ({words.length} kata)</span>
+        <div className="detail-field__btns">
+          <button className="ibtn" onClick={onToggleVisible} aria-label={seedShow ? 'Sembunyikan' : 'Tampilkan'}>
+            {seedShow ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+          {seedShow && (
+            <button className="ibtn" onClick={() => onCopy(words.join(' '), 'Seed Phrase')} aria-label="Salin seed phrase">
+              <Copy size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+      {seedShow ? (
+        <div className="detail-seed-grid">
+          {words.map((w, i) => (
+            <span key={i} className="detail-seed-word mono">
+              <span className="detail-seed-word__num">{i + 1}.</span> {w}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <span className="detail-field__value">{'•'.repeat(Math.min(words.length * 4, 40))}</span>
+      )}
+    </div>
+  );
 }
 
 export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) {
@@ -37,7 +121,8 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
   const pwShow   = pwVisible[entry.id]   ?? false;
   const seedShow = seedVisible[entry.id] ?? false;
 
-  const [delConfirm, setDelConfirm] = useState(false);
+  // v1.4.0: ganti pola double-tap delConfirm -> ConfirmDialog (konsisten dgn EntryCard)
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Escape key
   useEffect(() => {
@@ -84,8 +169,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
     }
   };
 
-  const handleDelete = async () => {
-    if (!delConfirm) { setDelConfirm(true); return; }
+  const doDelete = async () => {
     const newVault = store.vault.filter((e) => e.id !== entry.id);
     const newBin   = [...store.recycleBin, { ...entry, ts: Date.now() }];
     store.setVault(newVault);
@@ -97,123 +181,61 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
     onClose();
   };
 
-  // ── Field row ─────────────────────────────────────────────────────────
-
-  const FieldRow = ({
-    label, value, sensitive = false, isVisible, onToggleVisible, mono = false,
-  }: {
-    label: string;
-    value?: string;
-    sensitive?: boolean;
-    isVisible?: boolean;
-    onToggleVisible?: () => void;
-    mono?: boolean;
-  }) => {
-    if (!value) return null;
-    const display = sensitive && !isVisible ? '••••••••' : value;
-    return (
-      <div className="detail-field">
-        <span className="detail-field__label">{label}</span>
-        <div className="detail-field__row">
-          <span className={`detail-field__value ${mono ? 'mono' : ''}`}>{display}</span>
-          <div className="detail-field__btns">
-            {sensitive && (
-              <button className="ibtn" onClick={onToggleVisible} aria-label={isVisible ? 'Sembunyikan' : 'Tampilkan'}>
-                {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            )}
-            <button className="ibtn" onClick={() => copy(value, label)} aria-label={`Salin ${label}`} title="Salin">
-              <Copy size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ── Seed phrase ───────────────────────────────────────────────────────
-
-  const SeedSection = () => {
-    if (!entry.seedPhrase?.length) return null;
-    const words = entry.seedPhrase;
-    return (
-      <div className="detail-field">
-        <div className="detail-field__label-row">
-          <span className="detail-field__label">Seed Phrase ({words.length} kata)</span>
-          <div className="detail-field__btns">
-            <button className="ibtn" onClick={() => store.toggleSeedVisible(entry.id)} aria-label={seedShow ? 'Sembunyikan' : 'Tampilkan'}>
-              {seedShow ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
-            {seedShow && (
-              <button className="ibtn" onClick={() => copy(words.join(' '), 'Seed Phrase')} aria-label="Salin seed phrase">
-                <Copy size={14} />
-              </button>
-            )}
-          </div>
-        </div>
-        {seedShow ? (
-          <div className="detail-seed-grid">
-            {words.map((w, i) => (
-              <span key={i} className="detail-seed-word mono">
-                <span className="detail-seed-word__num">{i + 1}.</span> {w}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span className="detail-field__value">{'•'.repeat(Math.min(words.length * 4, 40))}</span>
-        )}
-      </div>
-    );
-  };
+  const handleDelete = () => setConfirmDelete(true);
 
   // ── All fields by category ────────────────────────────────────────────
 
   const renderAllFields = () => {
     const pw = (
-      <FieldRow key="pass" label="Password" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
+      <FieldRow key="pass" label="Password" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} onCopy={copy} mono />
     );
 
     switch (entry.cat) {
       case 'email':
         return <>
-          {entry.emailAddr && <FieldRow label="Alamat Email" value={entry.emailAddr} />}
-          <FieldRow label="Username" value={entry.user} />
+          {entry.emailAddr && <FieldRow label="Alamat Email" value={entry.emailAddr} onCopy={copy} />}
+          <FieldRow label="Username" value={entry.user} onCopy={copy} />
           {pw}
-          <FieldRow label="URL" value={entry.url} />
-          <FieldRow label="Catatan" value={entry.note} />
+          <FieldRow label="URL" value={entry.url} onCopy={copy} />
+          <FieldRow label="Catatan" value={entry.note} onCopy={copy} />
         </>;
       case 'kartu':
         return <>
-          <FieldRow label="Nomor Kartu" value={entry.cardNo} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <FieldRow label="Nama Pemegang" value={entry.cardHolder} />
-          <FieldRow label="Masa Berlaku" value={entry.cardExpiry} />
-          <FieldRow label="CVV" value={entry.cardCVV} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <FieldRow label="PIN Kartu" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <FieldRow label="Catatan" value={entry.note} />
+          <FieldRow label="Nomor Kartu" value={entry.cardNo} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} onCopy={copy} mono />
+          <FieldRow label="Nama Pemegang" value={entry.cardHolder} onCopy={copy} />
+          <FieldRow label="Masa Berlaku" value={entry.cardExpiry} onCopy={copy} />
+          <FieldRow label="CVV" value={entry.cardCVV} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} onCopy={copy} mono />
+          <FieldRow label="PIN Kartu" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} onCopy={copy} mono />
+          <FieldRow label="Catatan" value={entry.note} onCopy={copy} />
         </>;
       case 'wifi':
         return <>
-          <FieldRow label="Nama Jaringan (SSID)" value={entry.wifiSSID ?? entry.user} />
-          <FieldRow label="Password Wi-Fi" value={entry.wifiPass ?? entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <FieldRow label="Catatan" value={entry.note} />
+          <FieldRow label="Nama Jaringan (SSID)" value={entry.wifiSSID ?? entry.user} onCopy={copy} />
+          <FieldRow label="Password Wi-Fi" value={entry.wifiPass ?? entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} onCopy={copy} mono />
+          <FieldRow label="Catatan" value={entry.note} onCopy={copy} />
         </>;
       case 'crypto':
         return <>
-          <FieldRow label="Username" value={entry.user} />
+          <FieldRow label="Username" value={entry.user} onCopy={copy} />
           {pw}
-          <FieldRow label="Network" value={entry.network} />
-          <FieldRow label="Alamat Wallet" value={entry.walletAddr} mono />
-          <FieldRow label="Password Wallet" value={entry.walletPw} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <SeedSection />
-          <FieldRow label="URL" value={entry.url} />
-          <FieldRow label="Catatan" value={entry.note} />
+          <FieldRow label="Network" value={entry.network} onCopy={copy} />
+          <FieldRow label="Alamat Wallet" value={entry.walletAddr} onCopy={copy} mono />
+          <FieldRow label="Password Wallet" value={entry.walletPw} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} onCopy={copy} mono />
+          <SeedSection
+            seedPhrase={entry.seedPhrase}
+            seedShow={seedShow}
+            onToggleVisible={() => store.toggleSeedVisible(entry.id)}
+            onCopy={copy}
+          />
+          <FieldRow label="URL" value={entry.url} onCopy={copy} />
+          <FieldRow label="Catatan" value={entry.note} onCopy={copy} />
         </>;
       default:
         return <>
-          <FieldRow label="Username" value={entry.user} />
+          <FieldRow label="Username" value={entry.user} onCopy={copy} />
           {pw}
-          <FieldRow label="URL" value={entry.url} />
-          <FieldRow label="Catatan" value={entry.note} />
+          <FieldRow label="URL" value={entry.url} onCopy={copy} />
+          <FieldRow label="Catatan" value={entry.note} onCopy={copy} />
         </>;
     }
   };
@@ -221,6 +243,7 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="modal-overlay detail-overlay" role="dialog" aria-modal="true" aria-label={`Detail: ${entry.name}`} onClick={onClose}>
       <div className="modal detail-modal" onClick={(e) => e.stopPropagation()}>
 
@@ -265,14 +288,26 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
             <Star size={14} fill={entry.fav ? 'currentColor' : 'none'} /> Favorit
           </button>
           <button
-            className={`detail-action-btn detail-action-btn--delete ${delConfirm ? 'detail-action-btn--confirm' : ''}`}
+            className="detail-action-btn detail-action-btn--delete"
             onClick={handleDelete}
             title="Hapus"
           >
-            <Trash2 size={14} /> {delConfirm ? 'Konfirmasi?' : 'Hapus'}
+            <Trash2 size={14} /> Hapus
           </button>
         </div>
       </div>
     </div>
+
+    {/* ── Confirm: Hapus Entri ── */}
+    <ConfirmDialog
+      open={confirmDelete}
+      onCancel={() => setConfirmDelete(false)}
+      onConfirm={() => { setConfirmDelete(false); doDelete(); }}
+      title="Pindahkan ke Sampah?"
+      message={<>Entri <strong>{entry.name}</strong> akan dipindahkan ke sampah. Bisa dipulihkan nanti.</>}
+      confirmLabel="Pindahkan"
+      variant="danger"
+    />
+    </>
   );
 }

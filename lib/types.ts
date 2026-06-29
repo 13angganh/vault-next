@@ -48,6 +48,7 @@ export interface CustomCategory {
   emoji:   string;   // Sesi D: diisi dengan iconKey (nama Lucide icon), bukan emoji literal
                      // Backward-compat: jika berisi emoji char lama, CategoryIcon fallback ke Tag
   iconKey: string;   // canonical key — dipakai Sesi D+
+  color?:  string;   // v1.3.6: warna background/icon custom (hex atau CSS var). Optional — backward-compat
 }
 
 // ─── Backup Format ────────────────────────────────────────────────────────────
@@ -86,6 +87,7 @@ export const DEFAULT_CATEGORIES: CategoryDef[] = [
   { id: 'kartu',   label: 'Kartu'   },
   { id: 'wifi',    label: 'Wi-Fi'   },
   { id: 'lainnya', label: 'Lainnya' },
+  { id: 'note',    label: 'Catatan' },
 ];
 
 // ─── Lock Screen State ────────────────────────────────────────────────────────

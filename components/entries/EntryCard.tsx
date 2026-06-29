@@ -10,11 +10,14 @@
  */
 
 import { useState, useEffect, useRef, memo } from 'react';
-import { Pencil, Lock, Unlock, Star, RotateCcw, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { Pencil, Lock, Unlock, Star, RotateCcw, Trash2, Copy, Eye, EyeOff, Check, ChevronDown, User, Key } from 'lucide-react';
 import { useAppStore }      from '@/lib/store/appStore';
 import { saveVault }         from '@/lib/vaultService';
 import { CategoryIcon }      from '@/components/entries/CategoryIcon';
+import { ConfirmDialog }     from '@/components/ui/primitives';
 import type { VaultEntry }   from '@/lib/types';
+import { DUR, EASE } from '@/lib/animation';
 
 interface EntryCardProps {
   entry:            VaultEntry;
@@ -25,6 +28,105 @@ interface EntryCardProps {
   onRequestUnlock?: (entry: VaultEntry) => void;
 }
 
+/* ── Field: top-level component, bukan dideklarasikan di dalam EntryCard ──
+   v1.4.0: pola yang sama dengan fix SectionWrap (v1.3.6) dan FieldRow
+   di DetailView — re-creation komponen tiap render menyebabkan children
+   unmount+mount = berkedip pada hover/transition state.
+   ─────────────────────────────────────────────────────────────────────── */
+interface FieldProps {
+  label:            string;
+  value?:           string;
+  sensitive?:       boolean;
+  isVisible?:       boolean;
+  onToggleVisible?: () => void;
+  mono?:            boolean;
+  copiedLabel:      string | null;
+  onCopyField:      (value: string, label: string) => void;
+}
+
+function Field({
+  label, value, sensitive = false, isVisible, onToggleVisible, mono = false,
+  copiedLabel, onCopyField,
+}: FieldProps) {
+  if (!value) return null;
+  const display = sensitive && !isVisible ? '••••••••' : value;
+  return (
+    <div className="entry-field">
+      <span className="entry-field__label">{label}</span>
+      <div className="entry-field__row">
+        <span className={`entry-field__value ${mono ? 'mono' : ''}`}>{display}</span>
+        <div className="entry-field__actions">
+          {sensitive && (
+            <button
+              className="entry-field__btn"
+              onClick={onToggleVisible}
+              aria-label={isVisible ? 'Sembunyikan' : 'Tampilkan'}
+              title={isVisible ? 'Sembunyikan' : 'Tampilkan'}
+            >
+              {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          )}
+          <button
+            className={`entry-field__btn${copiedLabel === label ? ' entry-field__btn--copied' : ''}`}
+            onClick={() => onCopyField(value, label)}
+            aria-label={`Salin ${label}`}
+            title={`Salin ${label}`}
+          >
+            {copiedLabel === label ? <Check size={14} /> : <Copy size={14} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── SeedField: top-level component ── */
+interface SeedFieldProps {
+  seedPhrase?:     string[];
+  seedShow:        boolean;
+  onToggleVisible: () => void;
+  onCopyField:     (value: string, label: string) => void;
+}
+
+function SeedField({ seedPhrase, seedShow, onToggleVisible, onCopyField }: SeedFieldProps) {
+  if (!seedPhrase?.length) return null;
+  const words = seedPhrase;
+  return (
+    <div className="entry-field">
+      <span className="entry-field__label">Seed Phrase</span>
+      {seedShow ? (
+        <div className="entry-seed-grid">
+          {words.map((w, i) => (
+            <span key={i} className="entry-seed-word mono">
+              <span className="entry-seed-word__num">{i + 1}.</span> {w}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <span className="entry-field__value">{'•'.repeat(Math.min(words.length * 4, 32))}</span>
+      )}
+      <div className="entry-field__actions entry-field__actions--seed">
+        <button
+          className="entry-field__btn"
+          onClick={onToggleVisible}
+          aria-label={seedShow ? 'Sembunyikan seed' : 'Tampilkan seed'}
+        >
+          {seedShow ? <EyeOff size={14} /> : <Eye size={14} />}
+        </button>
+        {seedShow && (
+          <button
+            className="entry-field__btn"
+            onClick={() => onCopyField(words.join(' '), 'Seed Phrase')}
+            aria-label="Salin seed phrase"
+          >
+            <Copy size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function EntryCard({
   entry,
   isRecycleBin = false,
@@ -33,12 +135,13 @@ export function EntryCard({
   onCopy,
   onRequestUnlock,
 }: EntryCardProps) {
-  const store       = useAppStore();
-  const customCats  = store.customCats;
-  const lockedIds   = store.lockedIds;
-  const expandedIds = store.expandedIds;
-  const pwVisible   = store.pwVisible;
-  const seedVisible = store.seedVisible;
+  const store          = useAppStore();
+  const customCats     = store.customCats;
+  const lockedIds      = store.lockedIds;
+  const expandedIds    = store.expandedIds;
+  const pwVisible      = store.pwVisible;
+  const seedVisible    = store.seedVisible;
+  const prefersReduced = useReducedMotion();
 
   const isLocked   = lockedIds.includes(entry.id);
   const isExpanded = expandedIds.includes(entry.id);
@@ -49,6 +152,16 @@ export function EntryCard({
   const [_unlockError,      setUnlockError]      = useState('');
   const [_unlockLoading,    setUnlockLoading]    = useState(false);
   const unlockRef = useRef<HTMLInputElement>(null);
+
+  // Konfirmasi dialog states
+  const [quickCopied, setQuickCopied] = useState<'user'|'pass'|null>(null);
+  const handleQuickCopy=(text:string|undefined,field:'user'|'pass')=>{if(!text||isLocked)return;navigator.clipboard.writeText(text).then(()=>{setQuickCopied(field);if(onCopy)onCopy(text,field==='user'?'Username':'Password');setTimeout(()=>setQuickCopied(null),1500);});};
+
+  const [confirmDelete,  setConfirmDelete]  = useState(false);
+  const [confirmLock,    setConfirmLock]    = useState(false);
+  const [confirmUnlock,  setConfirmUnlock]  = useState(false);
+  const [confirmFav,     setConfirmFav]     = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState(false);
 
   useEffect(() => {
     if (showUnlockPrompt && unlockRef.current) {
@@ -100,7 +213,7 @@ export function EntryCard({
     }
   };
 
-  const handleFav = async () => {
+  const doFav = async () => {
     const updated = store.vault.map((e) =>
       e.id === entry.id ? { ...e, fav: !e.fav } : e,
     );
@@ -111,7 +224,9 @@ export function EntryCard({
     }
   };
 
-  const handleDelete = async () => {
+  const handleFav = () => setConfirmFav(true);
+
+  const doDelete = async () => {
     if (isRecycleBin) {
       // Permanent delete
       const updated = store.recycleBin.filter((e) => e.id !== entry.id);
@@ -133,7 +248,9 @@ export function EntryCard({
     }
   };
 
-  const handleRestore = async () => {
+  const handleDelete = () => setConfirmDelete(true);
+
+  const doRestore = async () => {
     const newBin   = store.recycleBin.filter((e) => e.id !== entry.id);
     const newVault = [...store.vault, { ...entry }];
     store.setRecycleBin(newBin);
@@ -144,7 +261,9 @@ export function EntryCard({
     }
   };
 
-  const handleToggleLock = async () => {
+  const handleRestore = () => setConfirmRestore(true);
+
+  const doToggleLock = async () => {
     // Hitung newLocked dulu dari closure yang konsisten — hindari race condition
     const newLocked = lockedIds.includes(entry.id)
       ? lockedIds.filter((id) => id !== entry.id)
@@ -165,9 +284,25 @@ export function EntryCard({
     }
   };
 
+  const handleToggleLock = () => {
+    if (isLocked) {
+      setConfirmUnlock(true);
+    } else {
+      setConfirmLock(true);
+    }
+  };
+
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+
   const copy = (text: string | undefined, label: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
+      onCopy?.(text, label);
+      // Tampilkan checkmark sesaat di tombol yang diklik
+      setCopiedLabel(label);
+      setTimeout(() => setCopiedLabel(null), 1500);
+    }).catch(() => {
+      // Fallback untuk browser/PWA yang restrict clipboard
       onCopy?.(text, label);
     });
   };
@@ -175,146 +310,62 @@ export function EntryCard({
   const pwShow   = pwVisible[entry.id]   ?? false;
   const seedShow = seedVisible[entry.id] ?? false;
 
-  // ── Field rendering helpers ──────────────────────────────────────────────
-
-  const Field = ({
-    label, value, sensitive = false, isVisible, onToggleVisible, mono = false,
-  }: {
-    label: string;
-    value?: string;
-    sensitive?: boolean;
-    isVisible?: boolean;
-    onToggleVisible?: () => void;
-    mono?: boolean;
-  }) => {
-    if (!value) return null;
-    const display = sensitive && !isVisible ? '••••••••' : value;
-    return (
-      <div className="entry-field">
-        <span className="entry-field__label">{label}</span>
-        <div className="entry-field__row">
-          <span className={`entry-field__value ${mono ? 'mono' : ''}`}>{display}</span>
-          <div className="entry-field__actions">
-            {sensitive && (
-              <button
-                className="entry-field__btn"
-                onClick={onToggleVisible}
-                aria-label={isVisible ? 'Sembunyikan' : 'Tampilkan'}
-                title={isVisible ? 'Sembunyikan' : 'Tampilkan'}
-              >
-                {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            )}
-            <button
-              className="entry-field__btn"
-              onClick={() => copy(value, label)}
-              aria-label={`Salin ${label}`}
-              title={`Salin ${label}`}
-            >
-              <Copy size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Seed phrase display
-  const SeedField = () => {
-    if (!entry.seedPhrase?.length) return null;
-    const words = entry.seedPhrase;
-    return (
-      <div className="entry-field">
-        <span className="entry-field__label">Seed Phrase</span>
-        {seedShow ? (
-          <div className="entry-seed-grid">
-            {words.map((w, i) => (
-              <span key={i} className="entry-seed-word mono">
-                <span className="entry-seed-word__num">{i + 1}.</span> {w}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span className="entry-field__value">{'•'.repeat(Math.min(words.length * 4, 32))}</span>
-        )}
-        <div className="entry-field__actions entry-field__actions--seed">
-          <button
-            className="entry-field__btn"
-            onClick={() => store.toggleSeedVisible(entry.id)}
-            aria-label={seedShow ? 'Sembunyikan seed' : 'Tampilkan seed'}
-          >
-            {seedShow ? <EyeOff size={14} /> : <Eye size={14} />}
-          </button>
-          {seedShow && (
-            <button
-              className="entry-field__btn"
-              onClick={() => copy(words.join(' '), 'Seed Phrase')}
-              aria-label="Salin seed phrase"
-            >
-              <Copy size={14} />
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   // ── Category-specific fields ─────────────────────────────────────────────
 
   const renderFields = () => {
     switch (entry.cat) {
       case 'crypto':
         return <>
-          <Field label="Username"         value={entry.user} />
-          <Field label="Password"         value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <Field label="Network"          value={entry.network} />
-          <Field label="Alamat Wallet"    value={entry.walletAddr} mono />
-          <Field label="Password Wallet"  value={entry.walletPw} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <SeedField />
-          <Field label="URL"              value={entry.url} />
-          <Field label="Catatan"          value={entry.note} />
+          <Field label="Username"         value={entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password"         value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Network"          value={entry.network} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Alamat Wallet"    value={entry.walletAddr} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password Wallet"  value={entry.walletPw} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <SeedField seedPhrase={entry.seedPhrase} seedShow={seedShow} onToggleVisible={() => store.toggleSeedVisible(entry.id)} onCopyField={copy} />
+          <Field label="URL"              value={entry.url} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Catatan"          value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
 
       case 'kartu':
         return <>
-          <Field label="Nomor Kartu"  value={entry.cardNo}     sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <Field label="Nama Pemegang" value={entry.cardHolder} />
-          <Field label="Masa Berlaku" value={entry.cardExpiry} />
-          <Field label="CVV"          value={entry.cardCVV}    sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <Field label="PIN"          value={entry.pass}       sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <Field label="Catatan"      value={entry.note} />
+          <Field label="Nomor Kartu"  value={entry.cardNo}     sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Nama Pemegang" value={entry.cardHolder} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Masa Berlaku" value={entry.cardExpiry} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="CVV"          value={entry.cardCVV}    sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="PIN"          value={entry.pass}       sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Catatan"      value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
 
       case 'wifi':
         return <>
-          <Field label="Nama Jaringan (SSID)" value={entry.wifiSSID ?? entry.user} />
-          <Field label="Password Wi-Fi"       value={entry.wifiPass ?? entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <Field label="Catatan"              value={entry.note} />
+          <Field label="Nama Jaringan (SSID)" value={entry.wifiSSID ?? entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password Wi-Fi"       value={entry.wifiPass ?? entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Catatan"              value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
 
       case 'bank':
         return <>
-          <Field label="Username / No. Rekening" value={entry.user} />
-          <Field label="Password"                value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <Field label="URL"                     value={entry.url} />
-          <Field label="Catatan"                 value={entry.note} />
+          <Field label="Username / No. Rekening" value={entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password"                value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="URL"                     value={entry.url} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Catatan"                 value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
 
       case 'email':
         return <>
-          <Field label="Alamat Email"   value={entry.emailAddr ?? entry.user} />
-          <Field label="Username"       value={entry.emailAddr ? entry.user : undefined} />
-          <Field label="Password"       value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <Field label="URL"            value={entry.url} />
-          <Field label="Catatan"        value={entry.note} />
+          <Field label="Alamat Email"   value={entry.emailAddr ?? entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Username"       value={entry.emailAddr ? entry.user : undefined} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password"       value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="URL"            value={entry.url} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Catatan"        value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
 
       default:
         return <>
-          <Field label="Username" value={entry.user} />
-          <Field label="Password" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono />
-          <Field label="URL"      value={entry.url} />
-          <Field label="Catatan"  value={entry.note} />
+          <Field label="Username" value={entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="URL"      value={entry.url} copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Catatan"  value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
     }
   };
@@ -330,10 +381,26 @@ export function EntryCard({
 
   // ── Render ───────────────────────────────────────────────────────────────
 
+  // Framer Motion variants (ease harus string atau EasingFunction bukan number[])
+  const cardVariants = {
+    initial: { opacity: 0, y: 6 },
+    animate: { opacity: 1, y: 0 },
+  };
+  const cardTransition = { duration: DUR.normal, ease: EASE.out };
+
   return (
-    <div
+    <>
+    <motion.div
       className={`entry-card ${isExpanded ? 'entry-card--expanded' : ''} ${isLocked ? 'entry-card--locked' : ''} ${isRecycleBin ? 'entry-card--bin' : ''}`}
       data-id={entry.id}
+      layout="position"
+      layoutId={`card-${entry.id}`}
+      variants={prefersReduced ? undefined : cardVariants}
+      initial={prefersReduced ? false : 'initial'}
+      animate={prefersReduced ? false : 'animate'}
+      whileHover={prefersReduced ? {} : { y: -1 }}
+      whileTap={prefersReduced ? {} : { scale: 0.995 }}
+      transition={cardTransition}
     >
       {/* ── Collapsed row ── */}
       <div
@@ -342,6 +409,7 @@ export function EntryCard({
         role="button"
         tabIndex={0}
         aria-expanded={isExpanded}
+        aria-label={isExpanded ? `Tutup ${entry.name}` : `Buka ${entry.name}`}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleExpand(); } }}
       >
         <CategoryIcon catId={entry.cat} customCats={customCats} size="md" />
@@ -358,14 +426,46 @@ export function EntryCard({
           {isLocked  && <span className="entry-card__lock-badge" aria-label="Terkunci"><Lock size={12} /></span>}
         </div>
 
-        <span className={`entry-card__chevron ${isExpanded ? 'entry-card__chevron--up' : ''}`} aria-hidden="true">
-          ›
-        </span>
+        {!isExpanded && !isLocked && !isRecycleBin && (entry.user || entry.pass) && (
+          <div className="entry-card__quick-copy" onClick={(e)=>e.stopPropagation()}>
+            {entry.user && (
+              <motion.button className={`entry-card__qc-btn${quickCopied==='user'?' entry-card__qc-btn--copied':''}`}
+                onClick={()=>handleQuickCopy(entry.user,'user')} aria-label="Salin username"
+                whileTap={prefersReduced?{}:{scale:0.85}} transition={{duration:DUR.tap}}>
+                {quickCopied==='user'?<Check size={11}/>:<User size={11}/>}
+              </motion.button>
+            )}
+            {entry.pass && (
+              <motion.button className={`entry-card__qc-btn${quickCopied==='pass'?' entry-card__qc-btn--copied':''}`}
+                onClick={()=>handleQuickCopy(entry.pass,'pass')} aria-label="Salin password"
+                whileTap={prefersReduced?{}:{scale:0.85}} transition={{duration:DUR.tap}}>
+                {quickCopied==='pass'?<Check size={11}/>:<Key size={11}/>}
+              </motion.button>
+            )}
+          </div>
+        )}
+        <motion.span
+          className="entry-card__chevron"
+          aria-hidden="true"
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ duration: prefersReduced ? 0 : 0.2, ease: EASE.inOut }}
+        >
+          <ChevronDown size={16} />
+        </motion.span>
       </div>
 
-      {/* ── Expanded body ── */}
+      {/* ── Expanded body — AnimatePresence untuk smooth height ── */}
+      <AnimatePresence initial={false}>
       {isExpanded && (
-        <div className="entry-card__body-wrap">
+        <motion.div
+          className="entry-card__body-wrap"
+          key={`body-${entry.id}`}
+          initial={prefersReduced ? false : { opacity: 0, height: 0 }}
+          animate={prefersReduced ? {} : { opacity: 1, height: 'auto' }}
+          exit={prefersReduced ? {} : { opacity: 0, height: 0 }}
+          transition={{ duration: DUR.expand, ease: EASE.inOut }}
+          style={{ overflow: 'hidden' }}
+        >
           <div className="entry-card__body-inner">
           <div className="entry-card__body">
           {/* Fields */}
@@ -376,51 +476,131 @@ export function EntryCard({
           {/* Action row */}
           <div className="entry-card__actions">
             {!isRecycleBin && onEdit && (
-              <button className="entry-action-btn entry-action-btn--edit"
-                onClick={() => onEdit(entry)} title="Edit">
+              <motion.button className="entry-action-btn entry-action-btn--edit"
+                onClick={() => onEdit(entry)} title="Edit"
+                whileTap={prefersReduced ? {} : { scale: 0.9 }}
+                transition={{ duration: DUR.tap }}>
                 <Pencil size={13} /> Edit
-              </button>
+              </motion.button>
             )}
 
             {!isRecycleBin && (
-              <button className="entry-action-btn entry-action-btn--lock"
+              <motion.button className="entry-action-btn entry-action-btn--lock"
                 onClick={handleToggleLock}
-                title={isLocked ? 'Lepas kunci' : 'Kunci entri'}>
+                title={isLocked ? 'Lepas kunci' : 'Kunci entri'}
+                whileTap={prefersReduced ? {} : { scale: 0.9 }}
+                transition={{ duration: DUR.tap }}>
                 {isLocked ? <><Unlock size={13} /> Lepas</> : <><Lock size={13} /> Kunci</>}
-              </button>
+              </motion.button>
             )}
 
             {!isRecycleBin && (
-              <button
+              <motion.button
                 className={`entry-action-btn entry-action-btn--fav ${entry.fav ? 'entry-action-btn--fav-active' : ''}`}
                 onClick={handleFav}
-                title={entry.fav ? 'Hapus favorit' : 'Tandai favorit'}>
-                <Star size={13} fill={entry.fav ? 'currentColor' : 'none'} />
+                title={entry.fav ? 'Hapus favorit' : 'Tandai favorit'}
+                whileTap={prefersReduced ? {} : { scale: 0.88 }}
+                transition={{ duration: DUR.tap }}>
+                <motion.span
+                  animate={prefersReduced ? {} : { rotate: entry.fav ? [0, -15, 15, 0] : 0 }}
+                  transition={{ duration: DUR.emph }}
+                  style={{ display:'inline-flex' }}>
+                  <Star size={13} fill={entry.fav ? 'currentColor' : 'none'} />
+                </motion.span>
                 {entry.fav ? 'Favorit' : 'Favorit'}
-              </button>
+              </motion.button>
             )}
 
             {isRecycleBin && (
-              <button className="entry-action-btn entry-action-btn--restore"
-                onClick={handleRestore} title="Pulihkan">
+              <motion.button className="entry-action-btn entry-action-btn--restore"
+                onClick={handleRestore} title="Pulihkan"
+                whileTap={prefersReduced ? {} : { scale: 0.9 }}
+                transition={{ duration: DUR.tap }}>
                 <RotateCcw size={13} /> Pulihkan
-              </button>
+              </motion.button>
             )}
 
-            <button className="entry-action-btn entry-action-btn--delete"
+            <motion.button className="entry-action-btn entry-action-btn--delete"
               onClick={handleDelete}
-              title={isRecycleBin ? 'Hapus permanen' : 'Hapus'}>
+              title={isRecycleBin ? 'Hapus permanen' : 'Hapus'}
+              whileTap={prefersReduced ? {} : { scale: 0.88 }}
+              transition={{ duration: DUR.tap }}>
               <Trash2 size={13} />
               {isRecycleBin ? 'Hapus Permanen' : 'Hapus'}
-            </button>
+            </motion.button>
           </div>
           </div>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
 
-    </div>
+    </motion.div>
+
+    {/* ── Confirm: Hapus / Hapus Permanen ── */}
+    <ConfirmDialog
+      open={confirmDelete}
+      onCancel={() => setConfirmDelete(false)}
+      onConfirm={() => { setConfirmDelete(false); doDelete(); }}
+      title={isRecycleBin ? 'Hapus Permanen?' : 'Pindahkan ke Sampah?'}
+      message={
+        isRecycleBin
+          ? <><strong>{entry.name}</strong> akan dihapus selamanya dan tidak bisa dipulihkan.</>
+          : <><strong>{entry.name}</strong> akan dipindahkan ke sampah. Bisa dipulihkan nanti.</>
+      }
+      confirmLabel={isRecycleBin ? 'Hapus Permanen' : 'Pindahkan'}
+      variant="danger"
+    />
+
+    {/* ── Confirm: Kunci Entri ── */}
+    <ConfirmDialog
+      open={confirmLock}
+      onCancel={() => setConfirmLock(false)}
+      onConfirm={() => { setConfirmLock(false); doToggleLock(); }}
+      title="Kunci Entri?"
+      message={<>Entri <strong>{entry.name}</strong> akan dikunci. Butuh PIN/password untuk membukanya.</>}
+      confirmLabel="Kunci"
+      variant="lock"
+    />
+
+    {/* ── Confirm: Lepas Kunci Entri ── */}
+    <ConfirmDialog
+      open={confirmUnlock}
+      onCancel={() => setConfirmUnlock(false)}
+      onConfirm={() => { setConfirmUnlock(false); doToggleLock(); }}
+      title="Lepas Kunci Entri?"
+      message={<>Entri <strong>{entry.name}</strong> tidak akan memerlukan PIN lagi untuk dibuka.</>}
+      confirmLabel="Lepas Kunci"
+      variant="warning"
+    />
+
+    {/* ── Confirm: Toggle Favorit ── */}
+    <ConfirmDialog
+      open={confirmFav}
+      onCancel={() => setConfirmFav(false)}
+      onConfirm={() => { setConfirmFav(false); doFav(); }}
+      title={entry.fav ? 'Hapus dari Favorit?' : 'Tandai Favorit?'}
+      message={
+        entry.fav
+          ? <><strong>{entry.name}</strong> akan dihapus dari daftar favorit.</>
+          : <><strong>{entry.name}</strong> akan ditambahkan ke daftar favorit.</>
+      }
+      confirmLabel={entry.fav ? 'Hapus Favorit' : 'Tandai Favorit'}
+      variant="warning"
+    />
+
+    {/* ── Confirm: Pulihkan dari Sampah ── */}
+    <ConfirmDialog
+      open={confirmRestore}
+      onCancel={() => setConfirmRestore(false)}
+      onConfirm={() => { setConfirmRestore(false); doRestore(); }}
+      title="Pulihkan Entri?"
+      message={<><strong>{entry.name}</strong> akan dipindahkan kembali ke vault.</>}
+      confirmLabel="Pulihkan"
+      variant="warning"
+    />
+    </>
   );
 }
 

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, ArrowLeft } from 'lucide-react';
-import { Button, Toggle }        from '@/components/ui/primitives';
+import { X, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Button, Toggle, ConfirmDialog } from '@/components/ui/primitives';
 import { useAppStore }           from '@/lib/store/appStore';
 import { saveVault }              from '@/lib/vaultService';
 import { CategoryIcon }           from '@/components/entries/CategoryIcon';
@@ -84,6 +84,10 @@ const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
     { key: 'url',  label: 'URL', type: 'url' },
     { key: 'note', label: 'Catatan', type: 'textarea' },
   ],
+  note: [
+    { key: 'note', label: 'Isi Catatan', type: 'textarea' },
+    { key: 'url',  label: 'Referensi / URL', type: 'url' },
+  ],
 };
 
 function getFieldsForCat(catId: string, customCats: CustomCategory[]): FieldDef[] {
@@ -108,6 +112,13 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [saving,      setSaving]      = useState(false);
   const [showPwGen,   setShowPwGen]   = useState(false);
   const [pwGenTarget, setPwGenTarget] = useState<FieldKey>('pass');
+  // v1.4.0: visibility toggle per field password — default tersembunyi
+  const [pwVisible,   setPwVisible]   = useState<Record<string, boolean>>({});
+  const togglePwVisible = (key: string) =>
+    setPwVisible((prev) => ({ ...prev, [key]: !prev[key] }));
+  // v1.4.0: konfirmasi sebelum ganti kategori menghapus field yang sudah diisi
+  const [pendingCat,  setPendingCat]  = useState<string | null>(null);
+  const [confirmEmptyEntry, setConfirmEmptyEntry] = useState(false);
   const [seedWords,   setSeedWords]   = useState<string[]>(entry?.seedPhrase ?? Array(12).fill(''));
   const [seedMode,    setSeedMode]    = useState<'grid' | 'text'>('grid');
 
@@ -120,8 +131,20 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     return arr;
   };
 
+  /* Raw text state untuk seed textarea — agar spasi bisa diketik bebas
+   * seedWords di-update saat blur (selesai ketik), bukan tiap keystroke */
+  const [seedRawText, setSeedRawText] = useState(() => seedToText(
+    (typeof entry !== 'undefined' && entry?.seedPhrase) ? entry.seedPhrase : Array(12).fill('')
+  ));
+
   const switchSeedMode = (next: 'grid' | 'text') => {
-    // Sinkronkan state sebelum pindah mode
+    if (next === 'text') {
+      // Sync raw text dari seedWords terkini saat masuk mode text
+      setSeedRawText(seedToText(seedWords));
+    } else {
+      // Commit raw text ke seedWords sebelum pindah ke grid
+      setSeedWords(textToSeed(seedRawText, seedWords.length));
+    }
     setSeedMode(next);
   };
 
@@ -147,8 +170,21 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
       nameRef.current?.focus();
       return;
     }
+    // v1.4.0: warning jika entri akan disimpan tanpa data apapun selain nama
+    if (!hasFilledFields()) {
+      setConfirmEmptyEntry(true);
+      return;
+    }
+    await doSave();
+  };
+  const doSave = async () => {
     setSaving(true);
     try {
+      // Jika sedang di text mode, commit raw text ke seedWords sebelum save
+      const finalSeedWords = seedMode === 'text'
+        ? textToSeed(seedRawText, seedWords.length)
+        : seedWords;
+
       const newEntry: VaultEntry = {
         ...(entry ?? {}),
         ...values,
@@ -157,8 +193,8 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         name: name.trim(),
         fav,
         ts:   Date.now(),
-        ...(cat === 'crypto' && seedWords.some((w) => w.trim())
-          ? { seedPhrase: seedWords.map((w) => w.trim()).filter(Boolean) }
+        ...(cat === 'crypto' && finalSeedWords.some((w) => w.trim())
+          ? { seedPhrase: finalSeedWords.map((w) => w.trim()).filter(Boolean) }
           : {}),
       };
       let newVault: VaultEntry[];
@@ -179,6 +215,26 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     }
   };
 
+  // v1.4.0: ganti kategori menghapus field — cek isi dulu, konfirmasi jika perlu
+  const hasFilledFields = () =>
+    Object.entries(values).some(([k, v]) => k !== 'cat' && k !== 'name' && k !== 'fav' && !!v) ||
+    seedWords.some((w) => w.trim() !== '');
+
+  const doCatChange = (catId: string) => {
+    setCat(catId);
+    setValues({});
+    setSeedWords(Array(12).fill(''));
+  };
+
+  const handleCatChange = (catId: string) => {
+    if (catId === cat) return;
+    if (hasFilledFields()) {
+      setPendingCat(catId);
+    } else {
+      doCatChange(catId);
+    }
+  };
+
   const currentFields = getFieldsForCat(cat, customCats);
 
   const renderField = (fd: FieldDef) => {
@@ -196,11 +252,16 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             placeholder={fd.placeholder}
             onChange={(e) => setField(fd.key, e.target.value)}
             rows={3}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="text"
           />
         </div>
       );
     }
     const isPw = fd.type === 'password';
+    const isFieldVisible = pwVisible[fd.key] ?? false;
     return (
       <div key={fd.key} className="form-group">
         <div className="form-label-row">
@@ -212,16 +273,29 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             </button>
           )}
         </div>
-        <input
-          id={id}
-          type={isPw ? 'text' : (fd.type ?? 'text')}
-          className={`input ${fd.mono ? 'mono' : ''}`}
-          value={val}
-          placeholder={fd.placeholder}
-          onChange={(e) => setField(fd.key, e.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-        />
+        <div className={isPw ? 'form-pw-input-row' : undefined}>
+          <input
+            id={id}
+            type={isPw && !isFieldVisible ? 'password' : (fd.type ?? 'text')}
+            className={`input ${fd.mono ? 'mono' : ''} ${isPw ? 'form-pw-input' : ''}`}
+            value={val}
+            placeholder={fd.placeholder}
+            onChange={(e) => setField(fd.key, e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {isPw && (
+            <button
+              type="button"
+              className="form-pw-toggle btn-icon"
+              onClick={() => togglePwVisible(fd.key)}
+              aria-label={isFieldVisible ? `Sembunyikan ${fd.label}` : `Tampilkan ${fd.label}`}
+              tabIndex={-1}
+            >
+              {isFieldVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          )}
+        </div>
         {fd.sensitive && isPw && val && <PasswordStrengthMeter password={val} />}
       </div>
     );
@@ -289,25 +363,33 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             </p>
             <textarea
               className="input form-textarea mono"
-              value={seedToText(seedWords)}
+              value={seedRawText}
               placeholder={`kata1 kata2 kata3 … (${wordCount} kata, pisahkan spasi)`}
               rows={wordCount === 12 ? 3 : 5}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck={false}
+              inputMode="text"
+              enterKeyHint="next"
               onChange={(e) => {
+                // Simpan raw text apa adanya — jangan parse, agar spasi bisa diketik
+                setSeedRawText(e.target.value);
+              }}
+              onBlur={(e) => {
+                // Parse ke seedWords hanya saat selesai ketik (blur)
                 setSeedWords(textToSeed(e.target.value, wordCount));
               }}
             />
             {/* Tampilkan jumlah kata terisi */}
             {(() => {
-              const filled = seedWords.filter((w) => w.trim()).length;
-              return filled > 0 ? (
+              const filled = seedRawText.trim().split(/\s+/).filter(Boolean).length;
+              const hasContent = seedRawText.trim().length > 0;
+              return hasContent ? (
                 <p className="form-hint" style={{
                   color: filled === wordCount ? 'var(--success)' : filled > wordCount ? 'var(--red)' : 'var(--muted2)',
                 }}>
-                  {filled}/{wordCount} kata{filled === wordCount ? ' — lengkap' : filled > wordCount ? ' — terlalu banyak' : ''}
+                  {filled}/{wordCount} kata{filled === wordCount ? ' — lengkap ✓' : filled > wordCount ? ' — terlalu banyak' : ''}
                 </p>
               ) : null;
             })()}
@@ -316,24 +398,33 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
         {/* Actions: reset + ganti panjang — berlaku di kedua mode */}
         <div className="seed-grid__actions">
-          <Button variant="ghost" size="sm" onClick={() => setSeedWords(Array(12).fill(''))}>
+          <Button variant="ghost" size="sm" onClick={() => {
+            setSeedWords(Array(12).fill(''));
+            setSeedRawText('');
+          }}>
             Reset 12 kata
           </Button>
           <Button variant="ghost" size="sm" onClick={() => {
             // Saat ganti panjang, pertahankan kata yang sudah ada
-            const current = seedWords.filter((w) => w.trim());
+            const current = seedMode === 'text'
+              ? textToSeed(seedRawText, 24)
+              : seedWords.filter((w) => w.trim()).map((w, _i) => w).concat(Array(24).fill('')).slice(0, 24);
             const next = Array(24).fill('');
             current.slice(0, 24).forEach((w, i) => { next[i] = w; });
             setSeedWords(next);
+            setSeedRawText(seedToText(next));
           }}>
             Ganti ke 24 kata
           </Button>
           {wordCount === 24 && (
             <Button variant="ghost" size="sm" onClick={() => {
-              const current = seedWords.filter((w) => w.trim());
+              const current = seedMode === 'text'
+                ? textToSeed(seedRawText, 12)
+                : seedWords.filter((w) => w.trim()).slice(0, 12);
               const next = Array(12).fill('');
               current.slice(0, 12).forEach((w, i) => { next[i] = w; });
               setSeedWords(next);
+              setSeedRawText(seedToText(next));
             }}>
               Kembali ke 12 kata
             </Button>
@@ -394,7 +485,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
                   key={c.id}
                   type="button"
                   className={`cat-picker__item ${cat === c.id ? 'cat-picker__item--active' : ''}`}
-                  onClick={() => { setCat(c.id); setValues({}); setSeedWords(Array(12).fill('')); }}
+                  onClick={() => handleCatChange(c.id)}
                   title={c.label}
                 >
                   <CategoryIcon catId={c.id} customCats={customCats} size="sm" />
@@ -438,6 +529,31 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           </div>
         </div>
       )}
+
+      {/* ── Confirm: Ganti Kategori (akan hapus field yang sudah diisi) ── */}
+      <ConfirmDialog
+        open={pendingCat !== null}
+        onCancel={() => setPendingCat(null)}
+        onConfirm={() => {
+          if (pendingCat) doCatChange(pendingCat);
+          setPendingCat(null);
+        }}
+        title="Ganti Kategori?"
+        message="Field yang sudah diisi akan dikosongkan karena setiap kategori punya field berbeda. Data yang belum disimpan akan hilang."
+        confirmLabel="Ganti Kategori"
+        variant="warning"
+      />
+
+      {/* ── Confirm: Simpan Entri Kosong ── */}
+      <ConfirmDialog
+        open={confirmEmptyEntry}
+        onCancel={() => setConfirmEmptyEntry(false)}
+        onConfirm={() => { setConfirmEmptyEntry(false); doSave(); }}
+        title="Simpan Entri Tanpa Data?"
+        message={<>Entri <strong>{name.trim()}</strong> akan disimpan tanpa password, username, atau data lain. Anda bisa mengisinya nanti.</>}
+        confirmLabel="Simpan Tetap"
+        variant="warning"
+      />
     </>
   );
 }

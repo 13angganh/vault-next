@@ -2,10 +2,15 @@
 
 /**
  * Vault Next — RecoveryPanel
- * Sesi B: refactor pakai Button primitive.
+ * Fix Keyboard A-01:
+ *  - inputMode="text" → cegah keyboard dismiss di iOS/Android
+ *  - enterKeyHint="done" → tampilkan tombol Done di keyboard
+ *  - autoCorrect/autoCapitalize/autoComplete off → cegah suggestion popup
+ *    yang bikin keyboard re-render dan autohide
+ *  - scrollIntoView saat focus → pastikan textarea visible saat keyboard naik
  */
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { ArrowLeft, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/primitives';
 
@@ -18,7 +23,20 @@ interface RecoveryPanelProps {
 
 export function RecoveryPanel({ loading, error, onSubmit, onBack }: RecoveryPanelProps) {
   const [phrase, setPhrase] = useState('');
-  const handleSubmit = () => { if (!phrase.trim() || loading) return; onSubmit(phrase.trim()); };
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSubmit = () => {
+    if (!phrase.trim() || loading) return;
+    onSubmit(phrase.trim());
+  };
+
+  // Saat focus: scroll textarea ke dalam viewport agar tidak tertutup keyboard
+  const handleFocus = useCallback(() => {
+    if (!textareaRef.current) return;
+    setTimeout(() => {
+      textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300); // delay agar keyboard sudah naik
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%' }}>
@@ -39,12 +57,20 @@ export function RecoveryPanel({ loading, error, onSubmit, onBack }: RecoveryPane
           Recovery phrase / seed phrase
         </label>
         <textarea
+          ref={textareaRef}
           value={phrase}
           onChange={(e) => setPhrase(e.target.value)}
+          onFocus={handleFocus}
           placeholder="Ketikkan recovery phrase kamu…"
           rows={4}
+          /* ── Keyboard autohide fixes ── */
           autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
           spellCheck={false}
+          inputMode="text"
+          enterKeyHint="done"
+          /* ── Styles ── */
           style={{
             width: '100%', padding: '12px 14px', background: 'var(--bg-s1)',
             border: `1px solid ${error ? 'var(--red)' : 'var(--border)'}`,
@@ -65,7 +91,8 @@ export function RecoveryPanel({ loading, error, onSubmit, onBack }: RecoveryPane
       <button onClick={onBack} style={{
         background: 'none', border: 'none', cursor: 'pointer',
         fontSize: 'var(--text-xs)', color: 'var(--muted2)',
-        display: 'flex', alignItems: 'center', gap: 6, margin: '0 auto', padding: 0,
+        display: 'flex', alignItems: 'center', gap: 6, margin: '0 auto', padding: '8px 0',
+        minHeight: 36, // touch target
       }}
         onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text2)')}
         onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted2)')}>

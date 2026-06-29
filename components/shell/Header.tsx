@@ -86,6 +86,11 @@ export function Header({
           onChange={(e) => handleSearch(e.target.value)}
           aria-label="Cari entri"
           aria-keyshortcuts="Control+k Meta+k"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode="search"
+          enterKeyHint="search"
           data-search-input
         />
         {localQuery && (

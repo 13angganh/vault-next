@@ -234,53 +234,28 @@ export function BiometricHintModal({
     }
   }
 
-  /* ── Render ── */
+  /* ── Render — v1.4.0: ganti 35 inline style blocks dengan className CSS ── */
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'var(--bg-overlay)',
-        zIndex: 1200,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '0 var(--space-5)',
-        animation: 'fadeIn 0.2s ease',
-      }}
+      className="bio-modal-overlay"
       onClick={step !== 'loading' ? onClose : undefined}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bio-modal-title"
     >
-      <div
-        style={{
-          background: 'var(--bg-s2)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-xl)',
-          padding: 'var(--space-6)',
-          width: '100%',
-          maxWidth: 340,
-          boxShadow: 'var(--shadow-modal)',
-          animation: 'fadeScaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bio-modal" onClick={(e) => e.stopPropagation()}>
+
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 40, height: 40,
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(0,212,170,0.1)',
-              border: '1px solid rgba(0,212,170,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Fingerprint size={20} style={{ color: 'var(--teal)' }} />
+        <div className="bio-modal__header">
+          <div className="bio-modal__header-left">
+            <div className="bio-modal__icon">
+              <Fingerprint size={20} />
             </div>
             <div>
-              <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--text)' }}>
+              <div id="bio-modal-title" className="bio-modal__title">
                 {mode === 'register' ? 'Daftarkan Biometrik' : 'Verifikasi Biometrik'}
               </div>
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)' }}>
-                Sidik jari / Face ID
-              </div>
+              <div className="bio-modal__subtitle">Sidik jari / Face ID</div>
             </div>
           </div>
           {step !== 'loading' && (
@@ -290,13 +265,13 @@ export function BiometricHintModal({
           )}
         </div>
 
-        <div style={{ height: 1, background: 'var(--border)', marginBottom: 'var(--space-5)' }} />
+        <div className="bio-modal__divider" />
 
         {/* Tidak didukung */}
         {!supported && (
-          <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
-            <AlertCircle size={36} style={{ color: 'var(--warning)', marginBottom: 'var(--space-3)' }} />
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--muted2)', lineHeight: 1.6 }}>
+          <div className="bio-modal__state bio-modal__state--center">
+            <AlertCircle size={36} className="bio-modal__state-icon bio-modal__state-icon--warning" />
+            <p className="bio-modal__state-text">
               Browser atau perangkat ini tidak mendukung autentikasi biometrik.
               Gunakan Chrome/Safari terbaru di Android atau iOS.
             </p>
@@ -306,71 +281,48 @@ export function BiometricHintModal({
 
         {/* Idle — register */}
         {supported && mode === 'register' && step === 'idle' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div style={{
-              padding: '10px 12px',
-              background: 'rgba(0,212,170,0.06)',
-              border: '1px solid rgba(0,212,170,0.18)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-xs)',
-              color: 'var(--notice-text)',
-              lineHeight: 1.7,
-            }}>
-              <Shield size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+          <div className="bio-modal__body">
+            <div className="bio-modal__notice bio-modal__notice--teal">
+              <Shield size={12} className="bio-modal__notice-icon" />
               Sidik jari disimpan aman di perangkat (tidak dikirim ke server).
               Sesi biometrik aktif hingga browser/tab ditutup.
             </div>
-            <Button variant="gold" full
-              onClick={handleRegister}
-            ><Fingerprint size={18} />
-              Daftarkan Sidik Jari</Button>
+            <Button variant="gold" full onClick={handleRegister}>
+              <Fingerprint size={18} /> Daftarkan Sidik Jari
+            </Button>
             <Button variant="ghost" full onClick={onClose}>Batal</Button>
           </div>
         )}
 
-        {/* Idle — auth (auto-trigger tapi tampilkan fallback jika gagal langsung) */}
+        {/* Idle — auth */}
         {supported && mode === 'auth' && step === 'idle' && (
-          <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--muted2)' }}>Menunggu verifikasi biometrik…</p>
+          <div className="bio-modal__state bio-modal__state--center">
+            <p className="bio-modal__state-text">Menunggu verifikasi biometrik…</p>
           </div>
         )}
 
         {/* Loading */}
         {step === 'loading' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)', padding: 'var(--space-4) 0' }}>
-            <div style={{ position: 'relative', width: 64, height: 64 }}>
-              <div style={{
-                width: 64, height: 64,
-                borderRadius: '50%',
-                background: 'rgba(0,212,170,0.08)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Fingerprint size={32} style={{ color: 'var(--teal)' }} />
+          <div className="bio-modal__state bio-modal__state--center">
+            <div className="bio-modal__spinner-wrap">
+              <div className="bio-modal__spinner-bg">
+                <Fingerprint size={32} />
               </div>
-              <Loader2
-                size={64}
-                style={{
-                  position: 'absolute', inset: 0,
-                  color: 'var(--teal)',
-                  animation: 'spin 1s linear infinite',
-                }}
-              />
+              <Loader2 size={64} className="bio-modal__spinner spin" />
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--muted2)', textAlign: 'center' }}>
+            <p className="bio-modal__state-text">
               {mode === 'register' ? 'Menunggu sidik jari…' : 'Verifikasi sidik jari…'}
               <br />
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted)' }}>
-                Sentuh sensor sidik jari perangkat Anda
-              </span>
+              <span className="bio-modal__state-hint">Sentuh sensor sidik jari perangkat Anda</span>
             </p>
           </div>
         )}
 
         {/* Success */}
         {step === 'success' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-4) 0' }}>
-            <CheckCircle2 size={48} style={{ color: 'var(--teal)' }} />
-            <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text)' }}>
+          <div className="bio-modal__state bio-modal__state--center">
+            <CheckCircle2 size={48} className="bio-modal__state-icon bio-modal__state-icon--teal" />
+            <p className="bio-modal__state-label">
               {mode === 'register' ? 'Sidik jari terdaftar!' : 'Verifikasi berhasil!'}
             </p>
             {mode === 'register' && (
@@ -379,21 +331,12 @@ export function BiometricHintModal({
           </div>
         )}
 
-
-        {/* Session expired — informatif, arahkan ke master pw */}
+        {/* Session expired */}
         {step === 'session_expired' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8,
-              padding: '12px 14px',
-              background: 'rgba(245,158,11,0.07)',
-              border: '1px solid rgba(245,158,11,0.25)',
-              borderRadius: 'var(--radius-md)',
-            }}>
-              <Fingerprint size={16} style={{ color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted2)', lineHeight: 1.7 }}>
-                {errMsg}
-              </span>
+          <div className="bio-modal__body">
+            <div className="bio-modal__notice bio-modal__notice--warning">
+              <Fingerprint size={16} className="bio-modal__notice-icon" />
+              <span>{errMsg}</span>
             </div>
             <Button variant="gold" full onClick={onClose}>Masuk dengan PIN / Password</Button>
           </div>
@@ -401,16 +344,10 @@ export function BiometricHintModal({
 
         {/* Error */}
         {step === 'error' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8,
-              padding: '10px 12px',
-              background: 'rgba(255,77,109,0.07)',
-              border: '1px solid rgba(255,77,109,0.3)',
-              borderRadius: 'var(--radius-md)',
-            }}>
-              <AlertCircle size={14} style={{ color: 'var(--red)', flexShrink: 0, marginTop: 2 }} />
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--red)', lineHeight: 1.6 }}>{errMsg}</span>
+          <div className="bio-modal__body">
+            <div className="bio-modal__notice bio-modal__notice--error">
+              <AlertCircle size={14} className="bio-modal__notice-icon" />
+              <span>{errMsg}</span>
             </div>
             {mode === 'auth' && (
               <Button variant="gold" full onClick={handleAuth}><Fingerprint size={16} /> Coba Lagi</Button>

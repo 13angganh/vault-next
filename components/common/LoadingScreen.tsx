@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { APP_VERSION } from '@/lib/constants';
 
 // ─── VaultIcon SVG — kunci + perisai, aksen gold ──────────────────────────────
 export function VaultIcon({ size = 56 }: { size?: number }) {
@@ -71,7 +72,7 @@ interface LoadingScreenProps {
   duration?: number;
 }
 
-export function LoadingScreen({ onComplete, duration = 2200 }: LoadingScreenProps) {
+export function LoadingScreen({ onComplete, duration = 700 }: LoadingScreenProps) {
   const [hiding, setHiding] = useState(false);
 
   useEffect(() => {
@@ -189,7 +190,7 @@ export function LoadingScreen({ onComplete, duration = 2200 }: LoadingScreenProp
         letterSpacing: '0.05em',
         animation: 'loadingFadeUp 0.6s ease 0.9s both',
       }}>
-        v1.0
+        v{APP_VERSION}
       </div>
     </div>
   );

@@ -38,22 +38,8 @@
   from { opacity: 0; transform: scale(0.95) translateY(4px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-16px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(16px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes scaleUp {
-  from { opacity: 0; transform: scale(0.92); }
-  to   { opacity: 1; transform: scale(1); }
-}
+/* v1.4.0: slideInLeft, slideInRight, slideDown, scaleUp dihapus — dead code,
+   tidak pernah dipakai di komponen manapun (diverifikasi via grep). */
 
 /* Interaction */
 @keyframes shake {
@@ -88,13 +74,6 @@
 
 /* TYPOGRAPHY UTILITIES */
 .mono { font-family: var(--font-mono) !important; }
-.label-caps {
-  font-size: var(--text-xs);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: var(--ls-label);
-  color: var(--muted);
-}
 .truncate {
   white-space: nowrap;
   overflow: hidden;
@@ -102,11 +81,10 @@
 }
 
 /* ANIMATION UTILITIES */
-.animate-fade-in    { animation: fadeIn    var(--transition-normal) var(--ease-default) both; }
-.animate-fade-up    { animation: fadeUp    var(--transition-normal) var(--ease-default) both; }
-.animate-fade-scale { animation: fadeScaleIn var(--transition-normal) var(--ease-default) both; }
-.animate-slide-in   { animation: slideInLeft var(--transition-normal) var(--ease-default) both; }
 .animate-shake      { animation: shake 350ms var(--ease-default) both; }
+/* v1.4.0: .animate-fade-in, .animate-fade-up, .animate-fade-scale,
+   .animate-slide-in, .label-caps dihapus — dead code, tidak pernah
+   dipakai di komponen manapun (diverifikasi via grep). */
 
 /* RIPPLE EFFECT (button micro-interaction) */
 .ripple-container {
@@ -151,19 +129,8 @@
   50%       { opacity: 1;   transform: scale(1.08); }
 }
 
-/* ─── Sesi D — PIN dot micro-animations (M-12) ────────────────────────── */
-@keyframes pinDotBounce {
-  0%   { transform: scale(0.5);  opacity: 0; }
-  55%  { transform: scale(1.35); opacity: 1; }
-  75%  { transform: scale(0.9);             }
-  100% { transform: scale(1.15);            }
-}
-
-@keyframes pinDotSuccess {
-  0%   { transform: scale(1.15); box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
-  50%  { transform: scale(1.25); box-shadow: 0 0 0 6px rgba(52,211,153,0);  }
-  100% { transform: scale(1.15); box-shadow: 0 0 0 0 transparent;           }
-}
+/* v1.4.0: pinDotBounce, pinDotSuccess dihapus — dead code, tidak pernah
+   dipakai (PIN dot animation diimplementasikan via Framer Motion di PINPad.tsx). */
 
 /* Shield security glow — M-14 */
 @keyframes shieldPulse {
@@ -188,4 +155,20 @@
   0%   { box-shadow: 0 0 0 0   var(--gold-glow); }
   50%  { box-shadow: 0 0 0 4px var(--gold-glow); }
   100% { box-shadow: 0 0 0 3px var(--gold-glow); }
+}
+
+/* ── PIN dot animations — v1.4.4 re-added dengan versi lebih smooth ─────── */
+/* Sebelumnya dihapus di v1.4.0 karena dianggap dead code — ternyata dipakai
+   oleh PINPad.tsx via JavaScript animation injection (dot.style.animation). */
+@keyframes pinDotBounce {
+  0%   { transform: scale(0.5);  opacity: 0; }
+  55%  { transform: scale(1.25); opacity: 1; }
+  75%  { transform: scale(0.92);            }
+  100% { transform: scale(1.1);             }
+}
+
+@keyframes pinDotSuccess {
+  0%   { transform: scale(1.1);  box-shadow: 0 0 0 0 var(--teal); }
+  50%  { transform: scale(1.2);  box-shadow: 0 0 0 5px rgba(0,212,170,0); }
+  100% { transform: scale(1.1);  box-shadow: 0 0 0 0 transparent; }
 }

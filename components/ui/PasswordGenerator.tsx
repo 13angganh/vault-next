@@ -11,8 +11,9 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/primitives';
-import { Copy, Check, X } from 'lucide-react';
+import { Copy, Check, X, RotateCw } from 'lucide-react';
 import { PasswordStrengthMeter } from '@/components/ui/PasswordStrengthMeter';
 
 const CHARS = {
@@ -55,6 +56,7 @@ interface PasswordGeneratorProps {
 }
 
 export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
+  const prefersReduced = useReducedMotion();
   const [length,     setLength]     = useState(16);
   const [useUpper,   setUseUpper]   = useState(true);
   const [useDigits,  setUseDigits]  = useState(true);
@@ -87,31 +89,41 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
       <div className="pw-gen__header">
         <h3 className="pw-gen__title">Generator Password</h3>
         {onClose && (
-          <button className="pw-gen__close btn-icon" onClick={onClose} aria-label="Tutup">
+          <motion.button
+            className="pw-gen__close btn-icon"
+            onClick={onClose}
+            aria-label="Tutup"
+            whileTap={prefersReduced ? {} : { scale: 0.88 }}
+            transition={{ duration: 0.12 }}
+          >
             <X size={14} />
-          </button>
+          </motion.button>
         )}
       </div>
 
       {/* Preview password */}
       <div className="pw-gen__preview">
         <code className="pw-gen__pw mono">{password}</code>
-        <button
+        <motion.button
           className={`pw-gen__copy btn-icon ${copied ? 'pw-gen__copy--copied' : ''}`}
           onClick={handleCopy}
           aria-label="Salin password"
           title="Salin"
+          whileTap={prefersReduced ? {} : { scale: 0.88 }}
+          transition={{ duration: 0.12 }}
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           className="pw-gen__regen btn-icon"
           onClick={regenerate}
           aria-label="Buat ulang"
           title="Buat ulang"
+          whileTap={prefersReduced ? {} : { scale: 0.88, rotate: -45 }}
+          transition={{ duration: 0.15 }}
         >
-          ↻
-        </button>
+          <RotateCw size={14} />
+        </motion.button>
       </div>
 
       {/* Strength meter */}

@@ -14,7 +14,8 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AppView = 'lock' | 'app';
-export type FilterType = 'all' | 'fav' | 'bin' | string; // string = cat id
+export type FilterType = 'all' | 'fav' | 'bin' | string;
+export type SortType    = 'default'|'name_asc'|'name_desc'|'newest'|'oldest'|'fav_first';
 
 interface AppState {
   // ── Auth & Lock ──
@@ -32,6 +33,7 @@ interface AppState {
 
   // ── UI State ──
   currentFilter:   FilterType;
+  sortBy:          SortType;
   searchQuery:     string;
   expandedIds:     string[];       // entry yang sedang expanded di list
   selectedIds:     string[];       // multi-select (batch action)
@@ -74,6 +76,7 @@ interface AppState {
 
   // ── Actions: UI ──
   setFilter:       (f: FilterType) => void;
+  setSortBy:       (s: SortType)   => void;
   setSearchQuery:  (q: string) => void;
   toggleExpanded:  (id: string) => void;
   clearExpanded:   () => void;
@@ -119,6 +122,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   customCats:      lsGetJson<CustomCategory[]>(LS_CATS, []),
 
   currentFilter:   'all',
+  sortBy:          'default',
   searchQuery:     '',
   expandedIds:     [],
   selectedIds:     [],
@@ -159,6 +163,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     seedVisible: {},
     pinBuffer: '',
     currentFilter: 'all',
+    sortBy: 'default',
     searchQuery: '',
   }),
 
@@ -201,6 +206,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // ── Actions: UI ────────────────────────────────────────────────────────────
 
   setFilter:      (f) => set({ currentFilter: f, searchQuery: '', expandedIds: [], selectedIds: [] }),
+  setSortBy:      (s) => set({ sortBy: s }),
   setSearchQuery: (q) => set({ searchQuery: q }),
 
   toggleExpanded: (id) => {

@@ -7,12 +7,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Pencil, Plus, Trash2, AlertTriangle, Check } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2, Check } from 'lucide-react';
 import { useAppStore }           from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES }    from '@/lib/types';
 import type { CustomCategory }   from '@/lib/types';
-import { Button, IconButton }    from '@/components/ui/primitives';
+import { Button, IconButton, ConfirmDialog } from '@/components/ui/primitives';
 import { CUSTOM_CAT_ICONS, CategoryIcon } from '@/components/entries/CategoryIcon';
+import { saveVault }             from '@/lib/vaultService';
 
 /* ── Daftar icon yang tersedia di picker ── */
 const ICON_LIST: Array<{ key: string; label: string }> = [
@@ -67,6 +68,23 @@ const ICON_LIST: Array<{ key: string; label: string }> = [
 ];
 
 const DEFAULT_ICON_KEY = 'Tag';
+const DEFAULT_COLOR    = '#9ca3af'; // abu — nilai default, tidak disimpan ke DB
+
+/** Palet warna preset untuk ikon kategori custom (12 warna harmonis) */
+const PRESET_COLORS = [
+  '#f0a500', // gold
+  '#4d8eff', // blue
+  '#ff4d6d', // red
+  '#00d4aa', // teal
+  '#a78bfa', // purple
+  '#fb923c', // orange
+  '#34d399', // green
+  '#f472b6', // pink
+  '#60a5fa', // light blue
+  '#facc15', // yellow
+  '#94a3b8', // slate
+  '#9ca3af', // grey (default)
+] as const;
 
 interface CategoryManagerProps {
   onClose?: () => void;
@@ -77,18 +95,26 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
   const addCustomCat    = useAppStore((s) => s.addCustomCat);
   const removeCustomCat = useAppStore((s) => s.removeCustomCat);
   const setCustomCats   = useAppStore((s) => s.setCustomCats);
+  // Diperlukan untuk saveVault agar customCats tersimpan di vault terenkripsi
+  const masterPw        = useAppStore((s) => s.masterPw);
+  const vault           = useAppStore((s) => s.vault);
+  const recycleBin      = useAppStore((s) => s.recycleBin);
+  const vaultMeta       = useAppStore((s) => s.vaultMeta);
+  const lockedIds       = useAppStore((s) => s.lockedIds);
 
   const [mode,          setMode]          = useState<'list' | 'add' | 'edit'>('list');
   const [editTarget,    setEditTarget]    = useState<CustomCategory | null>(null);
   const [label,         setLabel]         = useState('');
   const [iconKey,       setIconKey]       = useState(DEFAULT_ICON_KEY);
+  const [color,         setColor]         = useState(DEFAULT_COLOR);
   const [labelErr,      setLabelErr]      = useState('');
   const [showPicker,    setShowPicker]    = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteTarget,  setDeleteTarget]  = useState<CustomCategory | null>(null);
+  const [saving,        setSaving]        = useState(false); // v1.4.0: loading state
 
   useEffect(() => {
     if (mode === 'add') {
-      setLabel(''); setIconKey(DEFAULT_ICON_KEY);
+      setLabel(''); setIconKey(DEFAULT_ICON_KEY); setColor(DEFAULT_COLOR);
       setLabelErr(''); setShowPicker(false); setEditTarget(null);
     }
   }, [mode]);
@@ -97,6 +123,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     setEditTarget(cat);
     setLabel(cat.label);
     setIconKey(cat.iconKey || DEFAULT_ICON_KEY);
+    setColor(cat.color || DEFAULT_COLOR);
     setLabelErr(''); setShowPicker(false); setMode('edit');
   };
 
@@ -115,19 +142,33 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       label:   trimmed,
       emoji:   iconKey,   // keep emoji field filled for backward-compat
       iconKey: iconKey,
+      color:   color !== DEFAULT_COLOR ? color : undefined,
     };
 
+    let nextCats: CustomCategory[];
     if (mode === 'add') {
+      nextCats = [...customCats, newCat];
       addCustomCat(newCat);
-    } else if (mode === 'edit' && editTarget) {
-      setCustomCats(customCats.map((c) => c.id === editTarget.id ? newCat : c));
+    } else {
+      nextCats = customCats.map((c) => c.id === editTarget?.id ? newCat : c);
+      setCustomCats(nextCats);
     }
+
+    // Simpan ke vault terenkripsi agar persistens setelah restart
+    if (masterPw && vaultMeta) {
+      setSaving(true);
+      saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds)
+        .catch(() => { /* Gagal saveVault tidak block UI */ })
+        .finally(() => setSaving(false));
+    }
+
     setMode('list');
-  }, [label, iconKey, mode, editTarget, customCats, addCustomCat, setCustomCats]);
+  }, [label, iconKey, color, mode, editTarget, customCats, addCustomCat, setCustomCats,
+      masterPw, vault, recycleBin, vaultMeta, lockedIds]);
 
   const handleDelete = (id: string) => {
-    if (deleteConfirm === id) { removeCustomCat(id); setDeleteConfirm(null); }
-    else setDeleteConfirm(id);
+    const cat = customCats.find((c) => c.id === id);
+    if (cat) setDeleteTarget(cat);
   };
 
   const totalCatCount  = DEFAULT_CATEGORIES.length + customCats.length;
@@ -155,12 +196,12 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
             <button
               className="cat-manager-form__icon-btn"
               onClick={() => setShowPicker((v) => !v)}
-              aria-label="Pilih icon"
-              aria-expanded={showPicker}
+              aria-label="Pilih icon kategori"
               type="button"
             >
-              <span className="cat-manager-form__icon-preview">
-                <SelectedIcon size={22} color="var(--gold)" strokeWidth={1.8} />
+              <span className="cat-manager-form__icon-preview"
+                style={{ backgroundColor: color !== DEFAULT_COLOR ? `${color}26` : undefined }}>
+                <SelectedIcon size={22} color={color} strokeWidth={1.8} />
               </span>
               <span className="cat-manager-form__icon-hint">Tap untuk ganti icon</span>
             </button>
@@ -196,6 +237,30 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
             </div>
           )}
 
+          {/* Color picker — pilih warna ikon */}
+          <div className="form-group">
+            <label className="form-label">Warna Ikon</label>
+            <div className="color-picker" role="listbox" aria-label="Pilih warna ikon">
+              {PRESET_COLORS.map((c) => {
+                const isActive = c === color || (c === DEFAULT_COLOR && !color);
+                return (
+                  <button
+                    key={c}
+                    className={`color-picker__swatch${isActive ? ' color-picker__swatch--active' : ''}`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setColor(c)}
+                    type="button"
+                    aria-selected={isActive}
+                    aria-label={`Warna ${c}`}
+                    title={c}
+                  >
+                    {isActive && <Check size={10} strokeWidth={3} color="#fff" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Label input */}
           <div className="form-group">
             <label className="form-label" htmlFor="cat-label">
@@ -229,7 +294,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
 
           <div className="cat-manager-form__actions">
             <Button variant="ghost" onClick={() => setMode('list')}>Batal</Button>
-            <Button variant="primary" onClick={handleSave}>{mode === 'add' ? 'Tambah' : 'Simpan'}</Button>
+            <Button variant="primary" onClick={handleSave} loading={saving} disabled={saving}>{saving ? 'Menyimpan…' : (mode === 'add' ? 'Tambah' : 'Simpan')}</Button>
           </div>
         </div>
       </div>
@@ -238,6 +303,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
 
   /* ── Render list ── */
   return (
+    <>
     <div className="cat-manager-page">
       {/* Sticky header */}
       <div className="page-header">
@@ -274,22 +340,29 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
         ) : (
           <div className="cat-manager__list">
             {customCats.map((cat) => {
-              const iconK = cat.iconKey || cat.emoji || DEFAULT_ICON_KEY;
+              const iconK   = cat.iconKey || cat.emoji || DEFAULT_ICON_KEY;
               const CatIcon = CUSTOM_CAT_ICONS[iconK] ?? CUSTOM_CAT_ICONS['Tag'];
+              const iconColor = cat.color ?? 'var(--muted)';
+              const iconBg    = cat.color
+                ? `${cat.color}26`   /* hex + alpha 15% */
+                : 'rgba(156,163,175,0.15)';
               return (
                 <div key={cat.id} className="cat-manager__item">
-                  <span className="cat-manager__item-icon-wrap">
-                    <CatIcon size={14} color="var(--muted)" strokeWidth={1.8} />
+                  <span
+                    className="cat-manager__item-icon-wrap"
+                    style={{ backgroundColor: iconBg }}
+                  >
+                    <CatIcon size={14} color={iconColor} strokeWidth={1.8} />
                   </span>
                   <span className="cat-manager__item-label">{cat.label}</span>
                   <div className="cat-manager__item-actions">
                     <IconButton icon={<Pencil size={14} />} size="sm" onClick={() => openEdit(cat)} aria-label={`Edit ${cat.label}`} />
                     <IconButton
-                      icon={deleteConfirm === cat.id ? <AlertTriangle size={14} /> : <Trash2 size={14} />}
+                      icon={<Trash2 size={14} />}
                       size="sm" colorHover="del"
                       onClick={() => handleDelete(cat.id)}
-                      aria-label={deleteConfirm === cat.id ? `Konfirmasi hapus ${cat.label}` : `Hapus ${cat.label}`}
-                      title={deleteConfirm === cat.id ? 'Tap sekali lagi untuk konfirmasi' : 'Hapus'}
+                      aria-label={`Hapus ${cat.label}`}
+                      title="Hapus"
                     />
                   </div>
                 </div>
@@ -303,5 +376,31 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
         </Button>
       </div>
     </div>
+
+    {/* ── Confirm: Hapus Kategori ── */}
+    <ConfirmDialog
+      open={!!deleteTarget}
+      onCancel={() => setDeleteTarget(null)}
+      onConfirm={() => {
+        if (deleteTarget) {
+          removeCustomCat(deleteTarget.id);
+          // Simpan ke vault terenkripsi setelah hapus
+          const nextCats = customCats.filter((c) => c.id !== deleteTarget.id);
+          if (masterPw && vaultMeta) {
+            saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds).catch(() => {});
+          }
+        }
+        setDeleteTarget(null);
+      }}
+      title="Hapus Kategori?"
+      message={
+        deleteTarget
+          ? <>Kategori <strong>{deleteTarget.label}</strong> akan dihapus. Entri dengan kategori ini tidak berubah.</>
+          : undefined
+      }
+      confirmLabel="Hapus Kategori"
+      variant="danger"
+    />
+    </>
   );
 }

@@ -2,10 +2,10 @@
 
 import { useState, forwardRef, useImperativeHandle, useMemo, useCallback, useEffect } from 'react';
 import { Search as SearchIcon, Trash2, Lock, X,
-  Star, FolderOpen, PackageOpen,
+  Star, FolderOpen, PackageOpen, ArrowUpDown, Check as CheckIcon,
 } from 'lucide-react';
 import { verifyPinAndGetMaster, saveVault } from '@/lib/vaultService';
-import { Button, EmptyState, Skeleton } from '@/components/ui/primitives';
+import { Button, EmptyState, Skeleton, ConfirmDialog } from '@/components/ui/primitives';
 import { useAppStore }       from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import { EntryCard }         from '@/components/entries/EntryCard';
@@ -13,6 +13,7 @@ import { DetailView }        from '@/components/entries/DetailView';
 import { EntryForm }         from '@/components/entries/EntryForm';
 import { useToast }          from '@/components/ui/Toast';
 import type { VaultEntry }   from '@/lib/types';
+import type { SortType }     from '@/lib/store/appStore';
 
 export interface VaultListViewRef {
   openAddForm: () => void;
@@ -49,9 +50,14 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     const customCats    = useAppStore((s) => s.customCats);
     const currentFilter = useAppStore((s) => s.currentFilter);
     const searchQuery   = useAppStore((s) => s.searchQuery);
+    const sortBy        = useAppStore((s) => s.sortBy);
+    const setSortBy     = useAppStore((s) => s.setSortBy);
 
     const [detailEntry,      setDetailEntry]      = useState<VaultEntry | null>(null);
     const [editEntry,        setEditEntry]        = useState<VaultEntry | null>(null);
+    const [showSortMenu,     setShowSortMenu]     = useState(false);
+    const [activeFilter,     setActiveFilter]     = useState<'all'|'fav'|'locked'|'no_pass'>('all');
+    const [confirmEmptyBin,  setConfirmEmptyBin]  = useState(false);
     const [showAddForm,      setShowAddForm]      = useState(false);
     const [unlockEntry,      setUnlockEntry]      = useState<VaultEntry | null>(null);
     const [unlockInput,      setUnlockInput]      = useState('');
@@ -109,8 +115,21 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           (e.emailAddr ?? '').toLowerCase().includes(q),
         );
       }
-      return list;
-    }, [vault, recycleBin, currentFilter, searchQuery, isRecycleBin]);
+      // Quick filter
+    if (activeFilter==='fav')     list=list.filter(e=>e.fav);
+    if (activeFilter==='locked')  list=list.filter(e=>useAppStore.getState().lockedIds.includes(e.id));
+    if (activeFilter==='no_pass') list=list.filter(e=>!e.pass&&!e.wifiPass&&!e.cardNo);
+    // Sort
+    const copy=[...list];
+    switch(sortBy){
+      case 'name_asc':  copy.sort((a,b)=>a.name.localeCompare(b.name,'id')); break;
+      case 'name_desc': copy.sort((a,b)=>b.name.localeCompare(a.name,'id')); break;
+      case 'newest':    copy.sort((a,b)=>(b.ts??0)-(a.ts??0)); break;
+      case 'oldest':    copy.sort((a,b)=>(a.ts??0)-(b.ts??0)); break;
+      case 'fav_first': copy.sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)); break;
+    }
+    return copy;
+    }, [vault, recycleBin, currentFilter, searchQuery, isRecycleBin, sortBy, activeFilter]);
 
     const handleCopy    = useCallback((_t: string, label: string) => showToast(`${label} disalin!`), [showToast]);
 
@@ -141,14 +160,16 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
         store.toggleExpanded(unlockEntry.id);
         // Simpan ke disk — tanpa ini, perubahan hilang saat app ditutup/dibuka lagi
         try {
-          await saveVault(
-            store.masterPw,
-            store.vault,
-            store.recycleBin,
-            store.vaultMeta!,
-            store.customCats,
-            newLockedIds,
-          );
+          if (store.vaultMeta) {
+            await saveVault(
+              store.masterPw,
+              store.vault,
+              store.recycleBin,
+              store.vaultMeta,
+              store.customCats,
+              newLockedIds,
+            );
+          }
         } catch {
           // Gagal simpan — rollback store agar konsisten dengan disk
           store.setLockedIds(store.lockedIds);
@@ -165,6 +186,15 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
 
     const handleEdit    = useCallback((entry: VaultEntry) => { setDetailEntry(null); setEditEntry(entry); }, []);
     const handleSaved   = useCallback(() => showToast('Entri disimpan'), [showToast]);
+
+    const handleEmptyBin = useCallback(async () => {
+      const store = useAppStore.getState();
+      store.setRecycleBin([]);
+      if (store.autoSaveEnabled && store.vaultMeta) {
+        try { await saveVault(store.masterPw,store.vault,[],store.vaultMeta,store.customCats,store.lockedIds); } catch {}
+      }
+      showToast('Sampah dikosongkan');
+    }, [showToast]);
 
     /* ── Contextual empty state per filter ── */
     const renderEmptyState = () => {
@@ -201,7 +231,12 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           <EmptyState
             icon={<FolderOpen size={40} strokeWidth={1.2} />}
             title={`Kategori ${cat?.label ?? currentFilter} kosong`}
-            description="Tap + untuk menambahkan entri di kategori ini"
+            description="Tambahkan entri pertama di kategori ini"
+            action={
+              <Button variant="primary" size="sm" onClick={() => setShowAddForm(true)}>
+                + Tambah Entri
+              </Button>
+            }
           />
         );
       }
@@ -209,7 +244,12 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
         <EmptyState
           icon={<PackageOpen size={40} strokeWidth={1.2} />}
           title="Vault masih kosong"
-          description="Tap + untuk menambahkan entri pertama"
+          description="Mulai simpan password dan data sensitif kamu dengan aman"
+          action={
+            <Button variant="primary" onClick={() => setShowAddForm(true)}>
+              + Tambah Entri Pertama
+            </Button>
+          }
         />
       );
     };
@@ -237,12 +277,64 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       <>
         {/* ── Header: sticky, tidak ikut scroll ── */}
         <div className="vault-list-header">
-          <h2 className="vault-list-title">{filterLabel}</h2>
-          <p className="vault-list-subtitle">
-            {searchQuery
-              ? `${entries.length} hasil untuk "${searchQuery}"`
-              : `${entries.length} entri`}
-          </p>
+          <div className="vault-list-header__top">
+            <div>
+              <h2 className="vault-list-title">{filterLabel}</h2>
+              <p className="vault-list-subtitle">
+                {searchQuery
+                  ? `${entries.length} hasil untuk "${searchQuery}"`
+                  : `${entries.length} entri`}
+              </p>
+            </div>
+            <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
+              {/* Kosongkan sampah */}
+              {isRecycleBin && recycleBin.length > 0 && (
+                <button className="vault-empty-bin-btn" onClick={() => setConfirmEmptyBin(true)} aria-label="Kosongkan semua sampah">
+                  Kosongkan
+                </button>
+              )}
+              {/* Sort button */}
+              {!isRecycleBin && (
+                <div className="vault-sort-wrap">
+                  <button className={`vault-sort-btn${showSortMenu?' vault-sort-btn--active':''}`}
+                    onClick={() => setShowSortMenu(v=>!v)} aria-label="Urutkan entri">
+                    <ArrowUpDown size={14} />
+                  </button>
+                  {showSortMenu && (
+                    <>
+                      <div className="vault-sort-backdrop" onClick={() => setShowSortMenu(false)} />
+                      <div className="vault-sort-menu">
+                        {(['default','fav_first','name_asc','name_desc','newest','oldest'] as SortType[]).map(val => {
+                          const labels:Record<SortType,string>={default:'Default',fav_first:'Favorit dulu',name_asc:'Nama A–Z',name_desc:'Nama Z–A',newest:'Terbaru',oldest:'Terlama'};
+                          return (
+                            <button key={val} className={`vault-sort-item${sortBy===val?' vault-sort-item--active':''}`}
+                              onClick={()=>{setSortBy(val);setShowSortMenu(false);}}>
+                              {sortBy===val && <CheckIcon size={12}/>}
+                              {labels[val]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Filter chips */}
+          {!isRecycleBin && !searchQuery && (
+            <div className="vault-filter-chips">
+              {(['all','fav','locked','no_pass'] as const).map(val => {
+                const labels={all:'Semua',fav:'★ Favorit',locked:'🔒 Terkunci',no_pass:'Tanpa Pass'};
+                return (
+                  <button key={val} className={`vault-chip${activeFilter===val?' vault-chip--active':''}`}
+                    onClick={()=>setActiveFilter(val)}>
+                    {labels[val]}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* ── Entries: scroll mandiri ── */}
@@ -256,15 +348,16 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           ) : (
             <div className="vault-entries">
               {entries.map((entry) => (
-                <EntryCard
-                  key={entry.id}
-                  entry={entry}
-                  isRecycleBin={isRecycleBin}
-                  onEdit={handleEdit}
-                  onDetail={(e) => setDetailEntry(e)}
-                  onCopy={handleCopy}
-                  onRequestUnlock={(e) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }}
-                />
+                <div className="vault-entry-item" key={entry.id}>
+                  <EntryCard
+                    entry={entry}
+                    isRecycleBin={isRecycleBin}
+                    onEdit={handleEdit}
+                    onDetail={(e) => setDetailEntry(e)}
+                    onCopy={handleCopy}
+                    onRequestUnlock={(e) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -329,6 +422,15 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           />
         )}
 
+      <ConfirmDialog
+        open={confirmEmptyBin}
+        onCancel={() => setConfirmEmptyBin(false)}
+        onConfirm={() => { setConfirmEmptyBin(false); handleEmptyBin(); }}
+        title="Kosongkan Semua Sampah?"
+        message={`${recycleBin.length} entri akan dihapus permanen dan tidak bisa dipulihkan.`}
+        confirmLabel="Kosongkan Semua"
+        variant="danger"
+      />
 
       </>
     );

@@ -25,9 +25,9 @@ export default function NotFound() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background-color: var(--bg-base, #0f0e17);
-          color: var(--text-primary, #e8e6f0);
-          font-family: var(--font-sans, 'Outfit', sans-serif);
+          background-color: var(--bg-s1, #07080f);
+          color: var(--text, #eeeef5);
+          font-family: var(--font-sans, 'Inter', sans-serif);
           padding: 2rem;
         }
         .not-found-inner {
@@ -39,7 +39,7 @@ export default function NotFound() {
           font-weight: 700;
           line-height: 1;
           font-family: var(--font-mono, 'JetBrains Mono', monospace);
-          color: var(--gold, #d4af37);
+          color: var(--gold, #f0a500);
           opacity: 0.25;
           margin-bottom: 1rem;
           letter-spacing: -0.05em;
@@ -48,11 +48,11 @@ export default function NotFound() {
           font-size: 1.25rem;
           font-weight: 600;
           margin: 0 0 0.5rem;
-          color: var(--text-primary, #e8e6f0);
+          color: var(--text, #eeeef5);
         }
         .not-found-desc {
           font-size: 0.875rem;
-          color: var(--text-muted, #9ca3af);
+          color: var(--muted, #6b6d85);
           margin: 0 0 1.75rem;
           line-height: 1.6;
         }
@@ -62,18 +62,18 @@ export default function NotFound() {
           justify-content: center;
           padding: 0.625rem 1.25rem;
           border-radius: var(--radius-md, 0.5rem);
-          border: 1.5px solid var(--border-accent, rgba(212,175,55,0.4));
-          background-color: var(--surface-accent, rgba(212,175,55,0.08));
-          color: var(--gold, #d4af37);
+          border: 1.5px solid var(--gold-border, rgba(240,165,0,0.3));
+          background-color: var(--gold-dim, rgba(240,165,0,0.08));
+          color: var(--gold, #f0a500);
           font-size: 0.875rem;
           font-weight: 500;
-          font-family: var(--font-sans, 'Outfit', sans-serif);
+          font-family: var(--font-sans, 'Inter', sans-serif);
           text-decoration: none;
           min-height: 40px;
           transition: background-color 0.15s ease;
         }
         .not-found-btn:hover {
-          background-color: var(--surface-accent-hover, rgba(212,175,55,0.16));
+          background-color: rgba(240,165,0,0.14);
         }
       `}</style>
     </div>

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { APP_NAME, APP_VERSION } from '@/lib/constants';
 import '@/styles/globals.css';
 
 /* Google Fonts via next/font (no CDN, no layout shift) */
@@ -20,14 +21,16 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
+const APP_FULL_NAME = `${APP_NAME} v${APP_VERSION}`;
+
 export const metadata: Metadata = {
-  title: 'Vault Next',
+  title: APP_FULL_NAME,
   description: 'Pengelola akun terenkripsi AES-256. Sepenuhnya offline, tanpa server.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Vault Next',
+    title: APP_NAME,
   },
   icons: {
     icon: [
@@ -51,6 +54,9 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: 'cover',
   themeColor: '#07080f',
+  // Mencegah layout shift saat keyboard virtual muncul di Android/iOS
+  // 'resizes-visual' → keyboard hanya mengubah visual viewport, bukan layout viewport
+  interactiveWidget: 'resizes-visual',
 };
 
 export default function RootLayout({
@@ -62,12 +68,35 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#07080f" />
+        {/*
+          v1.4.0: Anti-flash script untuk tema.
+          Inline script ini WAJIB sync (tanpa async/defer) dan WAJIB di <head>
+          agar dieksekusi sebelum browser mulai paint halaman. Ini mencegah
+          "flash" tema gelap sekilas untuk user yang preferensinya terang,
+          karena tanpa ini, html selalu mulai dari :root (= dark) sampai
+          ThemeProvider's useEffect sempat berjalan setelah hydration.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('vault_theme');
+                  var theme = (saved === 'light' || saved === 'dark') ? saved : 'dark';
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           {children}
         </ThemeProvider>
-        <Script src="/sw-register.js" strategy="afterInteractive" />
+        <Script src="/sw-register.js" strategy="beforeInteractive" />
       </body>
     </html>
   );

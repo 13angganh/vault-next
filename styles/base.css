@@ -35,7 +35,7 @@
   /* Text */
   --text:        #eeeef5;
   --text2:       #c8c9d8;
-  --muted:       #6b6d85;
+  --muted:       #8486a2;  /* v1.4.2: dinaikkan 3.77->5.37:1 agar lolos AA teks kecil */
   --muted2:      #9294ae;
 
   /* Borders */
@@ -89,7 +89,7 @@
   --bg-s3:       #E8E7E3;
   --bg-overlay:  rgba(0,0,0,0.5);
 
-  --gold:        #C8860A;
+  --gold:        #9F6400;  /* v1.4.2: dinaikkan 3.06->4.89:1 agar lolos AA */
   --gold2:       #E09B1A;
   --gold-dim:    rgba(200,134,10,0.07);
   --gold-border: rgba(200,134,10,0.3);
@@ -174,10 +174,15 @@ body {
   z-index: 0;
 }
 
-/* Transisi tema — semua elemen kecuali yang punya animasi sendiri */
-*, *::before, *::after {
-  transition-property: background-color, border-color, color, box-shadow;
-  transition-duration: 200ms;
+/* Transisi tema — hanya elemen interaktif yang punya state warna berubah.
+   v1.4.4: wildcard * dihapus karena menyebabkan GPU composite overhead di
+   semua 100+ elemen DOM. Setiap komponen mendefinisikan transition sendiri. */
+button, a, input, select, textarea, [role="button"],
+.btn, .ibtn, .icon-btn, .btn-icon,
+.entry-card, .sidebar-item, .nav-item,
+.settings-section__header, .cat-picker__item {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+  transition-duration: var(--transition-fast);
   transition-timing-function: var(--ease-default);
 }
 
@@ -208,3 +213,6 @@ body {
 
 /* Tap highlight mobile */
 * { -webkit-tap-highlight-color: transparent; }
+
+/* Smooth scroll global */
+html { scroll-behavior: smooth; }

@@ -191,6 +191,12 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
             placeholder="Ketikkan recovery phrase kamu… (boleh dikosongkan)"
             rows={3}
             autoFocus
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="text"
+            enterKeyHint="next"
             className="setup-input setup-input--mono setup-input--textarea"
             style={{ marginBottom: 'var(--space-5)' }}
           />

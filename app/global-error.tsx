@@ -20,9 +20,9 @@ export default function GlobalError({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#0f0e17',
-          color: '#e8e6f0',
-          fontFamily: "'Outfit', sans-serif",
+          backgroundColor: '#07080f',
+          color: '#eeeef5',
+          fontFamily: "'Inter', sans-serif",
         }}
       >
         <div
@@ -55,7 +55,7 @@ export default function GlobalError({
               fontSize: '1.25rem',
               fontWeight: 600,
               marginBottom: '0.5rem',
-              color: '#e8e6f0',
+              color: '#eeeef5',
             }}
           >
             Terjadi Kesalahan
@@ -64,7 +64,7 @@ export default function GlobalError({
           <p
             style={{
               fontSize: '0.875rem',
-              color: '#9ca3af',
+              color: '#6b6d85',
               marginBottom: '0.25rem',
               lineHeight: 1.5,
             }}
@@ -76,7 +76,7 @@ export default function GlobalError({
             <p
               style={{
                 fontSize: '0.75rem',
-                color: '#6b7280',
+                color: '#9294ae',
                 marginBottom: '1.5rem',
                 fontFamily: "'JetBrains Mono', monospace",
               }}
@@ -94,23 +94,23 @@ export default function GlobalError({
               gap: '0.5rem',
               padding: '0.625rem 1.25rem',
               borderRadius: '0.5rem',
-              border: '1.5px solid rgba(212, 175, 55, 0.5)',
-              backgroundColor: 'rgba(212, 175, 55, 0.1)',
-              color: '#d4af37',
+              border: '1.5px solid rgba(240,165,0,0.3)',
+              backgroundColor: 'rgba(240,165,0,0.08)',
+              color: '#f0a500',
               fontSize: '0.875rem',
               fontWeight: 500,
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Inter', sans-serif",
               cursor: 'pointer',
               minHeight: 40,
               transition: 'background-color 0.15s ease',
             }}
             onMouseOver={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                'rgba(212, 175, 55, 0.2)';
+                'rgba(240,165,0,0.16)';
             }}
             onMouseOut={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                'rgba(212, 175, 55, 0.1)';
+                'rgba(240,165,0,0.08)';
             }}
           >
             Muat Ulang

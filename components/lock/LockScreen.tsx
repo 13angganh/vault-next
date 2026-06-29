@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { DUR, EASE } from '@/lib/animation';
 import { Button } from '@/components/ui/primitives';
 import {
   Sun, Moon, KeyRound, Lock, Fingerprint,
   RefreshCw, ArrowLeft, Plus, Loader2, Eye, EyeOff,
 } from 'lucide-react';
 import { VaultIcon }          from '@/components/common/LoadingScreen';
+import { APP_VERSION }        from '@/lib/constants';
 import { useTheme }           from '@/components/providers/ThemeProvider';
 import { PINPad }             from './PINPad';
 import { RecoveryPanel }      from './RecoveryPanel';
@@ -63,8 +66,9 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
   const [masterShow,  setMasterShow]  = useState(false);
   const [seedInput,   setSeedInput]   = useState('');
 
-  const hint      = getVaultHint();
-  const pinLocked = Date.now() < pinLockedUntil;
+  const hint           = getVaultHint();
+  const pinLocked      = Date.now() < pinLockedUntil;
+  const prefersReduced = useReducedMotion();
 
   useEffect(() => {
     if (!pinLocked) { setLockRemain(0); return; }
@@ -78,7 +82,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
   }, [pinLockedUntil, pinLocked]);
 
   const goPanel = useCallback((p: Panel) => {
-    setPanel(p); setError('');
+    setPanel(p); setError(''); setLoading(false);
     clearPin(); setMasterInput(''); setSeedInput('');
   }, [clearPin]);
 
@@ -138,19 +142,6 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     }
   }, [pinBuf, pinLocked, lockRemain, pinAttempts, incrementPinAttempts, setPinLocked, clearPin, doUnlockWithMaster, goPanel]);
 
-  const handleSeedLogin = async () => {
-    if (!seedInput.trim()) { setError('Masukkan recovery phrase'); return; }
-    setLoading(true); setError('');
-    try {
-      const masterPw = await recoverMasterPw(seedInput.trim());
-      const payload  = await unlockVault(masterPw);
-      onUnlocked(payload, masterPw);
-    } catch (e) {
-      setError((e as Error).message ?? 'Recovery phrase salah');
-      setLoading(false);
-    }
-  };
-
   const handleRecoverySubmit = async (phrase: string) => {
     setLoading(true); setError('');
     try {
@@ -161,6 +152,12 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
       setError((e as Error).message ?? 'Recovery gagal');
       setLoading(false);
     }
+  };
+
+  // handleSeedLogin: alias ke handleRecoverySubmit (seed panel pakai textarea lokal)
+  const handleSeedLogin = () => {
+    if (!seedInput.trim()) { setError('Masukkan recovery phrase'); return; }
+    handleRecoverySubmit(seedInput.trim());
   };
 
   const handleSetupComplete = async (masterPw: string, hintStr: string, recovery: string) => {
@@ -189,7 +186,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
           {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
 
-        {/* Logo — Sesi D: shield glow (M-14) */}
+        {/* Logo — shield + judul + versi dalam satu grup */}
         <div className="ls-logo">
           <div className="lock-shield-icon">
             <VaultIcon size={44} />
@@ -198,14 +195,19 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
           <h1 className="ls-title">
             Vault <span className="ls-title__gold">Next</span>
           </h1>
+          <div className="ls-version">v{APP_VERSION}</div>
         </div>
 
         {/* Card */}
         <div className="ls-card">
-
+          <AnimatePresence mode="wait" initial={false}>
           {/* ── PIN ── */}
           {panel === 'pin' && (
-            <div className="ls-panel">
+            <motion.div className="ls-panel" key="panel-pin"
+              initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+              animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
+              exit={prefersReduced ? {} : { opacity: 0, y: -8 }}
+              transition={{ duration: DUR.normal, ease: EASE.out }}>
               {pinLocked && (
                 <div className="ls-notice ls-notice--warn">
                   <Lock size={12} />
@@ -215,7 +217,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
               <PINPad
                 value={pinBuf}
-                maxLen={8}
+                maxLen={6}
                 onDigit={(d) => {
                   if (!pinLocked && !loading) {
                     appendPin(d);
@@ -234,12 +236,16 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 lockedLabel={`Dikunci ${lockRemain} detik lagi…`}
                 error={error}
               />
-            </div>
+            </motion.div>
           )}
 
           {/* ── Master Password ── */}
           {panel === 'master' && (
-            <div className="ls-panel">
+            <motion.div className="ls-panel" key="panel-master"
+              initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+              animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
+              exit={prefersReduced ? {} : { opacity: 0, y: -8 }}
+              transition={{ duration: DUR.normal, ease: EASE.out }}>
               <div className="ls-section-title">Master Password</div>
 
               {hint && (
@@ -274,12 +280,16 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   ? <><Loader2 size={14} className="spin" /> Membuka…</>
                   : 'Buka Vault'}
               </Button>
-            </div>
+            </motion.div>
           )}
 
           {/* ── Seed Phrase ── */}
           {panel === 'seed' && (
-            <div className="ls-panel">
+            <motion.div className="ls-panel" key="panel-seed"
+              initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+              animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
+              exit={prefersReduced ? {} : { opacity: 0, y: -8 }}
+              transition={{ duration: DUR.normal, ease: EASE.out }}>
               <div className="ls-section-title">Masuk via Seed Phrase</div>
 
               <div className="ls-field">
@@ -293,7 +303,10 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   autoFocus
                   autoCorrect="off"
                   autoCapitalize="off"
+                  autoComplete="off"
                   spellCheck={false}
+                  inputMode="text"
+                  enterKeyHint="done"
                   disabled={loading}
                 />
                 {error && <p className="ls-error">{error}</p>}
@@ -303,26 +316,34 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                   ? <><Loader2 size={14} className="spin" /> Membuka…</>
                   : 'Buka Vault'}
               </Button>
-            </div>
+            </motion.div>
           )}
 
           {/* ── Recovery ── */}
           {panel === 'recovery' && (
-            <div className="ls-panel">
+            <motion.div className="ls-panel" key="panel-recovery"
+              initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+              animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
+              exit={prefersReduced ? {} : { opacity: 0, y: -8 }}
+              transition={{ duration: DUR.normal, ease: EASE.out }}>
               <RecoveryPanel
                 onSubmit={handleRecoverySubmit}
                 onBack={() => goPanel(hasPinSetup() ? 'pin' : 'master')}
                 loading={loading}
                 error={error}
               />
-            </div>
+            </motion.div>
           )}
 
           {/* ── Setup Baru ── */}
           {panel === 'setup' && (
-            <div className="ls-panel">
+            <motion.div className="ls-panel" key="panel-setup"
+              initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+              animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
+              exit={prefersReduced ? {} : { opacity: 0, y: -8 }}
+              transition={{ duration: DUR.normal, ease: EASE.out }}>
               <SetupFlow onComplete={handleSetupComplete} />
-            </div>
+            </motion.div>
           )}
 
           {/* ── Footer: biometrik + setup baru ── */}
@@ -387,6 +408,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
               )}
             </div>
           )}
+          </AnimatePresence>
         </div>
       </div>
 

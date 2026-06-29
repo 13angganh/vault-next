@@ -60,6 +60,20 @@ const CAT_ICON_COLORS: Record<string, string> = {
   lainnya: 'var(--cat-lainnya)',
 };
 
+/* ── Helper: hex color → rgba dengan alpha ── */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const len = h.length;
+  if (len !== 3 && len !== 6) return `rgba(156,163,175,${alpha})`;
+  const full = len === 3
+    ? h.split('').map((c) => c + c).join('')
+    : h;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 /* ── Lucide icon registry untuk custom categories ── */
 export const CUSTOM_CAT_ICONS: Record<string, LucideIcon> = {
   Tag, Briefcase, Home, Heart, Star, Zap, Shield,
@@ -106,15 +120,20 @@ export function CategoryIcon({
 
   if (customCat) {
     /* Resolve icon dari iconKey */
-    const iconKey = customCat.iconKey || customCat.emoji; // backward-compat
+    const iconKey    = customCat.iconKey || customCat.emoji; // backward-compat
     const CustomIcon: LucideIcon = CUSTOM_CAT_ICONS[iconKey] ?? Tag;
+    /* Warna custom: jika ada field color, pakai itu; fallback ke abu */
+    const customColor = customCat.color ?? '#9ca3af';
+    const customBg    = customCat.color
+      ? hexToRgba(customCat.color, 0.15)
+      : 'rgba(156,163,175,0.15)';
 
     return (
       <span
         className={`cat-icon cat-icon--${size} ${className}`}
         style={{
           width: box, height: box,
-          backgroundColor: 'rgba(156,163,175,0.15)',
+          backgroundColor: customBg,
           borderRadius: radius,
           display: 'inline-flex',
           alignItems: 'center',
@@ -124,7 +143,7 @@ export function CategoryIcon({
         }}
         aria-hidden="true"
       >
-        <CustomIcon size={iconSize} color="var(--cat-lainnya)" strokeWidth={1.8} />
+        <CustomIcon size={iconSize} color={customColor} strokeWidth={1.8} />
       </span>
     );
   }

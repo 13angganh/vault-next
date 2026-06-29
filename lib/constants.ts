@@ -5,10 +5,21 @@
  */
 
 /** Nama aplikasi */
-export const APP_NAME = 'Vault';
+export const APP_NAME = 'Vault Next';
 
-/** Versi aplikasi — sync dengan package.json */
-export const APP_VERSION = '0.8.0';
+/** Versi aplikasi — sync dengan package.json
+ *
+ * Konvensi versioning:
+ *  MAJOR (x.0.0) → perubahan arsitektur/breaking: ganti format data, ganti crypto engine, refactor besar
+ *  MINOR (0.x.0) → fitur baru, UI/UX upgrade signifikan, multi-bug fix
+ *  PATCH (0.0.x) → hotfix satu bug spesifik
+ *
+ * WAJIB update di DUA tempat secara bersamaan:
+ *  1. File ini (APP_VERSION)
+ *  2. package.json ("version")
+ * ZIP export selalu diberi nama: vault-next-v{APP_VERSION}.zip
+ */
+export const APP_VERSION = '1.5.0';
 
 /** Auto-lock default timeout (menit) */
 export const AUTO_LOCK_DEFAULT_MIN = 5;
