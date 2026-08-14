@@ -99,7 +99,10 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
         const keyBytes  = new TextEncoder().encode(credId);
         const out = new Uint8Array(textBytes.length);
         for (let i = 0; i < textBytes.length; i++) out[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
-        lsSet(LS_BIO_SESSION, btoa(String.fromCharCode(...out)));
+        // Chunked, bukan spread sekaligus — hindari stack overflow untuk passphrase panjang
+        let outBinary = '';
+        for (let i = 0; i < out.length; i += 0x8000) outBinary += String.fromCharCode(...out.subarray(i, i + 0x8000));
+        lsSet(LS_BIO_SESSION, btoa(outBinary));
       }
       onUnlocked(payload, masterPw);
     } catch (e) {

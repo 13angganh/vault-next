@@ -16,7 +16,7 @@ import {
   LS_META, LS_PIN, LS_BACKUP, LS_BKPDATA, LS_PIN_SKIPPED,
 } from '@/lib/storage';
 import type {
-  VaultEntry, VaultMeta, CustomCategory,
+  VaultEntry, VaultMeta, CustomCategory, CategoryFieldDef,
   VaultBackup, VaultBackupPayload,
 } from '@/lib/types';
 
@@ -28,6 +28,9 @@ export interface UnlockPayload {
   meta:       VaultMeta;
   customCats: CustomCategory[];
   lockedIds:  string[];
+  lockedCatIds: string[];
+  // v1.10.0: lihat catatan lengkap di VaultBackupPayload (lib/types.ts).
+  defaultCatFieldOverrides: Record<string, CategoryFieldDef[]>;
 }
 
 export interface SetupPayload {
@@ -68,7 +71,8 @@ export async function setupVault(payload: SetupPayload): Promise<void> {
   };
 
   const inner: VaultBackupPayload = {
-    vault: [], meta, customCats: [], lockedIds: [], recycleBin: [],
+    vault: [], meta, customCats: [], lockedIds: [], recycleBin: [], lockedCatIds: [],
+    defaultCatFieldOverrides: {},
   };
 
   const ciphertext = await encrypt(JSON.stringify(inner), masterPw);
@@ -96,6 +100,8 @@ export async function unlockVault(masterPw: string): Promise<UnlockPayload> {
     meta:       normalizeMeta(data.meta ?? {}),
     customCats: data.customCats ?? [],
     lockedIds:  data.lockedIds  ?? [],
+    lockedCatIds: data.lockedCatIds ?? [],
+    defaultCatFieldOverrides: data.defaultCatFieldOverrides ?? {},
   };
 }
 
@@ -108,8 +114,26 @@ export async function saveVault(
   meta: VaultMeta,
   customCats: CustomCategory[],
   lockedIds: string[],
+  // v1.10.0: parameter opsional dengan default [] — supaya SEMUA
+  // pemanggilan saveVault yang sudah ada (16 titik di seluruh
+  // komponen sebelum fix ini) tetap valid tanpa perlu diedit satu per
+  // satu. Hanya titik yang benar-benar mengubah lock kategori (di
+  // CategoryManager.tsx) yang perlu mengirim nilai sungguhan.
+  lockedCatIds: string[] = [],
+  // v1.10.0: sama seperti lockedCatIds di atas — opsional dengan
+  // default {}. PENTING: setiap pemanggilan saveVault(store...) yang
+  // TIDAK menyertakan parameter ini akan menimpa override field
+  // kategori default milik pengguna jadi kosong secara diam-diam —
+  // pelajaran dari celah data-loss lockedCatIds yang sempat ditemukan
+  // & diperbaiki di 11 titik sebelum fitur ini. Setiap pemanggilan
+  // saveVault(store...) di seluruh proyek WAJIB menyertakan
+  // store.defaultCatFieldOverrides — diverifikasi dengan script
+  // penghitung argumen struktural, bukan grep manual saja.
+  defaultCatFieldOverrides: Record<string, CategoryFieldDef[]> = {},
 ): Promise<void> {
-  const inner: VaultBackupPayload = { vault, meta, customCats, lockedIds, recycleBin };
+  const inner: VaultBackupPayload = {
+    vault, meta, customCats, lockedIds, recycleBin, lockedCatIds, defaultCatFieldOverrides,
+  };
   const ciphertext = await encrypt(JSON.stringify(inner), masterPw);
   saveVaultData(ciphertext);
 }
@@ -220,8 +244,14 @@ export async function exportBackup(
   meta: VaultMeta,
   customCats: CustomCategory[],
   lockedIds: string[],
+  // v1.10.0: sama seperti saveVault — opsional dengan default agar
+  // pemanggilan lama tetap valid tanpa diedit.
+  lockedCatIds: string[] = [],
+  defaultCatFieldOverrides: Record<string, CategoryFieldDef[]> = {},
 ): Promise<VaultBackup> {
-  const inner: VaultBackupPayload = { vault, meta, customCats, lockedIds, recycleBin };
+  const inner: VaultBackupPayload = {
+    vault, meta, customCats, lockedIds, recycleBin, lockedCatIds, defaultCatFieldOverrides,
+  };
   const data = await encrypt(JSON.stringify(inner), masterPw);
 
   const backup: VaultBackup = {
@@ -276,6 +306,8 @@ export async function importBackup(
     meta:       normalizeMeta(data.meta ?? {}),
     customCats: data.customCats ?? [],
     lockedIds:  data.lockedIds  ?? [],
+    lockedCatIds: data.lockedCatIds ?? [],
+    defaultCatFieldOverrides: data.defaultCatFieldOverrides ?? {},
   };
 }
 

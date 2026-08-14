@@ -30,6 +30,26 @@ export async function exportVaultPdf({vault,customCats,appVersion}:ExportPdfOpti
   };
   const np=()=>{pg=doc.addPage([PW,PH]);y=PH-M;pg.drawRectangle({x:0,y:0,width:PW,height:PH,color:C.bg});};
   const en=(n:number)=>{if(y-n<50)np();};
+  // Pecah value jadi beberapa baris berdasarkan lebar sesungguhnya (bukan
+  // dipotong "…") — sebelumnya val>90 karakter dipotong diam-diam, artinya
+  // seed phrase / wallet address / password panjang bisa hilang sebagian
+  // dari backup PDF tanpa peringatan apa pun ke pengguna.
+  const valW=CW-75;
+  const wrapText=(text:string,font:typeof fR,size:number):string[]=>{
+    if(font.widthOfTextAtSize(text,size)<=valW)return[text];
+    const out:string[]=[];let line='';
+    // Untuk field mono (password/kunci/seed) tanpa spasi wajar untuk di-wrap
+    // kata-per-kata, pecah per karakter agar tetap termuat penuh di kolom.
+    const units=text.includes(' ')?text.split(' '):text.split('');
+    const sep=text.includes(' ')?' ':'';
+    for(const u of units){
+      const cand=line?line+sep+u:u;
+      if(font.widthOfTextAtSize(cand,size)>valW&&line){out.push(line);line=u;}
+      else line=cand;
+    }
+    if(line)out.push(line);
+    return out;
+  };
   // Cover
   pg.drawRectangle({x:0,y:0,width:PW,height:PH,color:C.dark});
   pg.drawRectangle({x:0,y:PH-6,width:PW,height:6,color:C.gold});
@@ -39,7 +59,7 @@ export async function exportVaultPdf({vault,customCats,appVersion}:ExportPdfOpti
   pg.drawText(`Diekspor: ${now}`,{x:M,y:PH-200,size:11,font:fR,color:C.muted});
   pg.drawText(`Total entri: ${vault.length}`,{x:M,y:PH-216,size:11,font:fR,color:C.muted});
   pg.drawRectangle({x:M,y:PH-330,width:CW,height:72,color:rgb(.9,.2,.2),opacity:.12,borderColor:rgb(.9,.3,.3),borderWidth:1});
-  pg.drawText('⚠  DOKUMEN SENSITIF',{x:M+12,y:PH-286,size:11,font:fB,color:rgb(.95,.4,.4)});
+  pg.drawText('!  DOKUMEN SENSITIF',{x:M+12,y:PH-286,size:11,font:fB,color:rgb(.95,.4,.4)});
   pg.drawText('Simpan di tempat aman. Jangan bagikan kepada siapapun.',{x:M+12,y:PH-303,size:10,font:fR,color:C.muted});
   pg.drawText('Dokumen ini berisi password dalam format plaintext.',{x:M+12,y:PH-318,size:10,font:fR,color:C.muted});
   wm(pg);
@@ -53,17 +73,24 @@ export async function exportVaultPdf({vault,customCats,appVersion}:ExportPdfOpti
     pg.drawText(cl(cid,customCats).toUpperCase(),{x:M+10,y:y-14,size:9,font:fB,color:C.gold});
     y-=32;
     for(const e of ents){
-      const pairs=fp(e);en(pairs.length*LH+28);
-      pg.drawText(e.name+(e.fav?'  ★':''),{x:M,y,size:11,font:fB,color:C.text});
+      const pairs=fp(e);
+      // Hitung total baris SETELAH wrapping (bukan cuma jumlah field) agar
+      // page-break (en) tidak salah estimasi saat ada value yang di-wrap
+      // jadi beberapa baris.
+      const wrapped=pairs.map(([lb,val,mono])=>[lb,wrapText(val,mono?fM:fR,8.5),mono] as const);
+      const totalLines=wrapped.reduce((n,[,lines])=>n+lines.length,0);
+      en(totalLines*LH+28);
+      pg.drawText(e.name+(e.fav?'  [FAV]':''),{x:M,y,size:11,font:fB,color:C.text});
       y-=4;
       pg.drawLine({start:{x:M,y},end:{x:M+CW,y},thickness:.4,color:C.line});
       y-=LH;
-      for(const [lb,val,mono] of pairs){
-        en(LH);
-        const dv=val.length>90?val.slice(0,90)+'…':val;
-        pg.drawText(`${lb}:`,{x:M,y,size:8.5,font:fB,color:C.muted});
-        pg.drawText(dv,{x:M+75,y,size:8.5,font:mono?fM:fR,color:C.text});
-        y-=LH;
+      for(const [lb,lines,mono] of wrapped){
+        for(let i=0;i<lines.length;i++){
+          en(LH);
+          if(i===0)pg.drawText(`${lb}:`,{x:M,y,size:8.5,font:fB,color:C.muted});
+          pg.drawText(lines[i],{x:M+75,y,size:8.5,font:mono?fM:fR,color:C.text});
+          y-=LH;
+        }
       }
       y-=8;
     }

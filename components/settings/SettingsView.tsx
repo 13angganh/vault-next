@@ -111,7 +111,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
   // Collapsible sections
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     tampilan: false, biometrik: false, keamanan: false,
-    penyimpanan: false, backup: false, kategori: false, info: false, health: false,
+    penyimpanan: false, backup: false, kategori: false, health: false, info: false,
   });
   const prefersReduced = useReducedMotion();
   const toggleSection = useCallback((key: string) => {
@@ -120,6 +120,12 @@ export function SettingsView({ onClose }: SettingsViewProps) {
   const [showBackup,        setShowBackup]        = useState(false);
   const [showBioModal,      setShowBioModal]      = useState(false);
   const [confirmDeleteBio,  setConfirmDeleteBio]  = useState(false);
+
+  // v1.7.0: sama seperti fix di AppShell.tsx — onClose yang stabil mencegah
+  // useFocusTrap di dalam BackupModal re-run efeknya (dan merebut fokus dari
+  // textarea sync manual) setiap kali SettingsView re-render.
+  const handleOpenBackup  = useCallback(() => setShowBackup(true), []);
+  const handleCloseBackup = useCallback(() => setShowBackup(false), []);
 
   const isWebAuthnSupported = typeof window !== 'undefined' && !!window.PublicKeyCredential;
   const hasBioCredential    = typeof window !== 'undefined' && !!lsGet(LS_BIO_CRED_ID);  // F2-07
@@ -249,7 +255,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
                 <span className="settings-row__desc">Simpan file .vault atau pulihkan dari backup</span>
               </div>
               <Button variant="ghost" size="sm" className="settings-row__action"
-                onClick={() => setShowBackup(true)} leftIcon={<Cloud size={14} />}>
+                onClick={handleOpenBackup} leftIcon={<Cloud size={14} />}>
                 Buka
               </Button>
             </div>
@@ -259,7 +265,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
                 <span className="settings-row__desc">Salin teks terenkripsi ke perangkat lain</span>
               </div>
               <Button variant="ghost" size="sm" className="settings-row__action"
-                onClick={() => setShowBackup(true)} leftIcon={<Cloud size={14} />}>
+                onClick={handleOpenBackup} leftIcon={<Cloud size={14} />}>
                 Buka
               </Button>
             </div>
@@ -279,7 +285,14 @@ export function SettingsView({ onClose }: SettingsViewProps) {
             </div>
           </SectionItem>
 
-          {/* ── Info Vault ── */}
+          {/* ── Kesehatan Password ── */}
+          <SectionItem skey="health" title="Kesehatan Password"
+            badge={`${vault.length} entri`}
+            openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced}>
+            <HealthCheckPanel />
+          </SectionItem>
+
+          {/* ── Info Vault: harus jadi section paling bawah di halaman Pengaturan ── */}
           <SectionItem skey="info" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Info Vault" badge={`${vault.length} entri`}>
             <div className="settings-info-grid-wrap">
             <div className="settings-info-grid">
@@ -303,12 +316,6 @@ export function SettingsView({ onClose }: SettingsViewProps) {
             </div>
           </SectionItem>
 
-          <SectionItem skey="health" title="Kesehatan Password"
-            badge={`${vault.length} entri`}
-            openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced}>
-            <HealthCheckPanel />
-          </SectionItem>
-
           <div className="settings-signature">
             <Shield size={13} />
             <span>Vault Next v{APP_VERSION}</span>
@@ -318,7 +325,7 @@ export function SettingsView({ onClose }: SettingsViewProps) {
         </div>
       </div>
 
-      {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
+      {showBackup && <BackupModal onClose={handleCloseBackup} />}
       {showBioModal && (
         <BiometricHintModal mode="register" masterPw={masterPw} onClose={() => setShowBioModal(false)} />
       )}

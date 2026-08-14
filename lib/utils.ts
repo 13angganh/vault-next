@@ -32,3 +32,15 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/**
+ * v1.10.0: Cek apakah kategori (default atau custom) sedang dikunci.
+ * Diekstrak sebagai pure function (bukan inline `lockedCatIds.includes(id)`
+ * di dalam komponen) supaya guard proteksi kunci kategori — dipakai di
+ * CategoryManager.tsx untuk mencegah edit/hapus kategori terkunci —
+ * bisa diuji unit test secara terisolasi tanpa perlu render komponen
+ * penuh atau mensimulasikan interaksi DOM.
+ */
+export function isCategoryLocked(catId: string, lockedCatIds: string[]): boolean {
+  return lockedCatIds.includes(catId);
+}

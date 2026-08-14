@@ -19,7 +19,7 @@ export const APP_NAME = 'Vault Next';
  *  2. package.json ("version")
  * ZIP export selalu diberi nama: vault-next-v{APP_VERSION}.zip
  */
-export const APP_VERSION = '1.5.1';
+export const APP_VERSION = '1.10.0';
 
 /** Auto-lock default timeout (menit) */
 export const AUTO_LOCK_DEFAULT_MIN = 5;

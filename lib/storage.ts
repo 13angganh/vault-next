@@ -21,6 +21,12 @@ export const LS_BIO_ENABLED   = 'vault_bio_enabled'; // boolean biometrik aktif
 export const LS_BIO_CRED_ID   = 'vault_bio_cred';    // base64 credentialId WebAuthn
 export const LS_BIO_SESSION   = 'vault_bio_sess';     // fallback sesi biometrik (obfuscated)
 export const SS_MASTER_PW     = 'vault_ss_mpw';      // sessionStorage: master pw sementara (biometrik)
+// v1.7.0: lockout PIN dulu hanya di Zustand (in-memory) — reload halaman atau
+// PWA tab di-kill oleh OS lalu dibuka lagi menghapus counter percobaan dan
+// waktu lockout tanpa jejak, sehingga rate-limiting 5x-percobaan/5-menit bisa
+// dilewati semata-mata dengan refresh. Dipersist sama seperti LS_AUTOLOCK dkk.
+export const LS_PIN_ATTEMPTS     = 'vault_pin_attempts';      // jumlah percobaan PIN salah beruntun
+export const LS_PIN_LOCKED_UNTIL = 'vault_pin_locked_until';  // timestamp ms — 0 jika tidak terkunci
 
 // ─── SSR Guard ────────────────────────────────────────────────────────────────
 
@@ -43,8 +49,17 @@ export function lsSet(key: string, value: string): void {
   if (!isBrowser()) return;
   try {
     localStorage.setItem(key, value);
-  } catch {
-    console.warn('[Vault] localStorage.setItem gagal:', key);
+  } catch (e) {
+    // Sebelumnya hanya console.warn — kegagalan (mis. kuota localStorage
+    // penuh) jadi diam-diam terjadi: fungsi save di vaultService melaporkan
+    // "berhasil" ke UI padahal data vault sebenarnya TIDAK tersimpan.
+    // Dilempar ulang agar naik ke caller (saveVault dkk, yang sudah async
+    // dan di-await dari form) supaya bisa ditampilkan ke pengguna.
+    console.warn('[Vault] localStorage.setItem gagal:', key, e);
+    throw new Error(
+      `Gagal menyimpan data ke penyimpanan lokal (kunci: ${key}). ` +
+      `Kemungkinan penyimpanan browser penuh. Coba hapus backup lama atau kosongkan ruang penyimpanan.`,
+    );
   }
 }
 
@@ -122,6 +137,8 @@ export function clearAllVaultData(): void {
     LS_BIO_ENABLED,   // hapus state biometrik aktif
     LS_BIO_CRED_ID,   // hapus credential ID WebAuthn
     LS_BIO_SESSION,   // hapus fallback sesi biometrik
+    LS_PIN_ATTEMPTS,      // v1.7.0: hapus sisa counter percobaan PIN
+    LS_PIN_LOCKED_UNTIL,  // v1.7.0: hapus sisa lockout PIN
   ];
   keys.forEach(lsRemove);
 }

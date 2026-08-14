@@ -43,7 +43,13 @@ export default function Page() {
     store.setRecycleBin(payload.recycleBin);
     store.setVaultMeta(payload.meta);
     store.setLockedIds(payload.lockedIds);
+    store.setLockedCatIds(payload.lockedCatIds);
     store.setCustomCats(payload.customCats);
+    // v1.10.0: muat override field kategori default — tanpa ini, data
+    // tersimpan tapi tidak pernah kembali ke UI setelah reload/unlock
+    // ulang (persis kesalahan yang sempat terjadi & diperbaiki untuk
+    // lockedCatIds di sesi sebelumnya).
+    store.loadDefaultCatFieldOverrides(payload.defaultCatFieldOverrides);
     try { sessionStorage.setItem('vault_ss_mpw', masterPw); } catch {}
   };
 

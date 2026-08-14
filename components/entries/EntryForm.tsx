@@ -9,7 +9,7 @@ import { CategoryIcon }           from '@/components/entries/CategoryIcon';
 import { PasswordStrengthMeter }  from '@/components/ui/PasswordStrengthMeter';
 import { PasswordGenerator }      from '@/components/ui/PasswordGenerator';
 import { DEFAULT_CATEGORIES }     from '@/lib/types';
-import type { VaultEntry, CustomCategory } from '@/lib/types';
+import type { VaultEntry, CustomCategory, CategoryFieldDef } from '@/lib/types';
 import { generateId } from '@/lib/utils';  // F2-11
 
 interface EntryFormProps {
@@ -18,7 +18,12 @@ interface EntryFormProps {
   onSaved:  (entry: VaultEntry) => void;
 }
 
-type FieldKey = keyof VaultEntry;
+// v1.10.0: field kustom (dibuat pengguna lewat Pengaturan > Edit Kategori)
+// punya key bebas, bukan hanya properti VaultEntry yang sudah dikenal.
+// Pola "branded string" ini mempertahankan autocomplete IDE untuk key
+// yang dikenal (fd.key === 'user' tetap type-checked) sambil tetap
+// menerima string sembarang untuk field kustom.
+type FieldKey = keyof VaultEntry | (string & {});
 
 interface FieldDef {
   key:          FieldKey;
@@ -28,6 +33,45 @@ interface FieldDef {
   sensitive?:   boolean;
   mono?:        boolean;
   hint?:        string;
+  // v1.10.0: true jika field ini BUKAN properti asli VaultEntry —
+  // nilainya dibaca/ditulis dari customFieldValues (state terpisah),
+  // bukan dari `values` (Partial<VaultEntry>). Ditentukan otomatis oleh
+  // fieldDefFromCategoryField() lewat KNOWN_ENTRY_KEYS di bawah, bukan
+  // diisi manual.
+  isCustom?:    boolean;
+}
+
+// v1.10.0: setiap properti VaultEntry yang bisa jadi target field form
+// individual (mengecualikan id/cat/name/fav/ts yang dikelola terpisah
+// oleh form, dan customFields yang merupakan WADAH bukan field itu
+// sendiri, serta seedPhrase/twoFABackupCodes yang berbentuk array
+// dan sudah punya UI section khusus sendiri, bukan renderField biasa).
+// Dipakai untuk membedakan field BAWAAN (baca/tulis via `values`) vs
+// field KUSTOM (baca/tulis via `customFieldValues`) saat menggabungkan
+// FIELDS_BY_CAT dengan override dari pengguna.
+export const KNOWN_ENTRY_KEYS = new Set<string>([
+  'user', 'pass', 'url', 'note', 'network', 'walletAddr', 'walletPw',
+  'cardNo', 'cardHolder', 'cardExpiry', 'cardCVV', 'wifiSSID', 'wifiPass',
+  'emailAddr', 'twoFAEnabled', 'twoFAPhone', 'twoFARecoveryEmail',
+]);
+
+// v1.10.0: konversi CategoryFieldDef (bentuk tersimpan/serializable, di
+// lib/types.ts) menjadi FieldDef (bentuk lokal untuk kebutuhan render
+// EntryForm). Heuristik: field type 'password' otomatis dapat
+// sensitive+mono, konsisten dengan pola semua field password bawaan
+// yang sudah ada di FIELDS_BY_CAT — pengguna yang membuat field kustom
+// bertipe password tidak perlu mengatur flag itu manual.
+function fieldDefFromCategoryField(cf: CategoryFieldDef): FieldDef {
+  const isPw = cf.type === 'password';
+  return {
+    key:         cf.key,
+    label:       cf.label,
+    type:        cf.type,
+    placeholder: cf.placeholder,
+    sensitive:   isPw,
+    mono:        isPw,
+    isCustom:    !KNOWN_ENTRY_KEYS.has(cf.key),
+  };
 }
 
 const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
@@ -90,12 +134,62 @@ const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
   ],
 };
 
-function getFieldsForCat(catId: string, customCats: CustomCategory[]): FieldDef[] {
-  if (FIELDS_BY_CAT[catId]) return FIELDS_BY_CAT[catId];
-  // Custom category — cek apakah punya config, fallback ke 'lainnya' (F2-10)
+/**
+ * v1.10.0: getFieldsForCat sekarang menggabungkan field bawaan
+ * (FIELDS_BY_CAT, hardcode) dengan kustomisasi pengguna, bukan lagi
+ * murni statis.
+ *
+ * - Kategori DEFAULT (ada di FIELDS_BY_CAT): jika pengguna sudah
+ *   mengatur override lewat Pengaturan > Edit Kategori (tersimpan di
+ *   store.defaultCatFieldOverrides[catId]), override itu yang dipakai.
+ *   Jika belum ada override, field bawaan asli tetap berlaku persis
+ *   seperti sebelum fitur ini ada — tidak ada perubahan perilaku untuk
+ *   pengguna yang belum pernah menyentuh fitur kustomisasi.
+ * - Kategori CUSTOM: jika CustomCategory.fields ada & tidak kosong,
+ *   itu yang dipakai. Kalau tidak (kategori custom lama, dibuat
+ *   sebelum fitur ini), fallback ke field 'lainnya' — perilaku lama,
+ *   tidak berubah.
+ */
+export function getFieldsForCat(
+  catId: string,
+  customCats: CustomCategory[],
+  defaultCatFieldOverrides: Record<string, CategoryFieldDef[]>,
+): FieldDef[] {
+  if (FIELDS_BY_CAT[catId]) {
+    const override = defaultCatFieldOverrides[catId];
+    if (override && override.length > 0) {
+      return override.map(fieldDefFromCategoryField);
+    }
+    return FIELDS_BY_CAT[catId];
+  }
+  // Custom category — pakai field kustomnya jika ada, fallback ke 'lainnya'
   const customCat = customCats.find((c) => c.id === catId);
-  if (customCat) return FIELDS_BY_CAT['lainnya'];
+  if (customCat?.fields && customCat.fields.length > 0) {
+    return customCat.fields.map(fieldDefFromCategoryField);
+  }
   return FIELDS_BY_CAT['lainnya'];
+}
+
+/**
+ * v1.10.0: konversi field BAWAAN kategori default (FIELDS_BY_CAT, bentuk
+ * FieldDef lokal) menjadi CategoryFieldDef (bentuk tersimpan/serializable
+ * di lib/types.ts) — arah kebalikan dari fieldDefFromCategoryField().
+ * Diekspor untuk dipakai CategoryManager.tsx sebagai starting point saat
+ * pengguna pertama kali membuka editor field kategori default (sebelum
+ * override apa pun dibuat), dan sebagai mekanisme "reset ke bawaan".
+ * catId di luar FIELDS_BY_CAT (kategori custom) mengembalikan array
+ * kosong — pemanggil bertanggung jawab menangani kasus itu terpisah
+ * (custom category sudah punya CustomCategory.fields sendiri).
+ */
+export function getBuiltinFieldsForCat(catId: string): CategoryFieldDef[] {
+  const fields = FIELDS_BY_CAT[catId];
+  if (!fields) return [];
+  return fields.map((fd) => ({
+    key:         fd.key,
+    label:       fd.label,
+    type:        fd.type,
+    placeholder: fd.placeholder,
+  }));
 }
 
 export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
@@ -108,8 +202,19 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [name,        setName]        = useState(entry?.name ?? '');
   const [fav,         setFav]         = useState(entry?.fav ?? false);
   const [values,      setValues]      = useState<Partial<VaultEntry>>(entry ?? {});
+  // v1.10.0: field KUSTOM (key di luar VaultEntry) disimpan terpisah
+  // dari `values` di atas karena `values` bertipe Partial<VaultEntry> —
+  // key bebas tidak bisa masuk ke situ secara type-safe. Nilai awal
+  // dari entry.customFields (data lama yang sudah tersimpan).
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(
+    entry?.customFields ?? {}
+  );
   const [nameError,   setNameError]   = useState('');
   const [saving,      setSaving]      = useState(false);
+  // Pesan saat saveVault gagal (mis. localStorage penuh) — sebelumnya error
+  // ini hanya di-console.error tanpa ada indikasi apa pun ke pengguna,
+  // sementara state vault di memori sudah kadung berubah (lihat doSave).
+  const [saveError,   setSaveError]   = useState('');
   const [showPwGen,   setShowPwGen]   = useState(false);
   const [pwGenTarget, setPwGenTarget] = useState<FieldKey>('pass');
   // v1.4.0: visibility toggle per field password — default tersembunyi
@@ -122,12 +227,37 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [seedWords,   setSeedWords]   = useState<string[]>(entry?.seedPhrase ?? Array(12).fill(''));
   const [seedMode,    setSeedMode]    = useState<'grid' | 'text'>('grid');
 
+  // v1.10.0: Verifikasi 2 Langkah (kategori Email) — state kode cadangan
+  // memakai pola IDENTIK dengan seedWords/seedMode/seedRawText di atas,
+  // hanya beda jumlah tetap (10, tanpa opsi ganti-panjang 12↔24 seperti
+  // seed phrase crypto — kode cadangan 2FA selalu 10 kode).
+  const [twoFAEnabled, setTwoFAEnabled] = useState(entry?.twoFAEnabled ?? false);
+  const BACKUP_CODE_COUNT = 10;
+  const [backupCodes, setBackupCodes] = useState<string[]>(
+    entry?.twoFABackupCodes && entry.twoFABackupCodes.length > 0
+      ? Array(BACKUP_CODE_COUNT).fill('').map((_, i) => entry.twoFABackupCodes?.[i] ?? '')
+      : Array(BACKUP_CODE_COUNT).fill('')
+  );
+  const [backupCodeMode, setBackupCodeMode] = useState<'grid' | 'text'>('grid');
+
   /* Konversi seedWords ↔ textarea text */
   const seedToText = (words: string[]) => words.map((w) => w.trim()).filter(Boolean).join(' ');
   const textToSeed = (text: string, count: number) => {
     const words = text.trim().split(/\s+/).filter(Boolean);
     const arr = Array(count).fill('');
     words.slice(0, count).forEach((w, i) => { arr[i] = w; });
+    return arr;
+  };
+
+  /* v1.10.0: Konversi backupCodes ↔ textarea text — pola sama dengan
+   * seedToText/textToSeed di atas, tapi pemisah menerima spasi ATAU
+   * baris baru (kode cadangan biasanya ditampilkan layanan satu per
+   * baris, beda dari seed phrase yang selalu satu baris dipisah spasi). */
+  const codesToText = (codes: string[]) => codes.map((c) => c.trim()).filter(Boolean).join('\n');
+  const textToCodes = (text: string, count: number) => {
+    const codes = text.trim().split(/[\s\n]+/).filter(Boolean);
+    const arr = Array(count).fill('');
+    codes.slice(0, count).forEach((c, i) => { arr[i] = c; });
     return arr;
   };
 
@@ -148,6 +278,21 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     setSeedMode(next);
   };
 
+  /* v1.10.0: Raw text state untuk backup codes textarea — pola identik
+   * dengan seedRawText di atas. */
+  const [backupCodesRawText, setBackupCodesRawText] = useState(() => codesToText(
+    (typeof entry !== 'undefined' && entry?.twoFABackupCodes) ? entry.twoFABackupCodes : Array(BACKUP_CODE_COUNT).fill('')
+  ));
+
+  const switchBackupCodeMode = (next: 'grid' | 'text') => {
+    if (next === 'text') {
+      setBackupCodesRawText(codesToText(backupCodes));
+    } else {
+      setBackupCodes(textToCodes(backupCodesRawText, BACKUP_CODE_COUNT));
+    }
+    setBackupCodeMode(next);
+  };
+
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { nameRef.current?.focus(); }, []);
@@ -162,6 +307,12 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
   const setField = useCallback((key: FieldKey, val: string) => {
     setValues((prev) => ({ ...prev, [key]: val }));
+  }, []);
+
+  // v1.10.0: setter paralel untuk field kustom — lihat penjelasan di
+  // deklarasi state customFieldValues di atas.
+  const setCustomField = useCallback((key: string, val: string) => {
+    setCustomFieldValues((prev) => ({ ...prev, [key]: val }));
   }, []);
 
   const handleSave = async () => {
@@ -179,11 +330,26 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   };
   const doSave = async () => {
     setSaving(true);
+    setSaveError('');
+    // Simpan vault sebelumnya agar bisa di-rollback jika saveVault gagal —
+    // state di memori (store.setVault) tidak boleh "terlanjur berubah" saat
+    // penulisan ke localStorage sebenarnya gagal, atau UI jadi berbohong
+    // tentang apa yang benar-benar tersimpan.
+    const prevVault = store.vault;
     try {
       // Jika sedang di text mode, commit raw text ke seedWords sebelum save
       const finalSeedWords = seedMode === 'text'
         ? textToSeed(seedRawText, seedWords.length)
         : seedWords;
+
+      // v1.10.0: sama seperti seed phrase — commit raw text mode dulu
+      // sebelum save. Kode cadangan disimpan terlepas dari status toggle
+      // twoFAEnabled (supaya data yang sudah diisi tidak hilang kalau
+      // toggle tidak sengaja dimatikan sebelum save) — twoFAEnabled sendiri
+      // tetap tersimpan sebagai penanda status terpisah.
+      const finalBackupCodes = backupCodeMode === 'text'
+        ? textToCodes(backupCodesRawText, BACKUP_CODE_COUNT)
+        : backupCodes;
 
       const newEntry: VaultEntry = {
         ...(entry ?? {}),
@@ -196,6 +362,30 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         ...(cat === 'crypto' && finalSeedWords.some((w) => w.trim())
           ? { seedPhrase: finalSeedWords.map((w) => w.trim()).filter(Boolean) }
           : {}),
+        ...(cat === 'email'
+          ? {
+              twoFAEnabled: twoFAEnabled,
+              ...(finalBackupCodes.some((c) => c.trim())
+                ? { twoFABackupCodes: finalBackupCodes.map((c) => c.trim()).filter(Boolean) }
+                : {}),
+            }
+          : {}),
+        // v1.10.0: hanya sertakan customFields kalau kategori saat ini
+        // benar-benar punya field kustom (filter berdasar currentFields,
+        // BUKAN seluruh customFieldValues mentah) — mencegah nilai field
+        // kustom dari kategori lain "menempel" terbawa saat entri
+        // disimpan, konsisten dengan penanganan seedWords/backupCodes
+        // di doCatChange saat ganti kategori.
+        ...(() => {
+          const customKeys = currentFields.filter((f) => f.isCustom).map((f) => f.key);
+          if (customKeys.length === 0) return {};
+          const filtered: Record<string, string> = {};
+          for (const k of customKeys) {
+            const v = customFieldValues[k];
+            if (v && v.trim()) filtered[k] = v.trim();
+          }
+          return Object.keys(filtered).length > 0 ? { customFields: filtered } : {};
+        })(),
       };
       let newVault: VaultEntry[];
       if (isEdit) {
@@ -205,11 +395,17 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
       }
       store.setVault(newVault);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, newVault, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds);
+      await saveVault(store.masterPw, newVault, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
       onSaved(newEntry);
       onClose();
     } catch (err) {
       console.error('Gagal menyimpan entri:', err);
+      store.setVault(prevVault); // rollback — jangan biarkan memori beda dari yang tersimpan
+      setSaveError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Gagal menyimpan entri. Coba lagi.',
+      );
     } finally {
       setSaving(false);
     }
@@ -218,12 +414,23 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   // v1.4.0: ganti kategori menghapus field — cek isi dulu, konfirmasi jika perlu
   const hasFilledFields = () =>
     Object.entries(values).some(([k, v]) => k !== 'cat' && k !== 'name' && k !== 'fav' && !!v) ||
-    seedWords.some((w) => w.trim() !== '');
+    seedWords.some((w) => w.trim() !== '') ||
+    backupCodes.some((c) => c.trim() !== '') ||
+    Object.values(customFieldValues).some((v) => v.trim() !== '');
 
   const doCatChange = (catId: string) => {
     setCat(catId);
     setValues({});
     setSeedWords(Array(12).fill(''));
+    setSeedRawText('');
+    // v1.10.0: reset state 2FA juga saat ganti kategori — sama seperti
+    // seedWords, field kategori-spesifik tidak boleh "menempel" saat
+    // pindah ke kategori lain lalu balik lagi.
+    setTwoFAEnabled(false);
+    setBackupCodes(Array(BACKUP_CODE_COUNT).fill(''));
+    setBackupCodesRawText('');
+    // v1.10.0: reset field kustom juga — sama alasannya seperti di atas.
+    setCustomFieldValues({});
   };
 
   const handleCatChange = (catId: string) => {
@@ -235,10 +442,17 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     }
   };
 
-  const currentFields = getFieldsForCat(cat, customCats);
+  const currentFields = getFieldsForCat(cat, customCats, store.defaultCatFieldOverrides);
 
   const renderField = (fd: FieldDef) => {
-    const val = (values[fd.key] as string) ?? '';
+    // v1.10.0: field kustom baca/tulis dari customFieldValues (state
+    // terpisah, key bebas), field bawaan tetap dari values seperti
+    // sebelumnya — lihat penjelasan lengkap di deklarasi state
+    // customFieldValues dan interface FieldDef.isCustom di atas.
+    const val = fd.isCustom
+      ? (customFieldValues[fd.key] ?? '')
+      : ((values[fd.key as keyof VaultEntry] as string) ?? '');
+    const handleChange = (v: string) => fd.isCustom ? setCustomField(fd.key, v) : setField(fd.key, v);
     const id  = `form-field-${fd.key}`;
     if (fd.type === 'textarea') {
       return (
@@ -250,7 +464,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             className={`input form-textarea ${fd.mono ? 'mono' : ''}`}
             value={val}
             placeholder={fd.placeholder}
-            onChange={(e) => setField(fd.key, e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             rows={3}
             autoComplete="off"
             autoCorrect="off"
@@ -276,11 +490,28 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         <div className={isPw ? 'form-pw-input-row' : undefined}>
           <input
             id={id}
-            type={isPw && !isFieldVisible ? 'password' : (fd.type ?? 'text')}
-            className={`input ${fd.mono ? 'mono' : ''} ${isPw ? 'form-pw-input' : ''}`}
+            // PENTING: type SELALU 'text' untuk field password, TIDAK
+            // PERNAH 'password'. Root cause bug sebelumnya: MDN secara
+            // eksplisit menyatakan -webkit-text-security "only affects
+            // fields that are not of type=password" — jadi saat type masih
+            // 'password' di state tersembunyi, browser boleh mengabaikan
+            // CSS masking ini sepenuhnya dan mengandalkan masking native
+            // type=password, yang lalu tidak konsisten ter-refresh saat
+            // type berganti ke 'text' di state terlihat. Dengan type SELALU
+            // 'text', masking 100% dikendalikan CSS (form-pw-input--masked
+            // di bawah) tanpa ambiguitas sama sekali — dan karena atribut
+            // type tidak pernah berubah lagi, TIDAK PERLU key dinamis untuk
+            // memaksa remount: className yang berubah pada elemen yang
+            // sama sudah cukup memicu browser menerapkan ulang CSS.
+            // (key dinamis sempat dicoba tapi dilepas lagi — remount
+            // ternyata mengganggu fokus/keyboard virtual saat toggle
+            // dilakukan sambil sedang mengetik, dan memicu replay animasi
+            // visual yang tidak diinginkan pada elemen.)
+            type={isPw ? 'text' : (fd.type ?? 'text')}
+            className={`input ${fd.mono ? 'mono' : ''} ${isPw ? 'form-pw-input' : ''} ${isPw && !isFieldVisible ? 'form-pw-input--masked' : ''}`}
             value={val}
             placeholder={fd.placeholder}
-            onChange={(e) => setField(fd.key, e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             autoComplete="off"
             spellCheck={false}
           />
@@ -288,6 +519,13 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             <button
               type="button"
               className="form-pw-toggle btn-icon"
+              // Cegah button mengambil fokus dari input saat ditekan sambil
+              // sedang mengetik — mousedown/touchstart pada button biasanya
+              // memicu blur di input terlebih dulu sebelum onClick jalan,
+              // yang bisa race dengan keyboard virtual (gejala: toggle
+              // "kadang tidak bisa" saat sedang mengetik). Fokus jadi
+              // tetap di input sepanjang toggle terjadi.
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => togglePwVisible(fd.key)}
               aria-label={isFieldVisible ? `Sembunyikan ${fd.label}` : `Tampilkan ${fd.label}`}
               tabIndex={-1}
@@ -434,6 +672,151 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     );
   };
 
+  // v1.10.0: Verifikasi 2 Langkah (kategori Email). Pola input kode
+  // cadangan IDENTIK dengan renderSeedSection() di atas (grid per-item
+  // bernomor / mode teks satu blok) — beda hanya jumlah tetap 10 (tanpa
+  // tombol ganti-panjang 12↔24 seperti seed phrase crypto, karena kode
+  // cadangan 2FA selalu 10 kode) dan field toggle + 2 field pemulihan
+  // tambahan sebelum blok kode.
+  const renderTwoFASection = () => {
+    if (cat !== 'email') return null;
+
+    return (
+      <div className="form-group">
+        <div className="form-divider" />
+        <div className="form-label-row">
+          <label className="form-label">Verifikasi 2 Langkah</label>
+          <Toggle checked={twoFAEnabled} onChange={setTwoFAEnabled} label="Verifikasi 2 Langkah" />
+        </div>
+
+        {twoFAEnabled && (
+          <>
+            <div className="form-group">
+              <label htmlFor="form-2fa-phone" className="form-label">Nomor Telepon Pemulihan</label>
+              <input
+                id="form-2fa-phone"
+                type="text"
+                inputMode="tel"
+                className="input"
+                value={(values.twoFAPhone as string) ?? ''}
+                placeholder="+62 812-3456-7890"
+                onChange={(e) => setField('twoFAPhone', e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="form-2fa-recovery-email" className="form-label">Email Pemulihan</label>
+              <input
+                id="form-2fa-recovery-email"
+                type="email"
+                className="input"
+                value={(values.twoFARecoveryEmail as string) ?? ''}
+                placeholder="pemulihan@contoh.com"
+                onChange={(e) => setField('twoFARecoveryEmail', e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+
+            <div className="form-group">
+              <div className="form-label-row">
+                <label className="form-label">Kode Cadangan ({BACKUP_CODE_COUNT} kode)</label>
+                <div className="seed-mode-tabs">
+                  <button
+                    type="button"
+                    className={`seed-mode-tab${backupCodeMode === 'grid' ? ' seed-mode-tab--active' : ''}`}
+                    onClick={() => switchBackupCodeMode('grid')}
+                  >
+                    Per Kode
+                  </button>
+                  <button
+                    type="button"
+                    className={`seed-mode-tab${backupCodeMode === 'text' ? ' seed-mode-tab--active' : ''}`}
+                    onClick={() => switchBackupCodeMode('text')}
+                  >
+                    Teks
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode 1: Grid per kode */}
+              {backupCodeMode === 'grid' && (
+                <>
+                  <p className="form-hint">Isi satu kode per kotak</p>
+                  <div className="seed-grid">
+                    {backupCodes.map((c, i) => (
+                      <div key={i} className="seed-grid__item">
+                        <span className="seed-grid__num">{i + 1}</span>
+                        <input
+                          type="text"
+                          className="input seed-grid__input mono"
+                          value={c}
+                          placeholder={`kode ${i + 1}`}
+                          onChange={(e) => {
+                            const updated = [...backupCodes];
+                            updated[i] = e.target.value;
+                            setBackupCodes(updated);
+                          }}
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Mode 2: Textarea semua kode sekaligus (pisah spasi/baris) */}
+              {backupCodeMode === 'text' && (
+                <>
+                  <p className="form-hint">
+                    Ketik atau tempel semua kode cadangan, satu per baris atau dipisah spasi. {BACKUP_CODE_COUNT} kode.
+                  </p>
+                  <textarea
+                    className="input form-textarea mono"
+                    value={backupCodesRawText}
+                    placeholder={`kode1\nkode2\nkode3\n… (${BACKUP_CODE_COUNT} kode)`}
+                    rows={5}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    inputMode="text"
+                    enterKeyHint="next"
+                    onChange={(e) => setBackupCodesRawText(e.target.value)}
+                    onBlur={(e) => setBackupCodes(textToCodes(e.target.value, BACKUP_CODE_COUNT))}
+                  />
+                  {(() => {
+                    const filled = backupCodesRawText.trim().split(/[\s\n]+/).filter(Boolean).length;
+                    const hasContent = backupCodesRawText.trim().length > 0;
+                    return hasContent ? (
+                      <p className="form-hint" style={{
+                        color: filled === BACKUP_CODE_COUNT ? 'var(--success)' : filled > BACKUP_CODE_COUNT ? 'var(--red)' : 'var(--muted2)',
+                      }}>
+                        {filled}/{BACKUP_CODE_COUNT} kode{filled === BACKUP_CODE_COUNT ? ' — lengkap ✓' : filled > BACKUP_CODE_COUNT ? ' — terlalu banyak' : ''}
+                      </p>
+                    ) : null;
+                  })()}
+                </>
+              )}
+
+              <div className="seed-grid__actions">
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setBackupCodes(Array(BACKUP_CODE_COUNT).fill(''));
+                  setBackupCodesRawText('');
+                }}>
+                  Kosongkan Kode
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   // ── Render sebagai HALAMAN PENUH, bukan overlay ──
   // Menggantikan vault-list, bukan di atas konten
   return (
@@ -506,10 +889,12 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           {/* Dynamic fields */}
           {currentFields.map(renderField)}
           {renderSeedSection()}
+          {renderTwoFASection()}
         </div>
 
         {/* Footer sticky — selalu terlihat */}
         <div className="entry-form-page__footer">
+          {saveError && <p className="form-error" role="alert">{saveError}</p>}
           <Button variant="ghost" onClick={onClose} disabled={saving}>Batal</Button>
           <Button variant="primary" onClick={handleSave} disabled={saving} loading={saving}>
             {saving ? 'Menyimpan…' : isEdit ? 'Simpan Perubahan' : 'Tambah Entri'}

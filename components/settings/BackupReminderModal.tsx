@@ -5,7 +5,7 @@
  * Sesi B: refactor pakai Button primitive.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAppStore }          from '@/lib/store/appStore';
 import { lsSet, lsGetNum, LS_BACKUP, LS_BKPDISM, LS_BKPIVL } from '@/lib/storage';
 import { useFocusTrap }         from '@/lib/hooks/useFocusTrap';
@@ -37,8 +37,19 @@ export function BackupReminderModal({ onOpenBackup }: BackupReminderModalProps) 
     }
   }, [isUnlocked, backupIntervalHrs]);
 
-  const handleDismiss   = () => { lsSet(LS_BKPDISM, String(Date.now())); setVisible(false); };
-  const handleBackupNow = () => { lsSet(LS_BKPDISM, String(Date.now())); setVisible(false); onOpenBackup(); };
+  // v1.7.0: sebelumnya inline, closure baru tiap render → useFocusTrap
+  // re-run efeknya tiap kali komponen ini re-render untuk alasan apapun.
+  // Tidak ada input teks bebas di modal ini jadi dampaknya kecil, tapi
+  // dirapikan sekalian konsisten dengan fix BackupModal/useFocusTrap lain.
+  const handleDismiss   = useCallback(() => {
+    lsSet(LS_BKPDISM, String(Date.now()));
+    setVisible(false);
+  }, []);
+  const handleBackupNow = useCallback(() => {
+    lsSet(LS_BKPDISM, String(Date.now()));
+    setVisible(false);
+    onOpenBackup();
+  }, [onOpenBackup]);
 
   const trapRef = useFocusTrap<HTMLDivElement>(visible, handleDismiss);
   if (!visible) return null;

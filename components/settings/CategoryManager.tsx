@@ -7,12 +7,15 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Pencil, Plus, Trash2, Check } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2, Check, Lock, Unlock, ListChecks, GripVertical } from 'lucide-react';
 import { useAppStore }           from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES }    from '@/lib/types';
-import type { CustomCategory }   from '@/lib/types';
+import type { CustomCategory, CategoryFieldDef } from '@/lib/types';
+import { isCategoryLocked }      from '@/lib/utils';
 import { Button, IconButton, ConfirmDialog } from '@/components/ui/primitives';
+import { useToast }              from '@/components/ui/Toast';
 import { CUSTOM_CAT_ICONS, CategoryIcon } from '@/components/entries/CategoryIcon';
+import { getBuiltinFieldsForCat, KNOWN_ENTRY_KEYS } from '@/components/entries/EntryForm';
 import { saveVault }             from '@/lib/vaultService';
 
 /* ── Daftar icon yang tersedia di picker ── */
@@ -101,16 +104,37 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
   const recycleBin      = useAppStore((s) => s.recycleBin);
   const vaultMeta       = useAppStore((s) => s.vaultMeta);
   const lockedIds       = useAppStore((s) => s.lockedIds);
+  // v1.10.0: state & action untuk lock/unlock KATEGORI (bukan entri) —
+  // supaya tidak sengaja terhapus/berubah, mirip lockedIds untuk entri.
+  const lockedCatIds       = useAppStore((s) => s.lockedCatIds);
+  const toggleLockedCatId  = useAppStore((s) => s.toggleLockedCatId);
+  // v1.10.0: dibutuhkan saat memanggil saveVault — parameter ke-8,
+  // WAJIB disertakan agar tidak menimpa override field kategori default
+  // jadi kosong secara diam-diam (pelajaran dari celah data-loss
+  // lockedCatIds sebelumnya).
+  const defaultCatFieldOverrides = useAppStore((s) => s.defaultCatFieldOverrides);
+  const setDefaultCatFieldOverrides = useAppStore((s) => s.setDefaultCatFieldOverrides);
 
-  const [mode,          setMode]          = useState<'list' | 'add' | 'edit'>('list');
+  const [mode,          setMode]          = useState<'list' | 'add' | 'edit' | 'edit-fields'>('list');
   const [editTarget,    setEditTarget]    = useState<CustomCategory | null>(null);
   const [label,         setLabel]         = useState('');
   const [iconKey,       setIconKey]       = useState(DEFAULT_ICON_KEY);
   const [color,         setColor]         = useState(DEFAULT_COLOR);
   const [labelErr,      setLabelErr]      = useState('');
   const [showPicker,    setShowPicker]    = useState(false);
+  // v1.10.0: editor field per kategori (default maupun custom).
+  // fieldsTargetId: id kategori yang sedang diedit field-nya (null = tidak
+  // sedang mengedit). fieldsIsDefault: true jika target kategori default
+  // (simpan ke defaultCatFieldOverrides), false jika custom (simpan ke
+  // CustomCategory.fields). formFields: draft field yang sedang diedit,
+  // belum disimpan sampai pengguna menekan Simpan.
+  const [fieldsTargetId,  setFieldsTargetId]  = useState<string | null>(null);
+  const [fieldsIsDefault, setFieldsIsDefault] = useState(false);
+  const [formFields,      setFormFields]      = useState<CategoryFieldDef[]>([]);
+  const [fieldsError,     setFieldsError]     = useState('');
   const [deleteTarget,  setDeleteTarget]  = useState<CustomCategory | null>(null);
   const [saving,        setSaving]        = useState(false); // v1.4.0: loading state
+  const { showToast, ToastContainer } = useToast();
 
   useEffect(() => {
     if (mode === 'add') {
@@ -120,11 +144,35 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
   }, [mode]);
 
   const openEdit = (cat: CustomCategory) => {
+    // v1.10.0: guard sama seperti handleDelete di atas.
+    if (isCategoryLocked(cat.id, lockedCatIds)) return;
     setEditTarget(cat);
     setLabel(cat.label);
     setIconKey(cat.iconKey || DEFAULT_ICON_KEY);
     setColor(cat.color || DEFAULT_COLOR);
     setLabelErr(''); setShowPicker(false); setMode('edit');
+  };
+
+  /**
+   * v1.10.0: buka editor field untuk kategori default ATAU custom.
+   * isDefault menentukan tempat penyimpanan saat handleSaveFields
+   * dipanggil nanti (defaultCatFieldOverrides vs CustomCategory.fields).
+   * Guard isCategoryLocked sama seperti openEdit — kategori terkunci
+   * tidak boleh diubah field-nya juga, bukan cuma nama/icon/warna.
+   */
+  const openFieldsEditor = (catId: string, isDefault: boolean, customCat?: CustomCategory) => {
+    if (isCategoryLocked(catId, lockedCatIds)) return;
+    setFieldsTargetId(catId);
+    setFieldsIsDefault(isDefault);
+    setFieldsError('');
+    if (isDefault) {
+      const override = defaultCatFieldOverrides[catId];
+      setFormFields(override && override.length > 0 ? override : getBuiltinFieldsForCat(catId));
+    } else {
+      const existing = customCat?.fields;
+      setFormFields(existing && existing.length > 0 ? existing : getBuiltinFieldsForCat('lainnya'));
+    }
+    setMode('edit-fields');
   };
 
   const handleSave = useCallback(() => {
@@ -145,40 +193,308 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       color:   color !== DEFAULT_COLOR ? color : undefined,
     };
 
+    // customCats sebelum diubah — untuk rollback jika saveVault gagal
+    const prevCats = customCats;
+
+    // v1.7.0: addCustomCat/setCustomCats bisa throw kalau localStorage
+    // gagal (mis. kuota penuh) — lihat lib/store/appStore.ts. Sebelumnya
+    // panggilan ini telanjang di sini, jadi exception-nya lolos ke luar
+    // handleSave sebagai uncaught error di onClick handler. State memori
+    // sendiri sudah aman (lsSetJson gagal → set() Zustand tidak pernah
+    // tercapai), tapi pengguna tetap perlu tahu simpannya gagal, bukan
+    // form macet tanpa penjelasan.
     let nextCats: CustomCategory[];
-    if (mode === 'add') {
-      nextCats = [...customCats, newCat];
-      addCustomCat(newCat);
-    } else {
-      nextCats = customCats.map((c) => c.id === editTarget?.id ? newCat : c);
-      setCustomCats(nextCats);
+    try {
+      if (mode === 'add') {
+        nextCats = [...customCats, newCat];
+        addCustomCat(newCat);
+      } else {
+        nextCats = customCats.map((c) => c.id === editTarget?.id ? newCat : c);
+        setCustomCats(nextCats);
+      }
+    } catch {
+      showToast('Gagal menyimpan kategori, coba lagi', 'error');
+      return;
     }
 
     // Simpan ke vault terenkripsi agar persistens setelah restart
     if (masterPw && vaultMeta) {
       setSaving(true);
-      saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds)
-        .catch(() => { /* Gagal saveVault tidak block UI */ })
+      saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, defaultCatFieldOverrides)
+        .then(() => setMode('list'))
+        .catch(() => {
+          // Gagal simpan — rollback state kategori agar konsisten dgn disk,
+          // dan beri tahu pengguna (sebelumnya ditelan diam-diam sambil UI
+          // sudah terlanjur pindah ke tampilan list seolah sukses).
+          // setCustomCats sendiri menulis ke localStorage — jika penyebab
+          // kegagalan adalah kuota penuh, rollback ini pun bisa melempar,
+          // jadi dibungkus agar tidak jadi exception baru yang tak tertangani.
+          try { setCustomCats(prevCats); } catch { /* state memori tetap salah, tapi UI sudah diberi tahu */ }
+          showToast('Gagal menyimpan kategori, coba lagi', 'error');
+        })
         .finally(() => setSaving(false));
+      return;
     }
 
     setMode('list');
   }, [label, iconKey, color, mode, editTarget, customCats, addCustomCat, setCustomCats,
-      masterPw, vault, recycleBin, vaultMeta, lockedIds]);
+      masterPw, vault, recycleBin, vaultMeta, lockedIds, lockedCatIds, defaultCatFieldOverrides, showToast]);
 
   const handleDelete = (id: string) => {
+    // v1.10.0: guard defense-in-depth — tombol Hapus sudah disabled di UI
+    // saat kategori terkunci, tapi cek ini memastikan aksi tetap
+    // terblokir di sumbernya, bukan cuma mengandalkan atribut disabled
+    // pada elemen tombol.
+    if (isCategoryLocked(id, lockedCatIds)) return;
     const cat = customCats.find((c) => c.id === id);
     if (cat) setDeleteTarget(cat);
   };
 
+  /**
+   * v1.10.0: ubah label field kustom menjadi key yang aman dipakai
+   * sebagai identifier di VaultEntry.customFields — lowercase, spasi/
+   * karakter non-alfanumerik jadi underscore, prefix "custom_" agar
+   * tidak mungkin bertabrakan dengan properti VaultEntry manapun
+   * (dicek juga secara eksplisit terhadap KNOWN_ENTRY_KEYS saat validasi
+   * simpan, ini lapis pertama pencegahan di titik pembuatan key).
+   */
+  const slugifyFieldKey = (label: string): string => {
+    const slug = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return `custom_${slug || Date.now()}`;
+  };
+
+  const addNewField = () => {
+    setFormFields((prev) => [
+      ...prev,
+      { key: `custom_new_${Date.now()}`, label: '', type: 'text' },
+    ]);
+  };
+
+  const removeField = (key: string) => {
+    setFormFields((prev) => prev.filter((f) => f.key !== key));
+  };
+
+  const updateFieldLabel = (key: string, label: string) => {
+    setFormFields((prev) => prev.map((f) => {
+      if (f.key !== key) return f;
+      // v1.10.0: field BAWAAN (key sudah dikenal, mis. 'user'/'pass')
+      // key-nya TIDAK ikut berubah walau labelnya diedit — key itu
+      // menentukan properti VaultEntry mana yang dipakai, mengubahnya
+      // akan memutus koneksi ke data lama yang sudah tersimpan. Hanya
+      // field KUSTOM baru (key belum ada di KNOWN_ENTRY_KEYS DAN belum
+      // pernah disimpan — ditandai prefix 'custom_new_') yang key-nya
+      // ikut disinkronkan dari label saat pertama kali diketik.
+      const isUnsavedNewCustomField = f.key.startsWith('custom_new_');
+      return {
+        ...f,
+        label,
+        key: isUnsavedNewCustomField ? slugifyFieldKey(label) : f.key,
+      };
+    }));
+  };
+
+  const updateFieldType = (key: string, type: CategoryFieldDef['type']) => {
+    setFormFields((prev) => prev.map((f) => f.key === key ? { ...f, type } : f));
+  };
+
+  /**
+   * v1.10.0: simpan draft formFields ke tujuan yang tepat — 
+   * defaultCatFieldOverrides[fieldsTargetId] untuk kategori default,
+   * atau CustomCategory.fields untuk kategori custom (update objek
+   * kategori itu di dalam array customCats). Validasi: setiap field
+   * harus punya label, tidak boleh ada key duplikat, dan key field
+   * kustom tidak boleh bertabrakan dengan KNOWN_ENTRY_KEYS (yang akan
+   * membuatnya salah dianggap field bawaan saat dirender).
+   */
+  const handleSaveFields = () => {
+    if (!fieldsTargetId) return;
+
+    const trimmedFields = formFields.map((f) => ({ ...f, label: f.label.trim() }));
+
+    if (trimmedFields.length === 0) {
+      setFieldsError('Minimal harus ada 1 field');
+      return;
+    }
+    if (trimmedFields.some((f) => !f.label)) {
+      setFieldsError('Semua field harus punya nama, tidak boleh kosong');
+      return;
+    }
+    const keys = trimmedFields.map((f) => f.key);
+    if (new Set(keys).size !== keys.length) {
+      setFieldsError('Ada nama field yang menghasilkan key sama — ubah salah satu nama agar berbeda');
+      return;
+    }
+    // Field kustom baru (belum disimpan, masih prefix custom_new_) tidak
+    // boleh lolos ke penyimpanan dengan key sementara itu — seharusnya
+    // sudah tersinkron dari label di updateFieldLabel, tapi field yang
+    // ditambah lalu langsung disimpan tanpa sempat diketik labelnya akan
+    // gagal di validasi label kosong di atas duluan, jadi baris ini
+    // murni jaring pengaman kedua.
+    if (keys.some((k) => k.startsWith('custom_new_'))) {
+      setFieldsError('Ada field baru yang belum diberi nama');
+      return;
+    }
+
+    const prevOverrides = defaultCatFieldOverrides;
+    const prevCats = customCats;
+
+    try {
+      if (fieldsIsDefault) {
+        setDefaultCatFieldOverrides(fieldsTargetId, trimmedFields);
+      } else {
+        const nextCats = customCats.map((c) =>
+          c.id === fieldsTargetId ? { ...c, fields: trimmedFields } : c
+        );
+        setCustomCats(nextCats);
+      }
+    } catch {
+      showToast('Gagal menyimpan field, coba lagi', 'error');
+      return;
+    }
+
+    if (masterPw && vaultMeta) {
+      setSaving(true);
+      const nextOverrides = fieldsIsDefault
+        ? { ...defaultCatFieldOverrides, [fieldsTargetId]: trimmedFields }
+        : defaultCatFieldOverrides;
+      const nextCats = fieldsIsDefault
+        ? customCats
+        : customCats.map((c) => c.id === fieldsTargetId ? { ...c, fields: trimmedFields } : c);
+      saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, nextOverrides)
+        .then(() => setMode('list'))
+        .catch(() => {
+          // Rollback — sama alasannya seperti handleSave di atas.
+          try {
+            if (fieldsIsDefault) {
+              useAppStore.setState({ defaultCatFieldOverrides: prevOverrides });
+            } else {
+              setCustomCats(prevCats);
+            }
+          } catch { /* state memori tetap salah, tapi UI sudah diberi tahu */ }
+          showToast('Gagal menyimpan field, coba lagi', 'error');
+        })
+        .finally(() => setSaving(false));
+      return;
+    }
+
+    setMode('list');
+  };
+
+  /**
+   * v1.10.0: kembalikan field kategori ke daftar bawaan (menghapus semua
+   * kustomisasi). Untuk kategori default: hapus dari
+   * defaultCatFieldOverrides sepenuhnya (getFieldsForCat lalu otomatis
+   * fallback ke FIELDS_BY_CAT asli). Untuk kategori custom: kembalikan
+   * ke draft (belum disimpan) berisi field 'lainnya' bawaan — pengguna
+   * tetap perlu menekan Simpan untuk benar-benar menerapkannya, murni
+   * mengisi ulang draft form, bukan langsung menulis ke store.
+   */
+  const resetFieldsToDefault = () => {
+    if (!fieldsTargetId) return;
+    setFormFields(
+      fieldsIsDefault ? getBuiltinFieldsForCat(fieldsTargetId) : getBuiltinFieldsForCat('lainnya')
+    );
+    setFieldsError('');
+  };
+
   const totalCatCount  = DEFAULT_CATEGORIES.length + customCats.length;
   const customCatCount = customCats.length;
+
+  /* ── Render form edit fields (v1.10.0) ── */
+  if (mode === 'edit-fields') {
+    const targetLabel = fieldsIsDefault
+      ? DEFAULT_CATEGORIES.find((c) => c.id === fieldsTargetId)?.label ?? ''
+      : customCats.find((c) => c.id === fieldsTargetId)?.label ?? '';
+
+    return (
+      <>
+      <div className="cat-manager-page">
+        <div className="page-header">
+          <button className="page-header__back" onClick={() => setMode('list')} aria-label="Kembali">
+            <ArrowLeft size={18} />
+          </button>
+          <h2 className="page-header__title">Field: {targetLabel}</h2>
+        </div>
+
+        <div className="cat-manager-form-body">
+          <p className="form-hint">
+            Atur field apa saja yang muncul di form saat menambah/edit entri kategori ini.
+            Field bawaan tidak bisa dihapus, tapi namanya bisa diubah.
+          </p>
+
+          <div className="field-editor-list">
+            {formFields.map((f) => {
+              const isBuiltin = KNOWN_ENTRY_KEYS.has(f.key);
+              return (
+                <div key={f.key} className="field-editor-item">
+                  <GripVertical size={14} className="field-editor-item__handle" aria-hidden="true" />
+                  <div className="field-editor-item__inputs">
+                    <input
+                      type="text"
+                      className="input"
+                      value={f.label}
+                      placeholder="Nama field, mis. Nomor Meja"
+                      onChange={(e) => updateFieldLabel(f.key, e.target.value)}
+                      maxLength={32}
+                    />
+                    <select
+                      className="settings-select"
+                      value={f.type ?? 'text'}
+                      onChange={(e) => updateFieldType(f.key, e.target.value as CategoryFieldDef['type'])}
+                      aria-label={`Tipe field ${f.label || 'baru'}`}
+                    >
+                      <option value="text">Teks</option>
+                      <option value="password">Password</option>
+                      <option value="email">Email</option>
+                      <option value="url">URL</option>
+                      <option value="textarea">Teks panjang</option>
+                    </select>
+                  </div>
+                  {isBuiltin
+                    ? <span className="field-editor-item__badge" title="Field bawaan — tidak bisa dihapus">Bawaan</span>
+                    : (
+                      <IconButton
+                        icon={<Trash2 size={14} />}
+                        size="sm" colorHover="del"
+                        onClick={() => removeField(f.key)}
+                        aria-label={`Hapus field ${f.label || 'ini'}`}
+                      />
+                    )
+                  }
+                </div>
+              );
+            })}
+          </div>
+
+          {fieldsError && <p className="form-error">{fieldsError}</p>}
+
+          <Button variant="ghost" onClick={addNewField} style={{ width: '100%' }}>
+            <Plus size={14} /> Tambah Field
+          </Button>
+
+          <button type="button" className="field-editor__reset-link" onClick={resetFieldsToDefault}>
+            Kembalikan ke field bawaan
+          </button>
+
+          <div className="cat-manager-form__actions">
+            <Button variant="ghost" onClick={() => setMode('list')}>Batal</Button>
+            <Button variant="primary" onClick={handleSaveFields} loading={saving} disabled={saving}>
+              {saving ? 'Menyimpan…' : 'Simpan'}
+            </Button>
+          </div>
+        </div>
+      </div>
+      <ToastContainer />
+      </>
+    );
+  }
 
   /* ── Render form add/edit ── */
   if (mode === 'add' || mode === 'edit') {
     const SelectedIcon = CUSTOM_CAT_ICONS[iconKey] ?? CUSTOM_CAT_ICONS['Tag'];
 
     return (
+      <>
       <div className="cat-manager-page">
         {/* Sticky header — konsisten dengan SettingsView & EntryForm */}
         <div className="page-header">
@@ -298,6 +614,8 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
           </div>
         </div>
       </div>
+      <ToastContainer />
+      </>
     );
   }
 
@@ -319,13 +637,34 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       <div className="cat-manager-list-body">
         <div className="cat-manager__section-label">Bawaan</div>
         <div className="cat-manager__list">
-          {DEFAULT_CATEGORIES.map((cat) => (
-            <div key={cat.id} className="cat-manager__item cat-manager__item--default">
-              <CategoryIcon catId={cat.id} size="sm" />
-              <span className="cat-manager__item-label">{cat.label}</span>
-              <span className="cat-manager__item-badge">Default</span>
-            </div>
-          ))}
+          {DEFAULT_CATEGORIES.map((cat) => {
+            const isLocked = isCategoryLocked(cat.id, lockedCatIds);
+            return (
+              <div key={cat.id} className="cat-manager__item cat-manager__item--default">
+                <CategoryIcon catId={cat.id} size="sm" />
+                <span className="cat-manager__item-label">{cat.label}</span>
+                <span className="cat-manager__item-badge">Default</span>
+                <div className="cat-manager__item-actions">
+                  <IconButton
+                    icon={<ListChecks size={14} />}
+                    size="sm"
+                    onClick={() => openFieldsEditor(cat.id, true)}
+                    aria-label={`Kelola field ${cat.label}`}
+                    disabled={isLocked}
+                    title={isLocked ? 'Buka kunci dulu untuk kelola field' : 'Kelola field'}
+                  />
+                  <IconButton
+                    icon={isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                    size="sm"
+                    colorHover="lock"
+                    onClick={() => toggleLockedCatId(cat.id)}
+                    aria-label={isLocked ? `Buka kunci kategori ${cat.label}` : `Kunci kategori ${cat.label}`}
+                    title={isLocked ? 'Buka kunci' : 'Kunci'}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="cat-manager__section-label">
@@ -346,6 +685,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
               const iconBg    = cat.color
                 ? `${cat.color}26`   /* hex + alpha 15% */
                 : 'rgba(156,163,175,0.15)';
+              const isLocked = isCategoryLocked(cat.id, lockedCatIds);
               return (
                 <div key={cat.id} className="cat-manager__item">
                   <span
@@ -356,13 +696,37 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                   </span>
                   <span className="cat-manager__item-label">{cat.label}</span>
                   <div className="cat-manager__item-actions">
-                    <IconButton icon={<Pencil size={14} />} size="sm" onClick={() => openEdit(cat)} aria-label={`Edit ${cat.label}`} />
+                    <IconButton
+                      icon={isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                      size="sm"
+                      colorHover="lock"
+                      onClick={() => toggleLockedCatId(cat.id)}
+                      aria-label={isLocked ? `Buka kunci kategori ${cat.label}` : `Kunci kategori ${cat.label}`}
+                      title={isLocked ? 'Buka kunci' : 'Kunci'}
+                    />
+                    <IconButton
+                      icon={<ListChecks size={14} />}
+                      size="sm"
+                      onClick={() => openFieldsEditor(cat.id, false, cat)}
+                      aria-label={`Kelola field ${cat.label}`}
+                      disabled={isLocked}
+                      title={isLocked ? 'Buka kunci dulu untuk kelola field' : 'Kelola field'}
+                    />
+                    <IconButton
+                      icon={<Pencil size={14} />}
+                      size="sm"
+                      onClick={() => openEdit(cat)}
+                      aria-label={`Edit ${cat.label}`}
+                      disabled={isLocked}
+                      title={isLocked ? 'Buka kunci dulu untuk edit' : 'Edit'}
+                    />
                     <IconButton
                       icon={<Trash2 size={14} />}
                       size="sm" colorHover="del"
                       onClick={() => handleDelete(cat.id)}
                       aria-label={`Hapus ${cat.label}`}
-                      title="Hapus"
+                      disabled={isLocked}
+                      title={isLocked ? 'Buka kunci dulu untuk hapus' : 'Hapus'}
                     />
                   </div>
                 </div>
@@ -383,11 +747,15 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       onCancel={() => setDeleteTarget(null)}
       onConfirm={() => {
         if (deleteTarget) {
+          const prevCats = customCats; // untuk rollback jika saveVault gagal
           removeCustomCat(deleteTarget.id);
           // Simpan ke vault terenkripsi setelah hapus
           const nextCats = customCats.filter((c) => c.id !== deleteTarget.id);
           if (masterPw && vaultMeta) {
-            saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds).catch(() => {});
+            saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, defaultCatFieldOverrides).catch(() => {
+              try { setCustomCats(prevCats); } catch { /* state memori tetap salah, tapi UI sudah diberi tahu */ }
+              showToast('Gagal menghapus kategori, coba lagi', 'error');
+            });
           }
         }
         setDeleteTarget(null);
@@ -401,6 +769,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       confirmLabel="Hapus Kategori"
       variant="danger"
     />
+    <ToastContainer />
     </>
   );
 }

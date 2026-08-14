@@ -29,6 +29,20 @@ export interface VaultEntry {
   wifiSSID?:   string;
   wifiPass?:   string;
   emailAddr?:  string;
+
+  // ── Field BARU v1.10.0 — Verifikasi 2 Langkah (kategori Email) ──
+  twoFAEnabled?:       boolean;
+  twoFAPhone?:         string;
+  twoFARecoveryEmail?: string;
+  twoFABackupCodes?:   string[];
+
+  // ── Field BARU v1.10.0 — Field kategori dinamis ──
+  // Wadah generik untuk field KUSTOM (bukan bawaan) yang ditambahkan
+  // pengguna lewat Pengaturan > Edit Kategori. Key di sini cocok
+  // dengan `key` pada CategoryFieldDef yang punya locked=false/undefined
+  // (field bawaan tetap disimpan di properti asli seperti user/pass/dst
+  // di atas, TIDAK di sini — demi backward-compat dengan data lama).
+  customFields?: Record<string, string>;
 }
 
 // ─── VaultMeta ────────────────────────────────────────────────────────────────
@@ -49,6 +63,11 @@ export interface CustomCategory {
                      // Backward-compat: jika berisi emoji char lama, CategoryIcon fallback ke Tag
   iconKey: string;   // canonical key — dipakai Sesi D+
   color?:  string;   // v1.3.6: warna background/icon custom (hex atau CSS var). Optional — backward-compat
+  // v1.10.0: daftar field form untuk kategori ini. Opsional untuk
+  // backward-compat — kategori custom lama (sebelum fitur ini) tidak
+  // punya field ini sama sekali; fallback ke field default kategori
+  // "Lainnya" tetap berlaku (lihat getFieldsForCat di EntryForm.tsx).
+  fields?: CategoryFieldDef[];
 }
 
 // ─── Backup Format ────────────────────────────────────────────────────────────
@@ -68,6 +87,44 @@ export interface VaultBackupPayload {
   customCats: CustomCategory[];
   lockedIds:  string[];
   recycleBin: VaultEntry[];
+  // v1.10.0: kategori (default maupun custom) yang dikunci dari
+  // hapus/ubah tidak sengaja. Field BARU — ditambahkan, tidak
+  // mengganti lockedIds (yang tetap untuk kunci ENTRI individual).
+  // Opsional supaya backup lama (tanpa field ini) tetap valid — lihat
+  // fallback `?? []` di unlockVault/importBackup di vaultService.ts.
+  lockedCatIds?: string[];
+  // v1.10.0: override daftar field per kategori DEFAULT (Sosmed, Email,
+  // dst). Kategori default sendiri tetap konstanta kode (DEFAULT_CATEGORIES),
+  // TIDAK diubah — field ini murni menyimpan kustomisasi field milik
+  // pengguna, terpisah per kategori by id. Kategori custom punya
+  // mekanisme serupa lewat CustomCategory.fields (lihat di bawah), BUKAN
+  // di sini — field ini KHUSUS kategori default karena mereka tidak
+  // punya objek CustomCategory sendiri untuk menampung field custom.
+  defaultCatFieldOverrides?: Record<string, CategoryFieldDef[]>;
+}
+
+/**
+ * v1.10.0: Definisi satu field dalam form entri untuk sebuah kategori
+ * (default maupun custom). Mengganti pendekatan lama FIELDS_BY_CAT yang
+ * hardcode di kode — sekarang field per kategori adalah DATA yang bisa
+ * dikustomisasi pengguna lewat menu Pengaturan > Edit Kategori.
+ *
+ * `key`: untuk field BAWAAN (Username/Password/URL/Catatan, dst) key
+ * sama seperti nama properti asli di VaultEntry (mis. 'user', 'pass') —
+ * backward-compat penuh dengan data lama. Untuk field KUSTOM baru yang
+ * ditambahkan pengguna, key adalah string bebas yang menjadi kunci di
+ * dalam VaultEntry.customFields (lihat field itu di interface VaultEntry).
+ * `locked`: field bawaan inti (mis. field 'user'/'pass' pada kategori
+ * yang belum sempat dikunci penuh) bisa ditandai locked agar tidak
+ * sengaja dihapus dari daftar field kategori — independen dari
+ * lockedCatIds (yang mengunci SELURUH kategori dari edit/hapus).
+ */
+export interface CategoryFieldDef {
+  key:          string;
+  label:        string;
+  type?:        'text' | 'password' | 'url' | 'email' | 'textarea';
+  placeholder?: string;
+  locked?:      boolean;
 }
 
 // ─── Kategori Default ─────────────────────────────────────────────────────────

@@ -394,11 +394,43 @@
   padding-right: 42px !important;   /* ruang untuk toggle button */
 }
 
+/* v1.6.1: masking password via CSS, independen dari atribut `type`.
+ * Root cause bug sebelumnya: mengganti atribut type="password"/"text" pada
+ * input yang sama (bahkan dengan key React berbeda untuk memaksa remount)
+ * tetap tidak konsisten refresh visual mask di beberapa Chrome Android —
+ * ini perilaku level browser, bukan bug React. -webkit-text-security
+ * mengontrol tampilan glyph murni di CSS, tidak pernah bergantung pada
+ * bagaimana browser menangani perubahan atribut type secara dinamis.
+ * Didukung Chrome Android sejak versi 18 (2012) — aman untuk semua device
+ * modern. `type` HTML tetap dipertahankan sebagai fallback semantik untuk
+ * browser yang tidak mendukung properti ini (mis. Firefox Android).
+ */
+.form-pw-input--masked {
+  -webkit-text-security: disc;
+  text-security: disc; /* properti belum standar; ditulis untuk masa depan */
+}
+
+/* v1.8.0: BUG FIX — .form-pw-toggle sebelumnya pakai transform:translateY(-50%)
+ * untuk memusatkan tombol secara vertikal, TAPI tombol ini juga memakai class
+ * .btn-icon yang punya rule .btn-icon:active { transform: scale(0.93) }.
+ * Dua sumber transform pada elemen yang sama tidak digabung oleh browser —
+ * nilai yang menang (specificity .btn-icon:active lebih tinggi) MENIMPA
+ * seluruhnya. Akibatnya translateY(-50%) hilang total tepat saat tombol
+ * ditekan, tombol meloncat dari posisi center ke posisi top:50% mentah
+ * (secara visual bergeser ke atas) lalu meloncat balik saat dilepas — inilah
+ * sumber "rasa tidak nyaman saat ditekan" yang dilaporkan, meski durasinya
+ * singkat (150ms) sehingga sulit dijelaskan persis apa yang salah.
+ * Diperbaiki dengan margin-top:-16px (setengah dari height:32px) sebagai
+ * pengganti translateY — secara matematis identik untuk memusatkan elemen
+ * bertinggi tetap, tapi TIDAK memakai transform sama sekali untuk
+ * positioning. transform sekarang sepenuhnya "milik" state :active tanpa
+ * konflik apa pun.
+ */
 .form-pw-toggle {
   position: absolute;
   right: 4px;
   top: 50%;
-  transform: translateY(-50%);
+  margin-top: -16px;   /* setengah dari height:32px — setara translateY(-50%) tanpa transform */
   width: 32px;
   height: 32px;
   display: flex;

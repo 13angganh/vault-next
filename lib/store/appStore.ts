@@ -5,10 +5,11 @@
  */
 
 import { create } from 'zustand';
-import type { VaultEntry, VaultMeta, CustomCategory } from '@/lib/types';
+import type { VaultEntry, VaultMeta, CustomCategory, CategoryFieldDef } from '@/lib/types';
 import {
   lsGet, lsSet, lsRemove, lsGetNum, lsSetNum, lsGetBool, lsSetBool, lsGetJson, lsSetJson,
   LS_AUTOLOCK, LS_AUTOSAVE, LS_BKPIVL, LS_CATS, LS_BIO_ENABLED, LS_BIO_CRED_ID,
+  LS_PIN_ATTEMPTS, LS_PIN_LOCKED_UNTIL,
 } from '@/lib/storage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,6 +30,14 @@ interface AppState {
   recycleBin:      VaultEntry[];
   vaultMeta:       VaultMeta | null;
   lockedIds:       string[];       // entry ID yang di-lock individual
+  // v1.10.0: kategori (default maupun custom) yang dikunci dari
+  // hapus/ubah tidak sengaja — paralel dengan lockedIds di atas, tapi
+  // untuk kategori bukan entri.
+  lockedCatIds:    string[];
+  // v1.10.0: override daftar field form untuk kategori DEFAULT
+  // (kategori custom punya mekanisme sendiri lewat CustomCategory.fields,
+  // lihat lib/types.ts untuk penjelasan lengkap kenapa dua tempat berbeda).
+  defaultCatFieldOverrides: Record<string, CategoryFieldDef[]>;
   customCats:      CustomCategory[];
 
   // ── UI State ──
@@ -68,6 +77,13 @@ interface AppState {
   setVaultMeta:  (meta: VaultMeta) => void;
   setLockedIds:  (ids: string[]) => void;
   toggleLockedId:(id: string) => void;
+  // v1.10.0: paralel dengan setLockedIds/toggleLockedId di atas, untuk kategori.
+  setLockedCatIds:   (ids: string[]) => void;
+  toggleLockedCatId: (catId: string) => void;
+  // v1.10.0: kelola override field form untuk kategori DEFAULT.
+  setDefaultCatFieldOverrides:   (catId: string, fields: CategoryFieldDef[]) => void;
+  resetDefaultCatFieldOverrides: (catId: string) => void;
+  loadDefaultCatFieldOverrides:  (all: Record<string, CategoryFieldDef[]>) => void;
 
   // ── Actions: Categories ──
   setCustomCats:    (cats: CustomCategory[]) => void;
@@ -119,6 +135,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   recycleBin:      [],
   vaultMeta:       null,
   lockedIds:       [],
+  lockedCatIds:    [],
+  defaultCatFieldOverrides: {},
   customCats:      lsGetJson<CustomCategory[]>(LS_CATS, []),
 
   currentFilter:   'all',
@@ -131,9 +149,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   seedVisible:     {},
 
   pinBuffer:       '',
-  pinAttempts:     0,
-  pinLocked:       false,
-  pinLockedUntil:  0,
+  // v1.7.0: dulu literal 0 — lockout hilang begitu halaman reload/PWA di-kill
+  // OS, membuat rate-limiting 5x-percobaan/5-menit bisa dilewati semata-mata
+  // dengan refresh. Dibaca dari localStorage sama seperti autoLockMinutes dkk.
+  pinAttempts:     lsGetNum(LS_PIN_ATTEMPTS, 0),
+  pinLocked:       false, // dihitung ulang dari pinLockedUntil vs Date.now() di LockScreen — lihat init di bawah
+  pinLockedUntil:  lsGetNum(LS_PIN_LOCKED_UNTIL, 0),
 
   backupIntervalHrs: lsGetNum(LS_BKPIVL, 24),
   autoSaveEnabled:   lsGetBool(LS_AUTOSAVE, true),
@@ -142,13 +163,21 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // ── Actions: Auth ──────────────────────────────────────────────────────────
 
-  unlock: (pw) => set({
-    isUnlocked: true,
-    masterPw: pw,
-    lastActivityAt: Date.now(),
-    pinBuffer: '',
-    pinAttempts: 0,
-  }),
+  unlock: (pw) => {
+    // v1.7.0: bersihkan sisa counter/lockout persisten juga — sebelumnya
+    // hanya di-reset di memori, localStorage tetap menyimpan angka lama
+    lsSetNum(LS_PIN_ATTEMPTS, 0);
+    lsSetNum(LS_PIN_LOCKED_UNTIL, 0);
+    set({
+      isUnlocked: true,
+      masterPw: pw,
+      lastActivityAt: Date.now(),
+      pinBuffer: '',
+      pinAttempts: 0,
+      pinLocked: false,
+      pinLockedUntil: 0,
+    });
+  },
 
   lock: () => set({
     isUnlocked: false,
@@ -157,6 +186,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     recycleBin: [],
     vaultMeta: null,
     lockedIds: [],
+    lockedCatIds: [],
+    defaultCatFieldOverrides: {},
     expandedIds: [],
     selectedIds: [],
     pwVisible: {},
@@ -184,23 +215,74 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ lockedIds: next });
   },
 
+  // v1.10.0: paralel persis dengan setLockedIds/toggleLockedId di atas,
+  // untuk kategori bukan entri.
+  setLockedCatIds: (ids) => set({ lockedCatIds: ids }),
+
+  toggleLockedCatId: (catId) => {
+    const curr = get().lockedCatIds;
+    const next = curr.includes(catId) ? curr.filter((x) => x !== catId) : [...curr, catId];
+    set({ lockedCatIds: next });
+  },
+
+  // v1.10.0: kelola override field form untuk kategori default. Immutable
+  // update pada objek Record — spread + override key, bukan mutasi
+  // langsung, konsisten dengan pola array immutable di atas.
+  setDefaultCatFieldOverrides: (catId, fields) => {
+    const curr = get().defaultCatFieldOverrides;
+    set({ defaultCatFieldOverrides: { ...curr, [catId]: fields } });
+  },
+
+  resetDefaultCatFieldOverrides: (catId) => {
+    const curr = get().defaultCatFieldOverrides;
+    const { [catId]: _removed, ...rest } = curr;
+    set({ defaultCatFieldOverrides: rest });
+  },
+
+  loadDefaultCatFieldOverrides: (all) => set({ defaultCatFieldOverrides: all }),
+
   // ── Actions: Categories ────────────────────────────────────────────────────
+  // v1.7.0: ketiga action ini melempar lewat ke pemanggil kalau localStorage
+  // gagal (mis. kuota penuh) -- itu memang perilaku yang benar (lsSetJson
+  // throw sejak v1.6.0, CategoryManager.tsx sudah menangkapnya sendiri untuk
+  // rollback+toast). Yang diperbaiki di sini murni robustness: state memori
+  // sebenarnya SUDAH aman tanpa perubahan (set() hanya tercapai setelah
+  // lsSetJson sukses, urutan yang sudah benar sejak awal) -- tapi kalau
+  // action ini dipanggil dari tempat lain di masa depan tanpa try/catch
+  // pembungkus seperti di CategoryManager, exception akan tetap uncaught
+  // dan berpotensi crash UI. try/catch di sini sekadar logging diagnostik
+  // sebelum re-throw -- perilaku pemanggil tidak berubah, hanya jejaknya.
 
   setCustomCats: (cats) => {
-    lsSetJson(LS_CATS, cats);
-    set({ customCats: cats });
+    try {
+      lsSetJson(LS_CATS, cats);
+      set({ customCats: cats });
+    } catch (err) {
+      console.error('[Vault] setCustomCats gagal simpan ke localStorage:', err);
+      throw err;
+    }
   },
 
   addCustomCat: (cat) => {
     const next = [...get().customCats, cat];
-    lsSetJson(LS_CATS, next);
-    set({ customCats: next });
+    try {
+      lsSetJson(LS_CATS, next);
+      set({ customCats: next });
+    } catch (err) {
+      console.error('[Vault] addCustomCat gagal simpan ke localStorage:', err);
+      throw err;
+    }
   },
 
   removeCustomCat: (id) => {
     const next = get().customCats.filter((c) => c.id !== id);
-    lsSetJson(LS_CATS, next);
-    set({ customCats: next });
+    try {
+      lsSetJson(LS_CATS, next);
+      set({ customCats: next });
+    } catch (err) {
+      console.error('[Vault] removeCustomCat gagal simpan ke localStorage:', err);
+      throw err;
+    }
   },
 
   // ── Actions: UI ────────────────────────────────────────────────────────────
@@ -241,13 +323,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   clearPin: () => set({ pinBuffer: '' }),
 
+  // v1.7.0: persist ke localStorage — lihat catatan di initial state di atas
   incrementPinAttempts: () => {
     const n = get().pinAttempts + 1;
+    lsSetNum(LS_PIN_ATTEMPTS, n);
     set({ pinAttempts: n });
   },
-  resetPinAttempts: () => set({ pinAttempts: 0, pinLocked: false, pinLockedUntil: 0 }),
+  resetPinAttempts: () => {
+    lsSetNum(LS_PIN_ATTEMPTS, 0);
+    lsSetNum(LS_PIN_LOCKED_UNTIL, 0);
+    set({ pinAttempts: 0, pinLocked: false, pinLockedUntil: 0 });
+  },
 
-  setPinLocked: (until) => set({ pinLocked: true, pinLockedUntil: until, pinBuffer: '' }),
+  setPinLocked: (until) => {
+    lsSetNum(LS_PIN_LOCKED_UNTIL, until);
+    set({ pinLocked: true, pinLockedUntil: until, pinBuffer: '' });
+  },
 
   // ── Actions: Settings ──────────────────────────────────────────────────────
 

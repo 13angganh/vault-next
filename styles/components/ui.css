@@ -139,6 +139,14 @@ select option { background: var(--bg-s2); color: var(--text); }
 .ibtn:active { transform: scale(0.88); transition: transform 120ms var(--ease-spring); }
 .ibtn.del:hover { border-color: var(--red); color: var(--red); }
 .ibtn.lock-active { border-color: var(--blue); color: var(--blue); background: rgba(77,142,255,0.1); }
+/* v1.10.0: state disabled — dipakai tombol Edit/Hapus kategori saat
+ * terkunci. Meniadakan hover/active supaya tidak terlihat masih
+ * responsif terhadap klik. */
+.ibtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 /* CARD */
 .card {
@@ -601,6 +609,14 @@ textarea:focus {
   outline-offset: 1px;
 }
 
+/* v1.8.0: BUG FIX — sebelumnya tidak ada transition eksplisit untuk transform
+ * di sini, dan .btn-icon (default state, di atas) hanya men-transition
+ * color+background — transform TIDAK termasuk. Akibatnya scale(0.93) saat
+ * :active muncul & hilang secara instan (patah), bukan mulus, berbeda
+ * perilaku dengan .ibtn:active di file ini yang sudah benar menyertakan
+ * transition transform-nya sendiri. Disamakan ke pola yang sama.
+ */
 .btn-icon:active {
   transform: scale(0.93);
+  transition: transform 120ms var(--ease-spring);
 }

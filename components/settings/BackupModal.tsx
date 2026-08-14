@@ -45,6 +45,8 @@ export function BackupModal({ onClose }: BackupModalProps) {
         store.vaultMeta,
         store.customCats,
         store.lockedIds,
+        store.lockedCatIds,
+        store.defaultCatFieldOverrides,
       );
       const json = JSON.stringify(backup, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
@@ -117,6 +119,9 @@ export function BackupModal({ onClose }: BackupModalProps) {
     const currentBin       = store.recycleBin;
     const currentCats      = store.customCats;
     const currentLocked    = store.lockedIds;
+    // v1.10.0: paralel dengan currentLocked/finalLocked di bawah, untuk kategori.
+    const currentLockedCat = store.lockedCatIds;
+    const currentFieldOverrides = store.defaultCatFieldOverrides;
     try {
       const text    = await importFile.text();
       const payload = await importBackup(text, importPw);
@@ -125,6 +130,8 @@ export function BackupModal({ onClose }: BackupModalProps) {
       let finalBin     = payload.recycleBin;
       let finalCats    = payload.customCats;
       let finalLocked  = payload.lockedIds;
+      let finalLockedCat = payload.lockedCatIds;
+      let finalFieldOverrides = payload.defaultCatFieldOverrides;
 
       if (importMode === 'merge') {
         // Merge: gabungkan, hindari duplikat berdasarkan ID
@@ -137,6 +144,12 @@ export function BackupModal({ onClose }: BackupModalProps) {
         const newCats = payload.customCats.filter((c) => !existingCatIds.has(c.id));
         finalCats   = [...currentCats, ...newCats];
         finalLocked = Array.from(new Set([...currentLocked, ...payload.lockedIds]));
+        finalLockedCat = Array.from(new Set([...currentLockedCat, ...payload.lockedCatIds]));
+        // v1.10.0: merge override field kategori default — key dari
+        // backup menimpa key lokal yang sama (backup dianggap lebih
+        // baru/otoritatif, konsisten dengan semangat union di atas),
+        // key yang hanya ada di salah satu tetap dipertahankan.
+        finalFieldOverrides = { ...currentFieldOverrides, ...payload.defaultCatFieldOverrides };
       }
 
       // Update store
@@ -145,9 +158,11 @@ export function BackupModal({ onClose }: BackupModalProps) {
       store.setVaultMeta(payload.meta);
       store.setCustomCats(finalCats);
       store.setLockedIds(finalLocked);
+      store.setLockedCatIds(finalLockedCat);
+      store.loadDefaultCatFieldOverrides(finalFieldOverrides);
 
       // Simpan — pakai snapshot masterPw bukan store (hindari stale closure)
-      await saveVault(currentMasterPw, finalVault, finalBin, payload.meta, finalCats, finalLocked);
+      await saveVault(currentMasterPw, finalVault, finalBin, payload.meta, finalCats, finalLocked, finalLockedCat, finalFieldOverrides);
 
       const added = importMode === 'merge'
         ? payload.vault.filter((e) => !currentVault.some((x) => x.id === e.id)).length
@@ -187,6 +202,8 @@ export function BackupModal({ onClose }: BackupModalProps) {
         store.vaultMeta,
         store.customCats,
         store.lockedIds,
+        store.lockedCatIds,
+        store.defaultCatFieldOverrides,
       );
       setSyncText(JSON.stringify(backup));
     } catch (e) {
@@ -219,8 +236,10 @@ export function BackupModal({ onClose }: BackupModalProps) {
       store.setVaultMeta(payload.meta);
       store.setCustomCats(payload.customCats);
       store.setLockedIds(payload.lockedIds);
+      store.setLockedCatIds(payload.lockedCatIds);
+      store.loadDefaultCatFieldOverrides(payload.defaultCatFieldOverrides);
       // Snapshot masterPw untuk hindari stale closure
-      await saveVault(currentMasterPw, payload.vault, payload.recycleBin, payload.meta, payload.customCats, payload.lockedIds);
+      await saveVault(currentMasterPw, payload.vault, payload.recycleBin, payload.meta, payload.customCats, payload.lockedIds, payload.lockedCatIds, payload.defaultCatFieldOverrides);
       setSyncResult(`✅ Sinkron berhasil! ${payload.vault.length} entri dimuat.`);
     } catch (e) {
       setSyncError((e as Error).message);

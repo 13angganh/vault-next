@@ -1,6 +1,6 @@
 'use client';
-import { useMemo } from 'react';
-import { Shield, AlertTriangle, Copy, Clock, CheckCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Shield, AlertTriangle, Copy, Clock, CheckCircle, ChevronDown } from 'lucide-react';
 import { useAppStore }   from '@/lib/store/appStore';
 import { runHealthCheck, scoreColor, scoreLabel } from '@/lib/healthCheck';
 import type { HealthIssue } from '@/lib/healthCheck';
@@ -12,9 +12,16 @@ const IMETA: Record<HealthIssue['type'],{icon:React.ReactNode;label:string;color
   old:       {icon:<Clock size={13}/>,          label:'Tidak diupdate',   color:'var(--muted)'},
 };
 
+// Jumlah masalah yang tampil sebelum daftar dipangkas & tombol "+N lainnya" muncul.
+const VISIBLE_ISSUES_LIMIT = 6;
+
 export function HealthCheckPanel() {
   const vault  = useAppStore((s) => s.vault);
   const report = useMemo(()=>runHealthCheck(vault),[vault]);
+  // v1.8.0: sebelumnya "+N masalah lainnya" adalah teks <p> statis tanpa
+  // onClick/state apa pun -- klik tidak melakukan apa-apa. State expanded
+  // ini yang membuat daftar benar-benar bisa dibuka/ditutup.
+  const [expanded, setExpanded] = useState(false);
   if (!vault.length) return <div className="health-empty"><Shield size={28}/><p>Belum ada entri</p></div>;
   const {score,totalScanned,duplicateGroups,weakCount,noPassCount,oldCount}=report;
   const col=scoreColor(score), lab=scoreLabel(score);
@@ -45,10 +52,10 @@ export function HealthCheckPanel() {
       {report.issues.length===0&&<div className="health-perfect"><CheckCircle size={18} style={{color:'var(--teal)'}}/><span>Semua password aman!</span></div>}
       {report.issues.length>0&&(
         <div className="health-issues">
-          {report.issues.slice(0,6).map((issue,i)=>{
+          {(expanded ? report.issues : report.issues.slice(0,VISIBLE_ISSUES_LIMIT)).map((issue,i)=>{
             const m=IMETA[issue.type];
             return (
-              <div key={i} className="health-issue">
+              <div key={`${issue.entryId}-${issue.type}-${i}`} className="health-issue">
                 <span className="health-issue__icon" style={{color:m.color}}>{m.icon}</span>
                 <div className="health-issue__info">
                   <span className="health-issue__name">{issue.entryName}</span>
@@ -58,7 +65,13 @@ export function HealthCheckPanel() {
               </div>
             );
           })}
-          {report.issues.length>6&&<p className="health-more">+{report.issues.length-6} masalah lainnya</p>}
+          {report.issues.length>VISIBLE_ISSUES_LIMIT&&(
+            <button type="button" className="health-more" aria-expanded={expanded}
+              onClick={()=>setExpanded((v)=>!v)}>
+              {expanded ? 'Tampilkan lebih sedikit' : `+${report.issues.length-VISIBLE_ISSUES_LIMIT} masalah lainnya`}
+              <ChevronDown size={12} className={`health-more__chevron${expanded?' health-more__chevron--open':''}`}/>
+            </button>
+          )}
         </div>
       )}
     </div>

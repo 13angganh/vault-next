@@ -4,7 +4,7 @@
  * F3-05
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
   lsGet, lsSet, lsRemove,
   lsGetJson, lsSetJson,
@@ -38,6 +38,41 @@ describe('lsGet / lsSet / lsRemove', () => {
 
   it('remove key yang tidak ada tidak throw', () => {
     expect(() => lsRemove('tidak_ada')).not.toThrow();
+  });
+});
+
+// v1.6.0: lsSet melempar error saat localStorage.setItem gagal (mis. kuota
+// penuh), alih-alih diam-diam gagal via console.warn. Ini penting karena
+// caller (EntryForm, CategoryManager, dst) mengandalkan exception ini untuk
+// rollback state dan memberi tahu pengguna -- tanpa test ini, regresi ke
+// perilaku silent-fail lama tidak akan terdeteksi.
+describe('lsSet — perilaku saat localStorage gagal (fix v1.6.0)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('melempar error saat localStorage.setItem gagal (simulasi kuota penuh)', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    });
+    expect(() => lsSet('key_gagal', 'nilai')).toThrow();
+  });
+
+  it('pesan error menyebut key yang gagal disimpan, agar mudah didiagnosis', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    });
+    expect(() => lsSet('kunci_spesifik', 'nilai')).toThrow(/kunci_spesifik/);
+  });
+
+  it('localStorage TIDAK berubah saat setItem gagal (tidak ada partial write)', () => {
+    lsSet('sudah_ada', 'nilai_lama');
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    });
+    try { lsSet('sudah_ada', 'nilai_baru'); } catch { /* diharapkan throw */ }
+    vi.restoreAllMocks();
+    expect(lsGet('sudah_ada')).toBe('nilai_lama'); // tidak ter-overwrite
   });
 });
 

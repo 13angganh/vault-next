@@ -19,8 +19,18 @@ const PBKDF2_ITER_2 = 100_000;
 const SALT_LEN = 16;
 const IV_LEN   = 12;
 
+// Dibangun per-chunk (bukan String.fromCharCode(...bytes) sekaligus) karena
+// spread argumen ke fromCharCode bisa "Maximum call stack size exceeded"
+// pada buffer besar — dan buffer di sini adalah seluruh vault terenkripsi,
+// yang membesar seiring bertambahnya entri, notes panjang, atau seed phrase.
 function bufToB64(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const bytes = new Uint8Array(buf);
+  const CHUNK = 0x8000; // 32k byte per chunk — jauh di bawah limit argumen JS engine
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 function b64ToBuf(b64: string): Uint8Array {

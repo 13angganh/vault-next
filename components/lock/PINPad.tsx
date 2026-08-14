@@ -9,7 +9,7 @@
  * untuk dot animation yang lebih smooth dan konsisten.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Delete } from 'lucide-react';
 import { DUR, EASE } from '@/lib/animation';
@@ -40,6 +40,30 @@ export function PINPad({
   const prevLen       = useRef(0);
   const dotRefs       = useRef<(HTMLDivElement | null)[]>([]);
   const prefersReduced = useReducedMotion();
+  // v1.7.0: auto-submit (80ms setelah digit terakhir) dan Enter key bisa
+  // race — kalau user menekan Enter tepat dalam window 80ms itu, onSubmit
+  // terpanggil dua kali untuk satu PIN yang sama, menghitung satu
+  // kesalahan sebagai dua percobaan (lihat incrementPinAttempts di
+  // LockScreen.tsx). Guard ini memastikan hanya panggilan PERTAMA yang
+  // lolos untuk setiap pengisian PIN; reset saat value berubah lagi
+  // (digit dihapus/ditambah) supaya percobaan berikutnya tetap bisa submit.
+  const submittedForValue = useRef<string | null>(null);
+  const submitOnce = useCallback(() => {
+    if (submittedForValue.current === value) return; // sudah submit utk PIN ini
+    submittedForValue.current = value;
+    onSubmit?.();
+  }, [value, onSubmit]);
+  // Guard di atas membandingkan STRING PIN, bukan boolean — supaya PIN
+  // yang berbeda dari percobaan sebelumnya tidak ikut terblokir. Tapi itu
+  // juga berarti kalau LockScreen mengisi ulang PINPad dengan PIN yang
+  // SAMA persis di percobaan berikutnya (pinBuf selalu di-clear ke ''
+  // dulu oleh LockScreen antar percobaan, tapi kalau user mengetik ulang
+  // PIN yang identik), guard lama akan salah mengira itu percobaan yang
+  // sudah pernah disubmit. Reset guard begini setiap kali panjang value
+  // turun dari maxLen — yaitu saat user mulai mengisi ulang.
+  useEffect(() => {
+    if (value.length < maxLen) submittedForValue.current = null;
+  }, [value, maxLen]);
 
   /* Keyboard support */
   useEffect(() => {
@@ -52,20 +76,20 @@ export function PINPad({
       } else if (e.key === 'Backspace') {
         onDelete();
       } else if (e.key === 'Enter' && value.length === maxLen) {
-        onSubmit?.();
+        submitOnce();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [disabled, locked, value, maxLen, onDigit, onDelete, onSubmit]);
+  }, [disabled, locked, value, maxLen, onDigit, onDelete, onSubmit, submitOnce]);
 
   /* Auto-submit */
   useEffect(() => {
     if (value.length === maxLen && onSubmit) {
-      const t = setTimeout(onSubmit, 80);
+      const t = setTimeout(submitOnce, 80);
       return () => clearTimeout(t);
     }
-  }, [value, maxLen, onSubmit]);
+  }, [value, maxLen, onSubmit, submitOnce]);
 
   /* Dot bounce animation saat digit ditambah */
   useEffect(() => {

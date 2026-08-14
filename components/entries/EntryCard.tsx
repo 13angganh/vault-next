@@ -220,7 +220,7 @@ export function EntryCard({
     store.setVault(updated);
     if (store.autoSaveEnabled) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, updated, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds);
+      await saveVault(store.masterPw, updated, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
     }
   };
 
@@ -233,7 +233,7 @@ export function EntryCard({
       store.setRecycleBin(updated);
       if (store.autoSaveEnabled) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        await saveVault(store.masterPw, store.vault, updated, store.vaultMeta!, store.customCats, store.lockedIds);
+        await saveVault(store.masterPw, store.vault, updated, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
       }
     } else {
       // Move to recycle bin
@@ -243,7 +243,7 @@ export function EntryCard({
       store.setRecycleBin(newBin);
       if (store.autoSaveEnabled) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds);
+      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
       }
     }
   };
@@ -257,7 +257,7 @@ export function EntryCard({
     store.setVault(newVault);
     if (store.autoSaveEnabled) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds);
+      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
     }
   };
 
@@ -277,7 +277,7 @@ export function EntryCard({
     // Selalu simpan locked state — ini data penting, tidak tergantung autoSave
     try {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked);
+      await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked, store.lockedCatIds, store.defaultCatFieldOverrides);
     } catch {
       // Rollback jika save gagal
       store.setLockedIds(lockedIds);
@@ -430,14 +430,14 @@ export function EntryCard({
           <div className="entry-card__quick-copy" onClick={(e)=>e.stopPropagation()}>
             {entry.user && (
               <motion.button className={`entry-card__qc-btn${quickCopied==='user'?' entry-card__qc-btn--copied':''}`}
-                onClick={()=>handleQuickCopy(entry.user,'user')} aria-label="Salin username"
+                onClick={()=>handleQuickCopy(entry.user,'user')} aria-label="Salin username" title="Salin Username"
                 whileTap={prefersReduced?{}:{scale:0.85}} transition={{duration:DUR.tap}}>
                 {quickCopied==='user'?<Check size={11}/>:<User size={11}/>}
               </motion.button>
             )}
             {entry.pass && (
               <motion.button className={`entry-card__qc-btn${quickCopied==='pass'?' entry-card__qc-btn--copied':''}`}
-                onClick={()=>handleQuickCopy(entry.pass,'pass')} aria-label="Salin password"
+                onClick={()=>handleQuickCopy(entry.pass,'pass')} aria-label="Salin password" title="Salin Password"
                 whileTap={prefersReduced?{}:{scale:0.85}} transition={{duration:DUR.tap}}>
                 {quickCopied==='pass'?<Check size={11}/>:<Key size={11}/>}
               </motion.button>

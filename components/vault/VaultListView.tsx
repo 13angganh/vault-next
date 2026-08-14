@@ -3,6 +3,7 @@
 import React, { useState, forwardRef, useImperativeHandle, useMemo, useCallback, useEffect } from 'react';
 import { Search as SearchIcon, Trash2, Lock, X,
   Star, FolderOpen, PackageOpen, SortAsc, Check as CheckIcon,
+  LayoutGrid, ShieldOff,
 } from 'lucide-react';
 import { verifyPinAndGetMaster, saveVault } from '@/lib/vaultService';
 import { Button, EmptyState, Skeleton, ConfirmDialog } from '@/components/ui/primitives';
@@ -22,6 +23,22 @@ export interface VaultListViewRef {
 interface VaultListViewProps {
   isVaultLoading?: boolean;
 }
+
+/* ── Filter chips: ikon + label per opsi ───────────────────────────────
+   Sebelumnya "labels" berisi string dengan emoji ★/🔒 di-hardcode hanya
+   untuk fav & locked, sedangkan all & no_pass tidak punya penanda visual
+   sama sekali -- tidak konsisten. Sekarang semua 4 opsi pakai ikon Lucide
+   yang sama dengan yang sudah dipakai EntryCard untuk badge favorit/
+   terkunci (Star, Lock), didefinisikan di luar komponen (module-level)
+   agar tidak dibuat ulang tiap render (pola sama dengan IMETA di
+   HealthCheckPanel.tsx).
+   ─────────────────────────────────────────────────────────────────────── */
+const FILTER_META: Record<'all'|'fav'|'locked'|'no_pass', { icon: React.ReactNode; label: string }> = {
+  all:     { icon: <LayoutGrid size={12} />,               label: 'Semua' },
+  fav:     { icon: <Star size={12} fill="currentColor" />, label: 'Favorit' },
+  locked:  { icon: <Lock size={12} />,                     label: 'Terkunci' },
+  no_pass: { icon: <ShieldOff size={12} />,                label: 'Tanpa Pass' },
+};
 
 /* ── Skeleton placeholder — 3 kartu saat vault sedang decrypt ── */
 function VaultSkeletonList() {
@@ -169,11 +186,14 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
               store.vaultMeta,
               store.customCats,
               newLockedIds,
+              store.lockedCatIds,
+              store.defaultCatFieldOverrides,
             );
           }
         } catch {
           // Gagal simpan — rollback store agar konsisten dengan disk
           store.setLockedIds(store.lockedIds);
+          showToast('Gagal menyimpan perubahan, coba lagi', 'error');
         }
         setUnlockEntry(null);
         setUnlockInput('');
@@ -183,16 +203,29 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       } finally {
         setUnlockLoading(false);
       }
-    }, [unlockEntry, unlockInput]);
+    }, [unlockEntry, unlockInput, showToast]);
 
     const handleEdit    = useCallback((entry: VaultEntry) => { setDetailEntry(null); setEditEntry(entry); }, []);
     const handleSaved   = useCallback(() => showToast('Entri disimpan'), [showToast]);
 
     const handleEmptyBin = useCallback(async () => {
       const store = useAppStore.getState();
+      const prevRecycleBin = store.recycleBin; // untuk rollback jika saveVault gagal
       store.setRecycleBin([]);
       if (store.autoSaveEnabled && store.vaultMeta) {
-        try { await saveVault(store.masterPw,store.vault,[],store.vaultMeta,store.customCats,store.lockedIds); } catch {}
+        try {
+          await saveVault(store.masterPw, store.vault, [], store.vaultMeta, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
+        } catch {
+          // v1.7.0: sebelumnya catch {} kosong — state memori sudah
+          // terlanjur "sampah dikosongkan" meski gagal tersimpan ke disk,
+          // dan toast sukses di bawah tetap tampil apa pun hasilnya. README
+          // v1.6.0 mengklaim alur ini sudah dapat toast error+rollback,
+          // tapi kode aktualnya tidak — diperbaiki sekarang, pola sama
+          // dengan rollback lockedIds di handleUnlockSubmit di atas.
+          store.setRecycleBin(prevRecycleBin);
+          showToast('Gagal mengosongkan sampah, coba lagi', 'error');
+          return;
+        }
       }
       showToast('Sampah dikosongkan');
     }, [showToast]);
@@ -326,11 +359,12 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           {!isRecycleBin && !searchQuery && (
             <div className="vault-filter-chips">
               {(['all','fav','locked','no_pass'] as const).map(val => {
-                const labels={all:'Semua',fav:'★ Favorit',locked:'🔒 Terkunci',no_pass:'Tanpa Pass'};
+                const { icon, label } = FILTER_META[val];
                 return (
                   <button key={val} className={`vault-chip${activeFilter===val?' vault-chip--active':''}`}
                     onClick={()=>setActiveFilter(val)}>
-                    {labels[val]}
+                    {icon}
+                    {label}
                   </button>
                 );
               })}

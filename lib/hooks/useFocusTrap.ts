@@ -28,6 +28,20 @@ export function useFocusTrap<T extends HTMLElement>(
 ) {
   const containerRef = useRef<T>(null);
 
+  // v1.7.0: onEscape dulu ada di dependency array effect utama. Kalau
+  // pemanggil meneruskan closure baru tiap render (mis. inline arrow
+  // function, atau prop yang belum di-useCallback di parent), efek utama
+  // re-run tiap render itu juga — termasuk firstFocusable?.focus() di
+  // bawah, yang merebut fokus dari elemen lain yang sedang aktif (mis.
+  // user sedang mengetik di textarea dalam modal). Disimpan di ref supaya
+  // handleKeyDown selalu baca versi terbaru tanpa jadi dependency efek
+  // utama — pola "effect event" standar React untuk callback yang tidak
+  // seharusnya men-trigger ulang efeknya sendiri.
+  const onEscapeRef = useRef(onEscape);
+  useEffect(() => {
+    onEscapeRef.current = onEscape;
+  });
+
   useEffect(() => {
     if (!active || !containerRef.current) return;
 
@@ -40,7 +54,7 @@ export function useFocusTrap<T extends HTMLElement>(
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onEscape?.();
+        onEscapeRef.current?.();
         return;
       }
 
@@ -69,7 +83,7 @@ export function useFocusTrap<T extends HTMLElement>(
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [active, onEscape]);
+  }, [active]);
 
   return containerRef;
 }

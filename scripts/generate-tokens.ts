@@ -14,7 +14,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import {
   fontSize, fontFamily, lineHeight, letterSpacing,
-  spacing, radius, ease, transition, layout,
+  spacing, radius, ease, transition, layout, zIndex,
 } from '../lib/design-tokens.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -70,6 +70,15 @@ ${px(radius, 'radius')}
   --content-max:     ${layout.contentMax};
   --modal-width:     ${layout.modalWidth};
   --modal-width-sm:  ${layout.modalWidthSm};
+
+  /* Z-Index Scale */
+  --z-sticky:   ${zIndex.sticky};
+  --z-content:  ${zIndex.content};
+  --z-dropdown: ${zIndex.dropdown};
+  --z-sidebar:  ${zIndex.sidebar};
+  --z-modal:    ${zIndex.modal};
+  --z-toast:    ${zIndex.toast};
+  --z-top:      ${zIndex.top};
 }
 `;
 

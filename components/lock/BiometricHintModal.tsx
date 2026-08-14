@@ -40,7 +40,7 @@ function xorObfuscate(text: string, key: string): string {
   for (let i = 0; i < textBytes.length; i++) {
     out[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
   }
-  return btoa(String.fromCharCode(...out));
+  return bufToB64(out.buffer);
 }
 
 function xorDeobfuscate(b64: string, key: string): string {
@@ -91,8 +91,15 @@ export function clearBioSession(): void {
 }
 
 /* ── Helpers ── */
+// Chunked, bukan spread sekaligus — lihat catatan yang sama di lib/crypto.ts
 function bufToB64(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const bytes = new Uint8Array(buf);
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 function b64ToBuf(b64: string): ArrayBuffer {

@@ -10,21 +10,30 @@ export interface HealthReport {
 }
 const COMMON = new Set(['12345678','password','password1','qwerty123','admin123','iloveyou','abc123456']);
 
+// Password "efektif" sebuah entri bisa ada di salah satu dari 3 field
+// tergantung kategori: pass (sosmed/email/bank/game/lainnya/kartu-PIN),
+// wifiPass (kategori Wi-Fi), atau walletPw (kategori Crypto — Password
+// Wallet). Sebelumnya health check hanya membaca e.pass, sehingga password
+// Wi-Fi dan Password Wallet tidak pernah dicek lemah/duplikat sama sekali.
+function getEffectivePassword(e: VaultEntry): string | undefined {
+  return e.pass || e.wifiPass || e.walletPw || undefined;
+}
+
 export function runHealthCheck(vault: VaultEntry[]): HealthReport {
   const issues: HealthIssue[] = [];
   const now = Date.now();
   const scan = vault.filter(e => !e.cat.startsWith('note'));
   // Duplikat
   const pm = new Map<string,string[]>();
-  for (const e of scan) { if (!e.pass || e.pass.length < 3) continue; const k=e.pass.toLowerCase().trim(); if(!pm.has(k))pm.set(k,[]); const arr=pm.get(k);if(arr)arr.push(e.id); }
+  for (const e of scan) { const pw=getEffectivePassword(e); if (!pw || pw.length < 3) continue; const k=pw.toLowerCase().trim(); if(!pm.has(k))pm.set(k,[]); const arr=pm.get(k);if(arr)arr.push(e.id); }
   let dg=0;
   for (const [,ids] of pm) { if(ids.length<2)continue; dg++; for(const id of ids){ const e=vault.find(x=>x.id===id); if(e)issues.push({entryId:id,entryName:e.name,type:'duplicate',detail:`Sama dengan ${ids.length-1} entri lain`}); } }
   // Lemah
   let wk=0;
-  for (const e of scan) { if(!e.pass)continue; const p=e.pass; if(p.length<8||COMMON.has(p.toLowerCase())||/^(.)\1+$/.test(p)||/^[0-9]+$/.test(p)){wk++;issues.push({entryId:e.id,entryName:e.name,type:'weak',detail:p.length<8?`Hanya ${p.length} karakter`:'Password terlalu umum'});} }
+  for (const e of scan) { const p=getEffectivePassword(e); if(!p)continue; if(p.length<8||COMMON.has(p.toLowerCase())||/^(.)\1+$/.test(p)||/^[0-9]+$/.test(p)){wk++;issues.push({entryId:e.id,entryName:e.name,type:'weak',detail:p.length<8?`Hanya ${p.length} karakter`:'Password terlalu umum'});} }
   // Tanpa password
   let np=0;
-  for (const e of scan) { if(!e.pass&&!e.wifiPass&&!e.cardNo){np++;issues.push({entryId:e.id,entryName:e.name,type:'no_password'});} }
+  for (const e of scan) { if(!e.pass&&!e.wifiPass&&!e.walletPw&&!e.cardNo){np++;issues.push({entryId:e.id,entryName:e.name,type:'no_password'});} }
   // Tua
   let old_=0;
   for (const e of scan) { if(e.ts&&now-e.ts>365*24*60*60*1000){old_++;const m=Math.floor((now-e.ts)/(30*24*60*60*1000));issues.push({entryId:e.id,entryName:e.name,type:'old',detail:`Belum diupdate ${m} bulan`});} }

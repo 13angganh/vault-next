@@ -3,11 +3,14 @@
  * Cache-first untuk assets statis, network-first untuk navigasi
  * Auto update: saat ada versi baru, notif muncul lalu reload
  *
- * Cache versioning: ganti CACHE_VER saat ada perubahan besar
- * agar cache lama otomatis bersih saat SW baru aktif.
+ * Cache versioning: CACHE_VER disinkronkan OTOMATIS dari APP_VERSION
+ * (lib/constants.ts) lewat scripts/generate-sw-version.ts, dijalankan
+ * via hook "prebuild" setiap `npm run build`. JANGAN edit baris
+ * CACHE_VER di bawah secara manual -- akan tertimpa saat build
+ * berikutnya. Untuk sinkronkan manual di luar build: npm run sw-version
  */
 
-const CACHE_VER   = 'v1.5.1'; // Sinkron dengan APP_VERSION di lib/constants.ts
+const CACHE_VER   = 'v1.10.0'; // Auto-sync dari APP_VERSION -- JANGAN edit manual, jalankan: npm run sw-version
 const CACHE_NAME  = `vault-next-${CACHE_VER}`;
 const STATIC_ASSETS = [
   '/',

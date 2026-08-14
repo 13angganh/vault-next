@@ -30,12 +30,32 @@ export function AppShell() {
 
   useRipple();
 
-  /* ── SW update listener ── */
+  /* ── SW update listener ──
+   * v1.7.0: sebelumnya auto-reload paksa 3 detik setelah SW baru terpasang,
+   * tanpa opsi tunda dan tanpa cek apakah user sedang mengetik. Untuk
+   * password manager ini berisiko: kalau reload terjadi saat user mengisi
+   * form panjang (mis. seed phrase), input yang belum tersimpan bisa hilang.
+   * Sekarang: tunda otomatis kalau ada input/textarea/contenteditable yang
+   * sedang fokus, dan selalu beri tombol eksplisit alih-alih auto-reload
+   * buta. Update tetap tersimpan (browser sudah punya SW baru di background,
+   * lihat sw.js), reload cuma soal KAPAN tab ini mengambilnya. */
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const isUserTyping = () => {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || (el as HTMLElement).isContentEditable;
+    };
+
     const handleSWUpdate = () => {
       setSwUpdate(true);
-      setTimeout(() => window.location.reload(), 3000);
+      if (!isUserTyping()) {
+        setTimeout(() => window.location.reload(), 3000);
+      }
+      // Kalau user sedang mengetik: TIDAK auto-reload. Bar tetap tampil
+      // dengan tombol "Perbarui sekarang" — reload menunggu keputusan user.
     };
     navigator.serviceWorker.addEventListener('controllerchange', handleSWUpdate);
     return () => navigator.serviceWorker.removeEventListener('controllerchange', handleSWUpdate);
@@ -46,6 +66,17 @@ export function AppShell() {
     setFilter('all');
     setTimeout(() => vaultListRef.current?.openAddForm(), 80);
   }, [setFilter]);
+
+  // v1.7.0: onClose sebelumnya inline `() => setShowBackup(false)` di JSX —
+  // closure baru setiap render AppShell (yang terjadi di setiap keystroke
+  // manapun di app, lewat AutoLockManager yang update lastActivityAt).
+  // BackupModal meneruskan onClose ke useFocusTrap sebagai onEscape;
+  // referensi yang berubah-ubah itu membuat efek fokusnya re-run terus dan
+  // merebut fokus dari textarea sync manual saat user sedang mengetik di
+  // dalamnya. setShowBackup dari useState stabil secara referensi, jadi
+  // dependency array kosong di sini aman.
+  const handleCloseBackup = useCallback(() => setShowBackup(false), []);
+  const handleOpenBackup  = useCallback(() => setShowBackup(true), []);
 
   /* ── Keyboard shortcuts ── */
   useEffect(() => {
@@ -107,10 +138,17 @@ export function AppShell() {
       {/* SW update bar */}
       {swUpdate && (
         <div className="sw-update-bar" role="status" aria-live="polite">
-          <span>Versi baru tersedia, memperbarui…</span>
+          <span>Versi baru tersedia</span>
           <div className="sw-update-bar__dots">
             <span /><span /><span />
           </div>
+          <button
+            type="button"
+            className="sw-update-bar__btn"
+            onClick={() => window.location.reload()}
+          >
+            Perbarui sekarang
+          </button>
         </div>
       )}
 
@@ -146,8 +184,8 @@ export function AppShell() {
         )}
       </main>
 
-      <BackupReminderModal onOpenBackup={() => setShowBackup(true)} />
-      {showBackup && <BackupModal onClose={() => setShowBackup(false)} />}
+      <BackupReminderModal onOpenBackup={handleOpenBackup} />
+      {showBackup && <BackupModal onClose={handleCloseBackup} />}
     </motion.div>
   );
 }

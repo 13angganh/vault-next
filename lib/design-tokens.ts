@@ -99,6 +99,35 @@ export const layout = {
   modalWidthSm:  '360px',
 } as const;
 
+// ─── Z-Index Scale ────────────────────────────────────────────────────────────
+// v1.9.1: BUG FIX — token --z-* dipakai luas di 11 file CSS (sidebar,
+// modal, lock, dropdown, header sticky, toast) tapi TIDAK PERNAH
+// didefinisikan di sini maupun di styles/tokens.css — dicek: nihil di
+// seluruh proyek sebelum fix ini. var() yang gagal resolve membuat
+// `z-index` jatuh ke initial value `auto`, sehingga stacking order
+// semua elemen ini ditentukan urutan DOM, bukan hierarki yang
+// dimaksud — inilah akar penyebab sidebar/modal/overlay bisa
+// tumpang-tindih dengan konten di baliknya secara tak terduga
+// (dilaporkan pengguna: sidebar sulit diklik karena konten halaman
+// utama "menembus" tampil di depannya).
+//
+// Nilai z-top (9999) dan z-modal (200) BUKAN angka baru — keduanya
+// dikonfirmasi dari komentar sejarah kode yang menyebutkan literal
+// lama sebelum standarisasi ke token (lihat styles/components/lock.css
+// baris ~849 untuk z-top, styles/components/modal.css baris ~134
+// untuk z-modal). Level lain disusun logis dari urutan hierarki visual
+// yang sudah tersirat di konteks pemakaian masing-masing token,
+// dengan gap 10x antar level untuk ruang ekspansi ke depan.
+export const zIndex = {
+  sticky:   10,    // header sticky level dasar (.app-header, .page-header)
+  content:  10,    // setara sticky, konteks halaman berbeda (.page-header settings/entry-form)
+  dropdown: 20,    // popover/menu kecil (.vault-sort-menu, .pw-gen-overlay)
+  sidebar:  30,    // sidebar navigasi + overlay-nya, drawer mobile
+  modal:    200,   // modal dialog (.modal, .modal-overlay) — dikonfirmasi dari komentar historis
+  toast:    300,   // notifikasi banner (.sw-update-bar) — di atas modal biasa, harus selalu terlihat
+  top:      9999,  // lapisan mutlak tertinggi: confirm dialog, biometric modal, toast container, unlock overlay — dikonfirmasi dari komentar historis
+} as const;
+
 // ─── Color Palette (CSS var references) ──────────────────────────────────────
 // Untuk runtime CSS, tetap gunakan var(--gold) dst.
 // Objek ini berguna untuk tooling / code-gen saja.

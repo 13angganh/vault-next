@@ -1,22 +1,17 @@
-/* VAULT NEXT — DESIGN TOKENS Satu sumber kebenaran untuk semua nilai desain */
+/* styles/tokens.css — Vault Next */
+/* AUTO-GENERATED oleh scripts/generate-tokens.ts */
+/* Edit lib/design-tokens.ts lalu jalankan: npm run tokens */
 
 :root {
   /* Type Scale (8 level) */
-  --text-xs:   10px;   /* badge, label kecil             */
-  --text-sm:   12px;   /* form label, meta info          */
-  --text-base: 14px;   /* body, deskripsi                */
-  --text-md:   16px;   /* subheading, button             */
-  --text-lg:   18px;   /* heading section                */
-  --text-xl:   22px;   /* page title                     */
-  --text-2xl:  28px;   /* lock screen title              */
-  --text-3xl:  36px;   /* display / hero                 */
-
-  /* Font Weight Rule */
-  /* 400 → body & deskripsi                                       */
-  /* 500 → label & meta                                           */
-  /* 600 → button & subheading                                    */
-  /* 700 → heading                                                */
-  /* 800 → display only (lock, loading)                           */
+  --text-xs: 10px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
 
   /* Line Height */
   --lh-tight:  1.2;
@@ -24,74 +19,57 @@
   --lh-loose:  1.7;
 
   /* Letter Spacing */
-  --ls-label:  0.05em;  /* ALL CAPS label */
-  --ls-tight:  -0.02em; /* display heading */
+  --ls-label:  0.05em;
+  --ls-tight:  -0.02em;
 
   /* Font Families */
-  --font-sans: var(--font-inter), 'Inter', sans-serif;
-  /* v1.4.0: nama variable --font-outfit dipertahankan untuk backward-compat
-     tapi fallback string diperbaiki dari 'Outfit' ke 'Inter' — font yang
-     sebenarnya dimuat via next/font/google sejak beberapa versi lalu. */
-  --font-mono: var(--font-jetbrains), 'JetBrains Mono', monospace;
+  --font-sans: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
   /* Spacing Scale (4px base) */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  20px;
-  --space-6:  24px;
-  --space-8:  32px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
   --space-16: 64px;
 
   /* Border Radius Scale */
-  --radius-sm:  8px;
-  --radius-md:  12px;
-  --radius-lg:  16px;
-  --radius-xl:  20px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-2xl: 28px;
   --radius-full: 9999px;
 
-  /* Transition */
+  /* Transition Easing */
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out:     cubic-bezier(0, 0, 0.2, 1);
 
-  --transition-fast:   150ms var(--ease-default);
-  --transition-normal: 250ms var(--ease-default);
-  --transition-slow:   400ms var(--ease-default);
-  --transition-spring: 350ms var(--ease-spring);
+  /* Transitions */
+  --transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow:   400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Layout */
-  --sidebar-width:    260px;
-  --appbar-height:    56px;
-  --content-max:      960px;
-  --modal-width:      480px;
-  --modal-width-sm:   360px;
+  --sidebar-width:   260px;
+  --appbar-height:   56px;
+  --content-max:     960px;
+  --modal-width:     480px;
+  --modal-width-sm:  360px;
 
-  /* Strength meter colors (F2-01) — didefinisikan di base.css per tema (dark/light).
-     v1.4.0: definisi di sini dihapus — tokens.css diimport sebelum base.css di
-     globals.css, sehingga nilai di sini selalu di-override oleh base.css. Dead code. */
-
-  /* Category icon colors (F2-02) */
-  --cat-sosmed:  #818cf8;
-  --cat-email:   #60a5fa;
-  --cat-bank:    #34d399;
-  --cat-game:    #f87171;
-  --cat-crypto:  var(--gold);
-  --cat-kartu:   #38bdf8;
-  --cat-wifi:    #c084fc;
-  --cat-lainnya: var(--muted);
-
-  /* Z-index tokens (F3-02) */
-  --z-base:     0;
+  /* Z-Index Scale */
+  --z-sticky:   10;
   --z-content:  10;
-  --z-sticky:   100;
-  --z-sidebar:  200;
-  --z-dropdown: 300;
-  --z-modal:    400;
-  --z-toast:    500;
+  --z-dropdown: 20;
+  --z-sidebar:  30;
+  --z-modal:    200;
+  --z-toast:    300;
   --z-top:      9999;
 }
