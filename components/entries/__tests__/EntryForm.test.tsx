@@ -223,3 +223,108 @@ describe('EntryForm — Verifikasi 2 Langkah kategori Email (v1.10.0)', () => {
     expect(screen.queryByText(/Seed Phrase/)).not.toBeInTheDocument();
   });
 });
+
+/**
+ * v1.10.1: BUG FIX + fitur — dropdown tipe field editor sebelumnya
+ * <select> native rusak visual di WebView Android (dilaporkan pengguna
+ * via screenshot). Sekalian ditambahkan tipe field baru "multi" —
+ * grid multi-isian bernomor ATAU mode teks satu blok, TERSEDIA untuk
+ * field kustom kategori APA PUN (bukan hardcode ke 2FA Email seperti
+ * kode cadangan di Bagian 1) — permintaan eksplisit pengguna: "saya
+ * kira bisa tambah 10 isian seperti crypto yang 12/24 seed itu".
+ * Test dropdown-nya sendiri ada di CategoryManager.test.tsx (mengedit
+ * definisi field); test di sini fokus ke RENDERING field multi di form
+ * entri, memakai kategori custom dummy yang field-nya sudah diset
+ * bertipe multi lewat store (mensimulasikan hasil dari field editor).
+ */
+describe('EntryForm — Field kustom tipe "multi" (v1.10.1)', () => {
+  const dummyCatWithMultiField = {
+    id: 'cat_toko',
+    label: 'Toko',
+    emoji: 'Tag',
+    iconKey: 'Tag',
+    fields: [
+      { key: 'user', label: 'Nama Toko' },
+      { key: 'custom_kode_akses', label: 'Kode Akses', type: 'multi' as const, multiCount: 5 },
+    ],
+  };
+
+  beforeEach(() => {
+    useAppStore.setState({ customCats: [dummyCatWithMultiField] });
+  });
+
+  it('field bertipe multi muncul dengan label dan jumlah isian yang benar', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Toko'));
+
+    expect(screen.getByText('Kode Akses (5 isian)')).toBeInTheDocument();
+  });
+
+  it('mode grid menampilkan tepat sejumlah multiCount kotak input, bukan 10 default', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Toko'));
+
+    for (let i = 1; i <= 5; i++) {
+      expect(screen.getByPlaceholderText(`isian ${i}`)).toBeInTheDocument();
+    }
+    // multiCount 5, BUKAN 10 (default BACKUP_CODE_COUNT dari fitur 2FA
+    // Bagian 1) — memverifikasi jumlah isian benar-benar dari
+    // konfigurasi field kustom itu sendiri, bukan angka hardcode lain.
+    expect(screen.queryByPlaceholderText('isian 6')).not.toBeInTheDocument();
+  });
+
+  it('mengetik di satu kotak hanya mengubah kotak itu, tidak memengaruhi kotak lain', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Toko'));
+
+    const isian1 = screen.getByPlaceholderText('isian 1') as HTMLInputElement;
+    const isian2 = screen.getByPlaceholderText('isian 2') as HTMLInputElement;
+    fireEvent.change(isian1, { target: { value: 'KODE-A' } });
+
+    expect(isian1.value).toBe('KODE-A');
+    expect(isian2.value).toBe('');
+  });
+
+  it('beralih ke mode Teks lalu kembali ke Per Isian mempertahankan isi', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Toko'));
+
+    fireEvent.change(screen.getByPlaceholderText('isian 1'), { target: { value: 'SATU' } });
+    fireEvent.change(screen.getByPlaceholderText('isian 2'), { target: { value: 'DUA' } });
+
+    fireEvent.click(screen.getByText('Teks'));
+    const textarea = screen.getByPlaceholderText(/^isian1/) as HTMLTextAreaElement;
+    expect(textarea.value).toBe('SATU\nDUA');
+
+    fireEvent.click(screen.getByText('Per Isian'));
+    expect((screen.getByPlaceholderText('isian 1') as HTMLInputElement).value).toBe('SATU');
+    expect((screen.getByPlaceholderText('isian 2') as HTMLInputElement).value).toBe('DUA');
+  });
+
+  it('mengetik di mode Teks lalu blur mem-parsing ke isian terpisah (pemisah baris ATAU spasi)', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Toko'));
+    fireEvent.click(screen.getByText('Teks'));
+
+    const textarea = screen.getByPlaceholderText(/^isian1/) as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'ax by\ncz' } });
+    fireEvent.blur(textarea);
+
+    fireEvent.click(screen.getByText('Per Isian'));
+    expect((screen.getByPlaceholderText('isian 1') as HTMLInputElement).value).toBe('ax');
+    expect((screen.getByPlaceholderText('isian 2') as HTMLInputElement).value).toBe('by');
+    expect((screen.getByPlaceholderText('isian 3') as HTMLInputElement).value).toBe('cz');
+  });
+
+  it('field multi milik kategori LAIN tidak menempel — pindah kategori mereset field multi', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Toko'));
+    fireEvent.change(screen.getByPlaceholderText('isian 1'), { target: { value: 'AKAN-HILANG' } });
+
+    fireEvent.click(screen.getByTitle('Sosmed'));
+    fireEvent.click(screen.getByText('Ganti Kategori'));
+    fireEvent.click(screen.getByTitle('Toko'));
+
+    expect((screen.getByPlaceholderText('isian 1') as HTMLInputElement).value).toBe('');
+  });
+});

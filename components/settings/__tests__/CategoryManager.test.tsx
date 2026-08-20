@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { CategoryManager } from '../CategoryManager';
 import { useAppStore } from '@/lib/store/appStore';
 
@@ -199,9 +199,9 @@ describe('CategoryManager — Editor Field Kategori (v1.10.0)', () => {
     render(<CategoryManager />);
     fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
 
-    const before = screen.getAllByPlaceholderText('Nama field, mis. Nomor Meja').length;
+    const before = screen.getAllByPlaceholderText('Nama field kamu sendiri, mis. Nomor Meja').length;
     fireEvent.click(screen.getByText('Tambah Field'));
-    const after = screen.getAllByPlaceholderText('Nama field, mis. Nomor Meja').length;
+    const after = screen.getAllByPlaceholderText('Nama field kamu sendiri, mis. Nomor Meja').length;
 
     expect(after).toBe(before + 1);
   });
@@ -211,7 +211,7 @@ describe('CategoryManager — Editor Field Kategori (v1.10.0)', () => {
     fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
     fireEvent.click(screen.getByText('Tambah Field'));
 
-    const inputs = screen.getAllByPlaceholderText('Nama field, mis. Nomor Meja');
+    const inputs = screen.getAllByPlaceholderText('Nama field kamu sendiri, mis. Nomor Meja');
     const newInput = inputs[inputs.length - 1];
     fireEvent.change(newInput, { target: { value: 'Nomor Meja' } });
 
@@ -238,15 +238,15 @@ describe('CategoryManager — Editor Field Kategori (v1.10.0)', () => {
     render(<CategoryManager />);
     fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
     fireEvent.click(screen.getByText('Tambah Field'));
-    expect(screen.getAllByPlaceholderText('Nama field, mis. Nomor Meja')).toHaveLength(
-      screen.getAllByPlaceholderText('Nama field, mis. Nomor Meja').length
+    expect(screen.getAllByPlaceholderText('Nama field kamu sendiri, mis. Nomor Meja')).toHaveLength(
+      screen.getAllByPlaceholderText('Nama field kamu sendiri, mis. Nomor Meja').length
     );
 
     fireEvent.click(screen.getByText('Kembalikan ke field bawaan'));
 
     // Field baru yang belum diberi nama (kosong) hilang — draft kembali
     // persis ke field bawaan asli.
-    const emptyInputs = screen.getAllByPlaceholderText('Nama field, mis. Nomor Meja')
+    const emptyInputs = screen.getAllByPlaceholderText('Nama field kamu sendiri, mis. Nomor Meja')
       .filter((el) => (el as HTMLInputElement).value === '');
     expect(emptyInputs).toHaveLength(0);
   });
@@ -278,5 +278,122 @@ describe('CategoryManager — Editor Field Kategori (v1.10.0)', () => {
 
     expect(screen.getByText('Kelola Kategori')).toBeInTheDocument();
     expect(useAppStore.getState().defaultCatFieldOverrides['sosmed']).toBeUndefined();
+  });
+});
+
+/**
+ * v1.10.1: BUG FIX — dropdown tipe field sebelumnya <select> native,
+ * rusak visual di WebView Android (dilaporkan pengguna via screenshot:
+ * kotak menciut kosong tak terbaca, badge "Bawaan" tampak menyatu ke
+ * input di sampingnya). Diganti dropdown kustom (tombol trigger + popup
+ * + backdrop, pola sama vault-sort-menu). Test ini memverifikasi
+ * dropdown BARU berfungsi — bukan menguji <select> lama yang sudah
+ * tidak ada.
+ */
+describe('CategoryManager — Dropdown Tipe Field kustom (v1.10.1 fix)', () => {
+  it('tombol trigger tipe field menampilkan label tipe saat ini ("Teks" untuk field default)', () => {
+    render(<CategoryManager />);
+    fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
+
+    // Field pertama (key 'user') defaultnya type text -> tombol label "Teks"
+    expect(screen.getByLabelText(/Tipe field Username: Teks/)).toBeInTheDocument();
+  });
+
+  it('mengklik tombol trigger membuka menu pilihan tipe', () => {
+    render(<CategoryManager />);
+    fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
+    fireEvent.click(screen.getByLabelText(/Tipe field Username: Teks/));
+
+    // Menu menampilkan semua 6 pilihan tipe sebagai tombol terpisah —
+    // query di dalam .field-type-menu secara eksplisit karena beberapa
+    // label tipe (mis. "Password", "Teks panjang") juga muncul sebagai
+    // label tombol trigger field LAIN di halaman yang sama (field 'pass'
+    // defaultnya bertipe password, field 'note' defaultnya textarea).
+    const menu = document.querySelector('.field-type-menu') as HTMLElement;
+    expect(menu).not.toBeNull();
+    expect(within(menu).getByText('Password')).toBeInTheDocument();
+    expect(within(menu).getByText('Email')).toBeInTheDocument();
+    expect(within(menu).getByText('URL')).toBeInTheDocument();
+    expect(within(menu).getByText('Teks panjang')).toBeInTheDocument();
+    expect(within(menu).getByText('Multi-isian')).toBeInTheDocument();
+  });
+
+  it('memilih tipe baru dari menu mengubah label tombol trigger dan menutup menu', () => {
+    render(<CategoryManager />);
+    fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
+    fireEvent.click(screen.getByLabelText(/Tipe field Username: Teks/));
+
+    const menu = document.querySelector('.field-type-menu') as HTMLElement;
+    fireEvent.click(within(menu).getByText('Password'));
+
+    expect(screen.getByLabelText(/Tipe field Username: Password/)).toBeInTheDocument();
+    // Menu tertutup — elemen .field-type-menu sudah tidak ada di DOM sama sekali.
+    expect(document.querySelector('.field-type-menu')).toBeNull();
+  });
+
+  it('mengklik backdrop menutup menu tanpa mengubah tipe', () => {
+    render(<CategoryManager />);
+    fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
+    fireEvent.click(screen.getByLabelText(/Tipe field Username: Teks/));
+
+    const backdrop = document.querySelector('.field-type-backdrop');
+    expect(backdrop).not.toBeNull();
+    fireEvent.click(backdrop as Element);
+
+    expect(screen.getByLabelText(/Tipe field Username: Teks/)).toBeInTheDocument();
+    expect(document.querySelector('.field-type-menu')).toBeNull();
+  });
+
+  it('mengklik tombol trigger yang sedang terbuka menutup menu lagi (toggle)', () => {
+    render(<CategoryManager />);
+    fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
+    const trigger = screen.getByLabelText(/Tipe field Username: Teks/);
+
+    fireEvent.click(trigger);
+    expect(document.querySelector('.field-type-menu')).not.toBeNull();
+
+    fireEvent.click(trigger);
+    expect(document.querySelector('.field-type-menu')).toBeNull();
+  });
+
+  it('memilih tipe "Multi-isian" menampilkan input jumlah isian dengan default 10', () => {
+    render(<CategoryManager />);
+    fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
+    fireEvent.click(screen.getByLabelText(/Tipe field Username: Teks/));
+    fireEvent.click(screen.getByText('Multi-isian'));
+
+    const countInput = screen.getByLabelText('Jumlah isian:') as HTMLInputElement;
+    expect(countInput).toBeInTheDocument();
+    expect(countInput.value).toBe('10');
+  });
+
+  it('mengubah jumlah isian memperbarui nilainya, dibatasi 2–30', () => {
+    render(<CategoryManager />);
+    fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
+    fireEvent.click(screen.getByLabelText(/Tipe field Username: Teks/));
+    fireEvent.click(screen.getByText('Multi-isian'));
+
+    const countInput = screen.getByLabelText('Jumlah isian:') as HTMLInputElement;
+    fireEvent.change(countInput, { target: { value: '15' } });
+    expect(countInput.value).toBe('15');
+
+    fireEvent.change(countInput, { target: { value: '99' } });
+    expect(countInput.value).toBe('30'); // dibatasi maksimum 30
+
+    fireEvent.change(countInput, { target: { value: '0' } });
+    expect(countInput.value).toBe('2'); // dibatasi minimum 2
+  });
+
+  it('berganti dari "Multi-isian" ke tipe lain menyembunyikan input jumlah isian lagi', () => {
+    render(<CategoryManager />);
+    fireEvent.click(screen.getByLabelText('Kelola field Sosmed'));
+    fireEvent.click(screen.getByLabelText(/Tipe field Username: Teks/));
+    fireEvent.click(screen.getByText('Multi-isian'));
+    expect(screen.getByLabelText('Jumlah isian:')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/Tipe field Username: Multi-isian/));
+    fireEvent.click(screen.getByText('Teks'));
+
+    expect(screen.queryByLabelText('Jumlah isian:')).not.toBeInTheDocument();
   });
 });

@@ -28,7 +28,7 @@ type FieldKey = keyof VaultEntry | (string & {});
 interface FieldDef {
   key:          FieldKey;
   label:        string;
-  type?:        'text' | 'password' | 'url' | 'email' | 'textarea';
+  type?:        'text' | 'password' | 'url' | 'email' | 'textarea' | 'multi';
   placeholder?: string;
   sensitive?:   boolean;
   mono?:        boolean;
@@ -39,6 +39,10 @@ interface FieldDef {
   // fieldDefFromCategoryField() lewat KNOWN_ENTRY_KEYS di bawah, bukan
   // diisi manual.
   isCustom?:    boolean;
+  // v1.10.1: jumlah isian tetap untuk field bertipe 'multi' (grid
+  // multi-kotak, pola sama dengan seed phrase/kode cadangan). Hanya
+  // relevan saat type === 'multi'.
+  multiCount?:  number;
 }
 
 // v1.10.0: setiap properti VaultEntry yang bisa jadi target field form
@@ -71,6 +75,7 @@ function fieldDefFromCategoryField(cf: CategoryFieldDef): FieldDef {
     sensitive:   isPw,
     mono:        isPw,
     isCustom:    !KNOWN_ENTRY_KEYS.has(cf.key),
+    multiCount:  cf.multiCount,
   };
 }
 
@@ -209,6 +214,19 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(
     entry?.customFields ?? {}
   );
+  // v1.10.1: field kustom bertipe 'multi' (grid multi-isian, mis. daftar
+  // resep/kode toko) disimpan TERPISAH dari customFieldValues di atas
+  // karena bentuknya array per key, bukan string tunggal — meski nilai
+  // akhirnya tetap digabung jadi satu string (dipisah newline) saat
+  // masuk ke VaultEntry.customFields[key] saat save, konsisten dengan
+  // customFields yang tetap Record<string,string>. Di-keyed by field
+  // key karena bisa ada LEBIH DARI SATU field multi dalam satu
+  // kategori (beda dari backupCodes yang hardcode untuk satu field
+  // 2FA saja). Nilai awal: kalau entry.customFields[key] sudah ada,
+  // pecah string gabungan itu jadi array lagi.
+  const [customMultiValues, setCustomMultiValues] = useState<Record<string, string[]>>({});
+  const [customMultiMode,   setCustomMultiMode]   = useState<Record<string, 'grid' | 'text'>>({});
+  const [customMultiRawText, setCustomMultiRawText] = useState<Record<string, string>>({});
   const [nameError,   setNameError]   = useState('');
   const [saving,      setSaving]      = useState(false);
   // Pesan saat saveVault gagal (mis. localStorage penuh) — sebelumnya error
@@ -381,6 +399,21 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           if (customKeys.length === 0) return {};
           const filtered: Record<string, string> = {};
           for (const k of customKeys) {
+            const fieldDef = currentFields.find((f) => f.key === k);
+            if (fieldDef?.type === 'multi') {
+              // v1.10.1: field multi — commit dulu kalau sedang di mode
+              // teks (belum sempat blur), lalu serialisasi array jadi
+              // satu string dipisah newline (pola sama seed phrase/kode
+              // cadangan, tapi generik per field key).
+              const count = fieldDef.multiCount ?? 10;
+              const mode  = customMultiMode[k] ?? 'grid';
+              const arr   = mode === 'text'
+                ? (customMultiRawText[k] ?? '').trim().split(/[\s\n]+/).filter(Boolean).slice(0, count)
+                : (customMultiValues[k] ?? []);
+              const joined = arr.map((s) => s.trim()).filter(Boolean).join('\n');
+              if (joined) filtered[k] = joined;
+              continue;
+            }
             const v = customFieldValues[k];
             if (v && v.trim()) filtered[k] = v.trim();
           }
@@ -416,7 +449,8 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     Object.entries(values).some(([k, v]) => k !== 'cat' && k !== 'name' && k !== 'fav' && !!v) ||
     seedWords.some((w) => w.trim() !== '') ||
     backupCodes.some((c) => c.trim() !== '') ||
-    Object.values(customFieldValues).some((v) => v.trim() !== '');
+    Object.values(customFieldValues).some((v) => v.trim() !== '') ||
+    Object.values(customMultiValues).some((arr) => arr.some((v) => v.trim() !== ''));
 
   const doCatChange = (catId: string) => {
     setCat(catId);
@@ -431,6 +465,10 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     setBackupCodesRawText('');
     // v1.10.0: reset field kustom juga — sama alasannya seperti di atas.
     setCustomFieldValues({});
+    // v1.10.1: reset state field multi juga.
+    setCustomMultiValues({});
+    setCustomMultiMode({});
+    setCustomMultiRawText({});
   };
 
   const handleCatChange = (catId: string) => {
@@ -444,7 +482,120 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
   const currentFields = getFieldsForCat(cat, customCats, store.defaultCatFieldOverrides);
 
+  // v1.10.1: inisialisasi customMultiValues dari entry.customFields untuk
+  // field bertipe 'multi' — dijalankan sekali saat currentFields pertama
+  // kali diketahui memuat field multi (mode edit entri lama). Guard
+  // `Object.keys(customMultiValues).length === 0` mencegah effect ini
+  // menimpa perubahan yang sedang diketik pengguna pada render berikutnya
+  // (currentFields bisa berubah referensi tiap render karena dihitung
+  // ulang, tapi inisialisasi hanya boleh terjadi SEKALI).
+  useEffect(() => {
+    if (!entry?.customFields) return;
+    const multiFields = currentFields.filter((f) => f.type === 'multi');
+    if (multiFields.length === 0) return;
+    setCustomMultiValues((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      const init: Record<string, string[]> = {};
+      for (const f of multiFields) {
+        const raw = entry.customFields?.[f.key];
+        const count = f.multiCount ?? 10;
+        init[f.key] = raw
+          ? Array(count).fill('').map((_, i) => raw.split('\n')[i] ?? '')
+          : Array(count).fill('');
+      }
+      return init;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFields.length]);
+
+  /**
+   * v1.10.1: render field kustom bertipe 'multi' — grid multi-kotak
+   * bernomor ATAU mode teks satu blok, pola IDENTIK dengan
+   * renderTwoFASection's backup codes di bawah, tapi generik untuk
+   * field key APA PUN (bukan hardcode ke field 2FA), sehingga bisa
+   * dipakai berkali-kali untuk beberapa field multi berbeda dalam satu
+   * kategori. State diakses via fd.key sebagai key ke
+   * customMultiValues/customMultiMode/customMultiRawText.
+   */
+  const renderMultiField = (fd: FieldDef) => {
+    const count = fd.multiCount ?? 10;
+    const arr   = customMultiValues[fd.key] ?? Array(count).fill('');
+    const mode  = customMultiMode[fd.key] ?? 'grid';
+    const rawText = customMultiRawText[fd.key] ?? '';
+
+    const setArr = (next: string[]) => setCustomMultiValues((prev) => ({ ...prev, [fd.key]: next }));
+    const setMode = (m: 'grid' | 'text') => setCustomMultiMode((prev) => ({ ...prev, [fd.key]: m }));
+    const setRaw = (t: string) => setCustomMultiRawText((prev) => ({ ...prev, [fd.key]: t }));
+
+    const arrToText = (a: string[]) => a.map((s) => s.trim()).filter(Boolean).join('\n');
+    const textToArr = (t: string, n: number) => {
+      const items = t.trim().split(/[\s\n]+/).filter(Boolean);
+      const out = Array(n).fill('');
+      items.slice(0, n).forEach((it, i) => { out[i] = it; });
+      return out;
+    };
+
+    const switchMode = (next: 'grid' | 'text') => {
+      if (next === 'text') setRaw(arrToText(arr));
+      else setArr(textToArr(rawText, count));
+      setMode(next);
+    };
+
+    return (
+      <div key={fd.key} className="form-group">
+        <div className="form-label-row">
+          <label className="form-label">{fd.label || 'Field'} ({count} isian)</label>
+          <div className="seed-mode-tabs">
+            <button type="button" className={`seed-mode-tab${mode === 'grid' ? ' seed-mode-tab--active' : ''}`}
+              onClick={() => switchMode('grid')}>Per Isian</button>
+            <button type="button" className={`seed-mode-tab${mode === 'text' ? ' seed-mode-tab--active' : ''}`}
+              onClick={() => switchMode('text')}>Teks</button>
+          </div>
+        </div>
+
+        {mode === 'grid' && (
+          <div className="seed-grid">
+            {arr.map((v, i) => (
+              <div key={i} className="seed-grid__item">
+                <span className="seed-grid__num">{i + 1}</span>
+                <input
+                  type="text"
+                  className="input seed-grid__input mono"
+                  value={v}
+                  placeholder={`isian ${i + 1}`}
+                  onChange={(e) => {
+                    const updated = [...arr];
+                    updated[i] = e.target.value;
+                    setArr(updated);
+                  }}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {mode === 'text' && (
+          <textarea
+            className="input form-textarea mono"
+            value={rawText}
+            placeholder={`isian1\nisian2\n… (${count} isian)`}
+            rows={5}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            onChange={(e) => setRaw(e.target.value)}
+            onBlur={(e) => setArr(textToArr(e.target.value, count))}
+          />
+        )}
+      </div>
+    );
+  };
+
   const renderField = (fd: FieldDef) => {
+    if (fd.type === 'multi') return renderMultiField(fd);
     // v1.10.0: field kustom baca/tulis dari customFieldValues (state
     // terpisah, key bebas), field bawaan tetap dari values seperti
     // sebelumnya — lihat penjelasan lengkap di deklarasi state

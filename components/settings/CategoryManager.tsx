@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Pencil, Plus, Trash2, Check, Lock, Unlock, ListChecks, GripVertical } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2, Check, Lock, Unlock, ListChecks, GripVertical, ChevronDown } from 'lucide-react';
 import { useAppStore }           from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES }    from '@/lib/types';
 import type { CustomCategory, CategoryFieldDef } from '@/lib/types';
@@ -132,6 +132,14 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
   const [fieldsIsDefault, setFieldsIsDefault] = useState(false);
   const [formFields,      setFormFields]      = useState<CategoryFieldDef[]>([]);
   const [fieldsError,     setFieldsError]     = useState('');
+  // v1.10.1: BUG FIX — dropdown tipe field sebelumnya <select> native,
+  // rusak visual di WebView Android (kotak menciut kosong, teks opsi
+  // tumpang tindih ke input di sampingnya — dilaporkan pengguna via
+  // screenshot). Diganti pola dropdown kustom yang sudah terbukti aman
+  // di proyek ini (identik dengan vault-sort-menu di VaultListView.tsx).
+  // Menyimpan key field yang dropdown tipenya sedang terbuka (null =
+  // semua tertutup) — hanya satu dropdown bisa terbuka dalam satu waktu.
+  const [openTypeDropdownFor, setOpenTypeDropdownFor] = useState<string | null>(null);
   const [deleteTarget,  setDeleteTarget]  = useState<CustomCategory | null>(null);
   const [saving,        setSaving]        = useState(false); // v1.4.0: loading state
   const { showToast, ToastContainer } = useToast();
@@ -294,7 +302,21 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
   };
 
   const updateFieldType = (key: string, type: CategoryFieldDef['type']) => {
-    setFormFields((prev) => prev.map((f) => f.key === key ? { ...f, type } : f));
+    setFormFields((prev) => prev.map((f) => {
+      if (f.key !== key) return f;
+      // v1.10.1: saat berganti KE tipe 'multi', beri default multiCount
+      // (10, sama seperti kode cadangan 2FA) supaya field langsung
+      // punya jumlah isian yang valid tanpa pengguna perlu mengatur
+      // apa pun dulu. Saat berganti DARI 'multi' ke tipe lain,
+      // multiCount dibuang — tidak relevan lagi untuk tipe non-multi.
+      if (type === 'multi') return { ...f, type, multiCount: f.multiCount ?? 10 };
+      const { multiCount: _unused, ...rest } = f;
+      return { ...rest, type };
+    }));
+  };
+
+  const updateFieldMultiCount = (key: string, count: number) => {
+    setFormFields((prev) => prev.map((f) => f.key === key ? { ...f, multiCount: count } : f));
   };
 
   /**
@@ -425,30 +447,53 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
           <div className="field-editor-list">
             {formFields.map((f) => {
               const isBuiltin = KNOWN_ENTRY_KEYS.has(f.key);
+              const typeLabels: Record<string, string> = {
+                text: 'Teks', password: 'Password', email: 'Email',
+                url: 'URL', textarea: 'Teks panjang', multi: 'Multi-isian',
+              };
+              const currentType = f.type ?? 'text';
               return (
-                <div key={f.key} className="field-editor-item">
+                <div key={f.key} className="field-editor-item-group">
+                <div className="field-editor-item">
                   <GripVertical size={14} className="field-editor-item__handle" aria-hidden="true" />
                   <div className="field-editor-item__inputs">
                     <input
                       type="text"
                       className="input"
                       value={f.label}
-                      placeholder="Nama field, mis. Nomor Meja"
+                      placeholder="Nama field kamu sendiri, mis. Nomor Meja"
                       onChange={(e) => updateFieldLabel(f.key, e.target.value)}
                       maxLength={32}
                     />
-                    <select
-                      className="settings-select"
-                      value={f.type ?? 'text'}
-                      onChange={(e) => updateFieldType(f.key, e.target.value as CategoryFieldDef['type'])}
-                      aria-label={`Tipe field ${f.label || 'baru'}`}
-                    >
-                      <option value="text">Teks</option>
-                      <option value="password">Password</option>
-                      <option value="email">Email</option>
-                      <option value="url">URL</option>
-                      <option value="textarea">Teks panjang</option>
-                    </select>
+                    <div className="field-type-wrap">
+                      <button
+                        type="button"
+                        className={`field-type-btn${openTypeDropdownFor === f.key ? ' field-type-btn--active' : ''}`}
+                        onClick={() => setOpenTypeDropdownFor((v) => v === f.key ? null : f.key)}
+                        aria-label={`Tipe field ${f.label || 'baru'}: ${typeLabels[currentType]}`}
+                      >
+                        {typeLabels[currentType]}
+                        <ChevronDown size={12} />
+                      </button>
+                      {openTypeDropdownFor === f.key && (
+                        <>
+                          <div className="field-type-backdrop" onClick={() => setOpenTypeDropdownFor(null)} />
+                          <div className="field-type-menu">
+                            {(['text', 'password', 'email', 'url', 'textarea', 'multi'] as const).map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                className={`field-type-item${currentType === t ? ' field-type-item--active' : ''}`}
+                                onClick={() => { updateFieldType(f.key, t); setOpenTypeDropdownFor(null); }}
+                              >
+                                {currentType === t && <Check size={12} />}
+                                {typeLabels[t]}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                   {isBuiltin
                     ? <span className="field-editor-item__badge" title="Field bawaan — tidak bisa dihapus">Bawaan</span>
@@ -461,6 +506,29 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
                       />
                     )
                   }
+                </div>
+                {/* v1.10.1: baris tambahan khusus tipe 'multi' — atur
+                    jumlah isian tetap (default 10, sama seperti kode
+                    cadangan 2FA). Muncul di bawah baris field utama,
+                    tidak menyempitkan .field-editor-item__inputs yang
+                    sudah padat. */}
+                {currentType === 'multi' && (
+                  <div className="field-editor-item__multicount">
+                    <label htmlFor={`multicount-${f.key}`}>Jumlah isian:</label>
+                    <input
+                      id={`multicount-${f.key}`}
+                      type="number"
+                      className="input field-editor-item__multicount-input"
+                      value={f.multiCount ?? 10}
+                      min={2}
+                      max={30}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value, 10);
+                        if (!isNaN(n)) updateFieldMultiCount(f.key, Math.min(30, Math.max(2, n)));
+                      }}
+                    />
+                  </div>
+                )}
                 </div>
               );
             })}

@@ -2,7 +2,7 @@
 
 **PWA password manager offline-first** berbasis Next.js (App Router), TypeScript strict, Zustand, dan enkripsi AES-256-GCM.
 
-> **Versi saat ini:** v1.10.0  
+> **Versi saat ini:** v1.10.1  
 > **Repo:** https://github.com/13angganh/vault-next  
 > **Deploy:** Vercel (auto-deploy dari GitHub push)
 
@@ -233,6 +233,72 @@ Ketiganya punya `:hover`, `:active` (scale 0.88), dan `aria-label` yang konsiste
 ---
 
 ## Changelog
+
+### v1.10.1 — Bug Fix: Dropdown Tipe Field Rusak Visual + Fitur Field Multi-Isian (2026-08-11)
+
+**Konteks:** pengguna melaporkan lewat 3 screenshot: dropdown pemilih
+tipe field (di editor field kategori custom, fitur v1.10.0) tampil
+rusak — kotak menciut kosong tak terbaca, badge "Bawaan" terlihat
+menyatu ke input di sampingnya, sulit diklik. Sekaligus meminta field
+kustom bisa dibuat benar-benar bebas namanya (bukan cuma memilih dari
+tipe bawaan), dan kategori Email default bisa punya field 10-isian
+mirip seed phrase crypto untuk 2FA — bukan cuma toggle sederhana.
+
+**Diagnosis:** dropdown tipe field sebelumnya `<select>` HTML native
+di dalam flex container. Meski sudah diberi `flex-shrink: 0`, elemen
+form native ini tidak stabil ukuran dan rendering teksnya di WebView
+Android — beberapa hipotesis diuji dan ditolak sebelum sampai ke akar
+masalah (bukan cuma soal lebar minimum; kuirk User Agent Stylesheet
+browser untuk elemen `<select>` di dalam flexbox tidak sepenuhnya bisa
+diprediksi dari CSS statis semata). Diperbaiki dengan mengganti
+`<select>` sepenuhnya dengan **dropdown kustom** (tombol trigger +
+popup absolute + backdrop) — pola IDENTIK dengan `.vault-sort-menu`
+yang sudah terbukti stabil di `VaultListView.tsx` sejak versi lama,
+bukan pola baru yang belum teruji.
+
+**Field kustom "benar-benar custom":** mekanisme mengetik nama field
+bebas sebenarnya sudah ada sejak v1.10.0 (`<input>` untuk label, bukan
+elemen statis) — placeholder-nya diperjelas dari "Nama field, mis.
+Nomor Meja" menjadi "Nama field kamu sendiri, mis. Nomor Meja" supaya
+lebih jelas menunjukkan field itu memang bebas dinamai, bukan terbatas
+ke nama tipe seperti yang terlihat rusak di screenshot.
+
+**Field multi-isian (permintaan baru dalam laporan yang sama):** tipe
+field `'multi'` ditambahkan ke dropdown tipe — grid multi-kotak
+bernomor ATAU mode teks satu blok, pola input IDENTIK dengan
+`renderTwoFASection`'s backup codes (Bagian 1, sesi v1.10.0) tapi
+GENERIK untuk field key apa pun (bukan hardcode ke satu field 2FA),
+sehingga bisa dipakai berkali-kali untuk beberapa field multi berbeda
+dalam satu kategori. Jumlah isian bisa diatur pengguna (2–30, default
+10) lewat input baru yang muncul saat tipe "Multi-isian" dipilih.
+Nilainya tetap disimpan sebagai satu string di
+`VaultEntry.customFields[key]` (dipisah newline saat serialisasi,
+dipecah lagi saat render) — TIDAK mengubah tipe `customFields` yang
+sudah dipakai luas di banyak tempat sejak v1.10.0.
+
+**Perubahan skema:** `CategoryFieldDef.type` (`lib/types.ts`) menambah
+opsi `'multi'`, plus `CategoryFieldDef.multiCount?: number`. Field
+baru, opsional — backward-compat penuh dengan `defaultCatFieldOverrides`/
+`CustomCategory.fields` yang sudah tersimpan dari v1.10.0.
+
+**Test:** 14 test baru — 8 untuk dropdown kustom (`CategoryManager.test.tsx`:
+label trigger, buka/tutup menu, pilih tipe, klik backdrop, toggle
+buka-tutup via trigger yang sama, input jumlah isian muncul/hilang/
+dibatasi 2–30) dan 6 untuk rendering field multi di form entri
+(`EntryForm.test.tsx`: label & jumlah isian benar, grid sesuai
+`multiCount` bukan default 10, isolasi antar kotak, toggle mode
+grid↔teks mempertahankan isi, parsing teks-ke-array, reset saat ganti
+kategori). Satu gap cakupan ditemukan & ditutup di tengah proses:
+test awal untuk dropdown tidak menguji kemampuan **toggle-tutup**
+(klik trigger yang sedang terbuka untuk menutupnya lagi) — dibuktikan
+dengan sengaja merusak logika toggle dan mendapati semua test tetap
+lolos; ditambahkan test khusus untuk skenario itu, divalidasi ulang
+dengan cara yang sama. Setiap fix lain juga divalidasi dengan sengaja
+merusak logikanya lebih dulu dan mengonfirmasi test yang relevan gagal
+tepat sasaran. 149→163 test, semuanya lolos.
+
+**Verifikasi:** `tsc --noEmit` 0 error, `eslint --max-warnings 0` 0
+error/warning, `vitest run` 163/163 lolos.
 
 ### v1.10.0 — Fitur Besar: Verifikasi 2 Langkah, Lock/Unlock Kategori, Field Kategori Dinamis (2026-08-10)
 

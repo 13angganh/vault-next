@@ -553,6 +553,113 @@
   color: var(--gold);
 }
 
+/* v1.10.1: BUG FIX — dropdown tipe field sebelumnya <select> native,
+ * rusak visual di WebView Android: kotak menciut jadi kosong tak
+ * terbaca, badge "Bawaan" tampak menyatu ke input di sampingnya
+ * (dilaporkan pengguna via screenshot). Diganti pola dropdown kustom
+ * (tombol trigger + popup absolute + backdrop) — pola IDENTIK dengan
+ * .vault-sort-wrap/.vault-sort-btn/.vault-sort-menu di layout.css,
+ * yang sudah terbukti stabil di proyek ini. Lebar tombol trigger FIXED
+ * (bukan flex-shrink dari sisa ruang) sehingga tidak bisa menciut
+ * kosong seperti <select> sebelumnya. */
+.field-editor-item-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-type-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.field-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  min-width: 92px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-s2);
+  color: var(--text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.field-type-btn:hover,
+.field-type-btn--active {
+  color: var(--gold);
+  border-color: var(--gold-border);
+  background: var(--gold-dim);
+}
+
+.field-type-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dropdown);
+}
+
+.field-type-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  background: var(--bg-s2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-1);
+  min-width: 150px;
+  z-index: calc(var(--z-dropdown) + 1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  animation: fadeScaleIn 0.15s var(--ease-spring) both;
+}
+
+.field-type-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text2);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.field-type-item:hover {
+  background: var(--bg-s3);
+  color: var(--text);
+}
+
+.field-type-item--active {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.field-editor-item__multicount {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 10px 0 30px; /* sejajar dengan input di atasnya, bukan grip icon */
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.field-editor-item__multicount-input {
+  width: 64px;
+  height: 32px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
 .form-hint {
   font-size: var(--text-xs);
   color: var(--muted);

@@ -118,13 +118,24 @@ export interface VaultBackupPayload {
  * yang belum sempat dikunci penuh) bisa ditandai locked agar tidak
  * sengaja dihapus dari daftar field kategori — independen dari
  * lockedCatIds (yang mengunci SELURUH kategori dari edit/hapus).
+ *
+ * v1.10.1: tipe 'multi' ditambahkan — field dengan beberapa isian
+ * bernomor sekaligus (pola sama dengan seed phrase crypto / kode
+ * cadangan 2FA: grid per-item ATAU satu blok teks, dipisah baris/spasi).
+ * `multiCount` menentukan jumlah isian tetap untuk field ini (mis. 10).
+ * Nilainya TETAP disimpan sebagai satu string di
+ * VaultEntry.customFields[key] (bukan mengubah tipe customFields jadi
+ * array — customFields sudah Record<string,string> dipakai luas),
+ * digabung dengan pemisah baris baru saat disimpan dan dipecah lagi
+ * saat dirender, pola identik codesToText/textToCodes di EntryForm.tsx.
  */
 export interface CategoryFieldDef {
   key:          string;
   label:        string;
-  type?:        'text' | 'password' | 'url' | 'email' | 'textarea';
+  type?:        'text' | 'password' | 'url' | 'email' | 'textarea' | 'multi';
   placeholder?: string;
   locked?:      boolean;
+  multiCount?:  number;
 }
 
 // ─── Kategori Default ─────────────────────────────────────────────────────────
