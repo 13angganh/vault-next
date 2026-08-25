@@ -30,11 +30,29 @@ export interface VaultEntry {
   wifiPass?:   string;
   emailAddr?:  string;
 
+  // ── Field BARU v1.10.2 — kategori Bank: pisah Username dari No. Rekening ──
+  // Sebelumnya digabung dalam satu field 'user' berlabel
+  // "Username / No. Rekening". Field 'user' TETAP dipakai untuk
+  // Username (data lama tidak berubah maknanya) — field baru ini
+  // khusus menampung No. Rekening sebagai isian terpisah.
+  bankAccountNo?: string;
+
   // ── Field BARU v1.10.0 — Verifikasi 2 Langkah (kategori Email) ──
   twoFAEnabled?:       boolean;
   twoFAPhone?:         string;
   twoFARecoveryEmail?: string;
   twoFABackupCodes?:   string[];
+
+  // ── Field BARU v1.10.2 — Perluasan Verifikasi 2 Langkah ──
+  // Permintaan pengguna: 5 opsi tambahan yang muncul saat
+  // Verifikasi 2 Langkah aktif, di luar 3 yang sudah ada di atas
+  // (nomor telepon pemulihan, email pemulihan, kode cadangan).
+  twoFAVideoSelfie?:        boolean; // 1. Video selfie (fitur keamanan Google)
+  twoFASecurityKey?:        string;  // 2. Kunci sandi & kunci keamanan (catatan bebas)
+  twoFAAuthenticatorApp?:   boolean; // 3. Authenticator app aktif/nonaktif
+  twoFAGoogleCommand?:      boolean; // 4a. Perintah Google aktif/nonaktif
+  twoFAGoogleCommandDevice?: string; // 4b. Merk & tipe HP yang terhubung (hanya relevan saat 4a aktif)
+  twoFAPrimaryPhone?:       string;  // 5. Nomor telepon verifikasi 2 langkah (BEDA dari twoFAPhone/pemulihan)
 
   // ── Field BARU v1.10.0 — Field kategori dinamis ──
   // Wadah generik untuk field KUSTOM (bukan bawaan) yang ditambahkan

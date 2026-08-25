@@ -10,7 +10,7 @@
  * berikutnya. Untuk sinkronkan manual di luar build: npm run sw-version
  */
 
-const CACHE_VER   = 'v1.10.1'; // Auto-sync dari APP_VERSION -- JANGAN edit manual, jalankan: npm run sw-version
+const CACHE_VER   = 'v1.10.2'; // Auto-sync dari APP_VERSION -- JANGAN edit manual, jalankan: npm run sw-version
 const CACHE_NAME  = `vault-next-${CACHE_VER}`;
 const STATIC_ASSETS = [
   '/',

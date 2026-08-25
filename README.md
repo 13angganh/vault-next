@@ -2,7 +2,7 @@
 
 **PWA password manager offline-first** berbasis Next.js (App Router), TypeScript strict, Zustand, dan enkripsi AES-256-GCM.
 
-> **Versi saat ini:** v1.10.1  
+> **Versi saat ini:** v1.10.2  
 > **Repo:** https://github.com/13angganh/vault-next  
 > **Deploy:** Vercel (auto-deploy dari GitHub push)
 
@@ -233,6 +233,109 @@ Ketiganya punya `:hover`, `:active` (scale 0.88), dan `aria-label` yang konsiste
 ---
 
 ## Changelog
+
+### v1.10.2 — Perluasan Verifikasi 2 Langkah, Pisah Field Bank, Upgrade Next.js 16.3.2 (2026-08-12)
+
+**Konteks:** permintaan fitur baru dari pengguna (bukan bug fix) —
+(1) 5 opsi tambahan untuk Verifikasi 2 Langkah kategori Email: video
+selfie, kunci sandi & kunci keamanan, authenticator app, perintah
+Google + perangkat terhubung, dan nomor telepon verifikasi 2 langkah
+terpisah dari nomor pemulihan yang sudah ada; (2) kategori Bank
+default: pisahkan Username dari No. Rekening yang sebelumnya digabung
+satu field; (3) upgrade Next.js 16.3.0 → 16.3.2 dan
+`eslint-config-next` sepadan.
+
+#### 1. Perluasan Verifikasi 2 Langkah (5 opsi baru)
+
+7 field baru di `VaultEntry` (Schema BEKU dihormati — field baru
+ditambahkan, field lama v1.10.0 tidak diubah): `twoFAVideoSelfie`,
+`twoFASecurityKey`, `twoFAAuthenticatorApp`, `twoFAGoogleCommand`,
+`twoFAGoogleCommandDevice`, `twoFAPrimaryPhone`. Field
+`twoFAGoogleCommandDevice` (merk & tipe HP) hanya muncul di UI saat
+toggle "Perintah Google" aktif, dan sengaja TIDAK disimpan kalau
+togglenya mati — mencegah data usang menempel diam-diam kalau
+pengguna sempat mengetik lalu mematikan toggle sebelum simpan.
+`twoFAPrimaryPhone` sengaja dibuat sebagai field terpisah dari
+`twoFAPhone` (nomor pemulihan v1.10.0) — permintaan eksplisit
+pengguna: keduanya adalah nomor yang berbeda maknanya.
+
+**Kesalahan yang sempat ditulis lalu dikoreksi dalam sesi yang sama:**
+percobaan pertama untuk 3 toggle baru (video selfie, authenticator,
+perintah Google) sempat memaksa nilai boolean lewat mekanisme
+`setField` yang dirancang untuk field bertipe string, menggunakan
+type assertion `as unknown as string` untuk melewati pemeriksaan
+TypeScript — kode yang secara kebetulan "bekerja" di runtime (karena
+JavaScript tidak benar-benar mengonversi nilainya) tapi salah secara
+desain dan berpotensi menyembunyikan bug. Diperbaiki sebelum sesi
+selesai dengan mengikuti pola yang sudah benar dan sudah ada di
+proyek (`twoFAEnabled`/`setTwoFAEnabled`) — ketiga toggle baru
+dibangun sebagai `useState` React terpisah, bukan lewat jalur string.
+
+Selama sesi ini juga terjadi **reset sandbox tak terduga** (folder
+kerja hilang total, bukan cuma `node_modules` seperti biasanya) —
+seluruh pekerjaan sejak v1.10.1 (termasuk kesalahan type-coercion di
+atas) hilang dan harus dibangun ulang dari ZIP v1.10.1 yang sudah
+terverifikasi sebagai basis. Hasil akhir setelah rekonstruksi identik
+dengan rencana semula, kali ini ditulis langsung dengan pola yang
+benar tanpa perlu koreksi lagi.
+
+#### 2. Kategori Bank: pisah Username & No. Rekening
+
+`FIELDS_BY_CAT['bank']` di `EntryForm.tsx` sebelumnya satu field
+`user` berlabel "Username / No. Rekening". Field `user` TETAP dipakai
+untuk Username (data lama tidak berubah maknanya, backward-compat
+penuh) — field baru `bankAccountNo` (properti `VaultEntry` baru)
+khusus menampung No. Rekening sebagai isian terpisah.
+
+#### 3. Upgrade Next.js 16.3.0 → 16.3.2
+
+Diverifikasi lewat npm registry sebelum upgrade bahwa `16.3.2` memang
+rilis stabil (bukan canary) dan merupakan versi terbaru saat ini
+(`16.4.0` masih tahap canary). Release notes resmi dikonfirmasi lewat
+pencarian web: `16.3.1` dan `16.3.2` murni backport bug fixes
+(validasi export, catch-all routing, beberapa perbaikan Turbopack
+terkait WASM/worker chunk loading) — tidak ada breaking change atau
+fitur baru berisiko. `eslint-config-next` dinaikkan sepadan.
+
+Upgrade ini menaikkan versi transitif `nanoid` (lewat
+`next → postcss → nanoid`) dari `3.3.17` (rentan —
+[GHSA-2v37-7h3g-55p8](https://github.com/advisories/GHSA-2v37-7h3g-55p8),
+custom generator bisa infinite loop saat size=0) ke `3.3.18` yang
+sudah menambal celah itu. Ditangani dengan hati-hati: `npm audit fix`
+tanpa `--force` sempat dicoba lebih dulu tapi dry-run menunjukkan itu
+akan menambah ~95 paket baru dan mengubah 43 paket lain (mencoba
+menaikkan `vite`/`vitest` beserta seluruh rantai dependency
+platform-nya) — di luar scope permintaan upgrade Next.js dan berisiko
+mengganggu test suite yang sudah lolos, sama seperti risiko yang
+sengaja dihindari saat audit dependency di v1.9.1. Sebagai gantinya,
+`nanoid` diinstal terarah lalu segera dihapus lagi dari dependency
+langsung (`npm uninstall`) — hasil akhirnya versi transitif tetap naik
+ke `3.3.18` tanpa `nanoid` tercantum sebagai dependency proyek yang
+tidak pernah dipakai langsung oleh kode. 6 kerentanan tersisa
+(`@babel/core`, `brace-expansion`, `esbuild`, `js-yaml`, `undici`,
+`vite`) semuanya di rantai dev-tooling (`vitest`) yang sama seperti
+sebelumnya — sengaja tidak disentuh dengan alasan yang sama.
+
+**Test baru:** 10 test — 8 untuk perluasan 2FA (`EntryForm.test.tsx`:
+kelima opsi muncul saat toggle aktif, nomor telepon verifikasi
+terpisah dari nomor pemulihan, toggle independen satu sama lain,
+field perangkat Google muncul/hilang sesuai togglenya, field kunci
+keamanan tidak memengaruhi field 2FA lain, reset saat ganti kategori)
+dan 2 untuk pemisahan field Bank (dua field terpisah bukan gabungan,
+mengisi satu tidak memengaruhi yang lain). Tidak ada test versi
+dependency baru ditulis untuk upgrade Next.js — keputusan sadar,
+karena nomor versi dependency memang seharusnya berubah seiring
+waktu (beda dengan `CACHE_VER` yang harus selalu sinkron dengan
+`APP_VERSION` sebagai invariant struktural proyek); mengunci versi di
+dalam test akan membuatnya gagal di setiap upgrade masa depan. 163→173
+test, semuanya lolos.
+
+**Verifikasi:** `tsc --noEmit` 0 error, `eslint --max-warnings 0` 0
+error/warning (termasuk setelah upgrade `eslint-config-next`),
+`vitest run` 173/173 lolos. `next build` dikonfirmasi menampilkan
+`▲ Next.js 16.3.2 (Turbopack)` dengan benar dan `prebuild` sukses
+sebelum titik kegagalan jaringan sandbox yang sama seperti sesi-sesi
+sebelumnya (fetch font Google, bukan terkait perubahan sesi ini).
 
 ### v1.10.1 — Bug Fix: Dropdown Tipe Field Rusak Visual + Fitur Field Multi-Isian (2026-08-11)
 

@@ -93,11 +93,16 @@ const FIELDS_BY_CAT: Record<string, FieldDef[]> = {
     { key: 'url',       label: 'URL Webmail', type: 'url', placeholder: 'https://mail.google.com' },
     { key: 'note',      label: 'Catatan', type: 'textarea' },
   ],
+  // v1.10.2: field 'user' & 'bankAccountNo' dipisah — sebelumnya
+  // digabung satu field berlabel "Username / No. Rekening". Data lama
+  // (di field 'user') tetap tampil sebagai Username, No. Rekening jadi
+  // isian baru terpisah (field baru VaultEntry.bankAccountNo).
   bank: [
-    { key: 'user', label: 'Username / No. Rekening' },
-    { key: 'pass', label: 'Password', type: 'password', sensitive: true, mono: true },
-    { key: 'url',  label: 'URL Mobile Banking', type: 'url', placeholder: 'https://...' },
-    { key: 'note', label: 'Catatan', type: 'textarea' },
+    { key: 'user',          label: 'Username' },
+    { key: 'bankAccountNo', label: 'No. Rekening', placeholder: '1234567890' },
+    { key: 'pass',          label: 'Password', type: 'password', sensitive: true, mono: true },
+    { key: 'url',           label: 'URL Mobile Banking', type: 'url', placeholder: 'https://...' },
+    { key: 'note',          label: 'Catatan', type: 'textarea' },
   ],
   game: [
     { key: 'user', label: 'Username / ID' },
@@ -250,6 +255,12 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   // hanya beda jumlah tetap (10, tanpa opsi ganti-panjang 12↔24 seperti
   // seed phrase crypto — kode cadangan 2FA selalu 10 kode).
   const [twoFAEnabled, setTwoFAEnabled] = useState(entry?.twoFAEnabled ?? false);
+  // v1.10.2: 3 toggle baru untuk perluasan Verifikasi 2 Langkah — pola
+  // useState terpisah IDENTIK twoFAEnabled di atas (BUKAN lewat
+  // values/setField yang bertipe string — toggle adalah boolean).
+  const [twoFAVideoSelfie, setTwoFAVideoSelfie] = useState(entry?.twoFAVideoSelfie ?? false);
+  const [twoFAAuthenticatorApp, setTwoFAAuthenticatorApp] = useState(entry?.twoFAAuthenticatorApp ?? false);
+  const [twoFAGoogleCommand, setTwoFAGoogleCommand] = useState(entry?.twoFAGoogleCommand ?? false);
   const BACKUP_CODE_COUNT = 10;
   const [backupCodes, setBackupCodes] = useState<string[]>(
     entry?.twoFABackupCodes && entry.twoFABackupCodes.length > 0
@@ -383,6 +394,18 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         ...(cat === 'email'
           ? {
               twoFAEnabled: twoFAEnabled,
+              // v1.10.2: 3 toggle baru (state React terpisah, bukan
+              // bagian dari `values` — sama seperti twoFAEnabled) harus
+              // disertakan eksplisit di sini juga, tidak ikut otomatis
+              // lewat spread ...values di atas.
+              twoFAVideoSelfie: twoFAVideoSelfie,
+              twoFAAuthenticatorApp: twoFAAuthenticatorApp,
+              twoFAGoogleCommand: twoFAGoogleCommand,
+              // v1.10.2: twoFAGoogleCommandDevice hanya relevan saat
+              // togglenya aktif — kalau twoFAGoogleCommand mati, JANGAN
+              // simpan device meski user sempat mengetiknya sebelum
+              // mematikan toggle (data usang tidak boleh menempel diam-diam).
+              ...(twoFAGoogleCommand ? {} : { twoFAGoogleCommandDevice: undefined }),
               ...(finalBackupCodes.some((c) => c.trim())
                 ? { twoFABackupCodes: finalBackupCodes.map((c) => c.trim()).filter(Boolean) }
                 : {}),
@@ -461,6 +484,10 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     // seedWords, field kategori-spesifik tidak boleh "menempel" saat
     // pindah ke kategori lain lalu balik lagi.
     setTwoFAEnabled(false);
+    // v1.10.2: reset 3 toggle baru juga — sama alasannya seperti twoFAEnabled.
+    setTwoFAVideoSelfie(false);
+    setTwoFAAuthenticatorApp(false);
+    setTwoFAGoogleCommand(false);
     setBackupCodes(Array(BACKUP_CODE_COUNT).fill(''));
     setBackupCodesRawText('');
     // v1.10.0: reset field kustom juga — sama alasannya seperti di atas.
@@ -866,6 +893,73 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
                 value={(values.twoFARecoveryEmail as string) ?? ''}
                 placeholder="pemulihan@contoh.com"
                 onChange={(e) => setField('twoFARecoveryEmail', e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+
+            {/* v1.10.2: 5 opsi tambahan Verifikasi 2 Langkah — permintaan
+                eksplisit pengguna, di luar 3 field yang sudah ada di atas. */}
+            <div className="form-group">
+              <Toggle
+                checked={twoFAVideoSelfie}
+                onChange={setTwoFAVideoSelfie}
+                label="Video Selfie"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="form-2fa-security-key" className="form-label">Kunci Sandi &amp; Kunci Keamanan</label>
+              <input
+                id="form-2fa-security-key"
+                type="text"
+                className="input"
+                value={(values.twoFASecurityKey as string) ?? ''}
+                placeholder="mis. YubiKey 5C, Passkey iPhone"
+                onChange={(e) => setField('twoFASecurityKey', e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+
+            <div className="form-group">
+              <Toggle
+                checked={twoFAAuthenticatorApp}
+                onChange={setTwoFAAuthenticatorApp}
+                label="Authenticator App"
+              />
+            </div>
+
+            <div className="form-group">
+              <Toggle
+                checked={twoFAGoogleCommand}
+                onChange={setTwoFAGoogleCommand}
+                label="Perintah Google"
+              />
+              {twoFAGoogleCommand && (
+                <input
+                  type="text"
+                  className="input"
+                  style={{ marginTop: 'var(--space-2)' }}
+                  value={(values.twoFAGoogleCommandDevice as string) ?? ''}
+                  placeholder="Merk & tipe HP terhubung, mis. Samsung Galaxy S24"
+                  onChange={(e) => setField('twoFAGoogleCommandDevice', e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="form-2fa-primary-phone" className="form-label">Nomor Telepon Verifikasi 2 Langkah</label>
+              <input
+                id="form-2fa-primary-phone"
+                type="text"
+                inputMode="tel"
+                className="input"
+                value={(values.twoFAPrimaryPhone as string) ?? ''}
+                placeholder="+62 812-3456-7890"
+                onChange={(e) => setField('twoFAPrimaryPhone', e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
               />

@@ -328,3 +328,138 @@ describe('EntryForm — Field kustom tipe "multi" (v1.10.1)', () => {
     expect((screen.getByPlaceholderText('isian 1') as HTMLInputElement).value).toBe('');
   });
 });
+
+/**
+ * v1.10.2: permintaan pengguna — perluas Verifikasi 2 Langkah dengan 5
+ * opsi baru (video selfie, kunci sandi & kunci keamanan, authenticator
+ * app, perintah Google + perangkat, nomor telepon verifikasi 2 langkah
+ * terpisah dari nomor pemulihan). Ketiga toggle baru dibangun sebagai
+ * state React terpisah (pola sama twoFAEnabled), bukan lewat
+ * values/setField yang bertipe string.
+ */
+describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', () => {
+  it('kelima opsi baru muncul setelah toggle Verifikasi 2 Langkah diaktifkan', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+
+    expect(screen.getByLabelText('Video Selfie')).toBeInTheDocument();
+    expect(screen.getByLabelText('Kunci Sandi & Kunci Keamanan')).toBeInTheDocument();
+    expect(screen.getByLabelText('Authenticator App')).toBeInTheDocument();
+    expect(screen.getByLabelText('Perintah Google')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nomor Telepon Verifikasi 2 Langkah')).toBeInTheDocument();
+  });
+
+  it('nomor telepon verifikasi 2 langkah (opsi 5) TERPISAH dari nomor telepon pemulihan — mengisi satu tidak mengisi yang lain', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+
+    const pemulihan = screen.getByLabelText('Nomor Telepon Pemulihan') as HTMLInputElement;
+    const verifikasi = screen.getByLabelText('Nomor Telepon Verifikasi 2 Langkah') as HTMLInputElement;
+    fireEvent.change(verifikasi, { target: { value: '+62811111111' } });
+
+    expect(verifikasi.value).toBe('+62811111111');
+    expect(pemulihan.value).toBe('');
+  });
+
+  it('toggle Video Selfie, Authenticator App, dan Perintah Google independen satu sama lain', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+
+    fireEvent.click(screen.getByLabelText('Video Selfie'));
+
+    expect(screen.getByLabelText('Video Selfie')).toBeChecked();
+    expect(screen.getByLabelText('Authenticator App')).not.toBeChecked();
+    expect(screen.getByLabelText('Perintah Google')).not.toBeChecked();
+  });
+
+  it('field Merk & Tipe HP TIDAK muncul sebelum toggle Perintah Google diaktifkan', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+
+    expect(screen.queryByPlaceholderText(/Merk & tipe HP/)).not.toBeInTheDocument();
+  });
+
+  it('mengaktifkan toggle Perintah Google menampilkan field Merk & Tipe HP', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+    fireEvent.click(screen.getByLabelText('Perintah Google'));
+
+    expect(screen.getByPlaceholderText(/Merk & tipe HP/)).toBeInTheDocument();
+  });
+
+  it('mematikan toggle Perintah Google menyembunyikan field Merk & Tipe HP lagi', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+    fireEvent.click(screen.getByLabelText('Perintah Google'));
+    fireEvent.change(screen.getByPlaceholderText(/Merk & tipe HP/), { target: { value: 'Samsung Galaxy S24' } });
+
+    fireEvent.click(screen.getByLabelText('Perintah Google'));
+
+    expect(screen.queryByPlaceholderText(/Merk & tipe HP/)).not.toBeInTheDocument();
+  });
+
+  it('mengetik di Kunci Sandi & Kunci Keamanan tidak memengaruhi field 2FA lain', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+
+    const kunciKeamanan = screen.getByLabelText('Kunci Sandi & Kunci Keamanan') as HTMLInputElement;
+    fireEvent.change(kunciKeamanan, { target: { value: 'YubiKey 5C' } });
+
+    expect(kunciKeamanan.value).toBe('YubiKey 5C');
+    expect((screen.getByLabelText('Email Pemulihan') as HTMLInputElement).value).toBe('');
+  });
+
+  it('pindah kategori dari Email lalu balik lagi mereset ketiga toggle baru (tidak menempel)', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+    fireEvent.click(screen.getByLabelText('Video Selfie'));
+    fireEvent.click(screen.getByLabelText('Authenticator App'));
+
+    fireEvent.click(screen.getByTitle('Sosmed'));
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+
+    expect(screen.getByLabelText('Video Selfie')).not.toBeChecked();
+    expect(screen.getByLabelText('Authenticator App')).not.toBeChecked();
+  });
+});
+
+/**
+ * v1.10.2: permintaan pengguna — pisahkan Username dari No. Rekening
+ * di kategori Bank default (sebelumnya digabung satu field berlabel
+ * "Username / No. Rekening").
+ */
+describe('EntryForm — Kategori Bank: Username & No. Rekening terpisah (v1.10.2)', () => {
+  it('field "Username" dan "No. Rekening" muncul sebagai dua field terpisah, bukan gabungan', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Bank'));
+
+    expect(screen.getByLabelText('Username')).toBeInTheDocument();
+    expect(screen.getByLabelText('No. Rekening')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Username \/ No\. Rekening/)).not.toBeInTheDocument();
+  });
+
+  it('mengisi Username tidak memengaruhi No. Rekening, dan sebaliknya', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Bank'));
+
+    const username = screen.getByLabelText('Username') as HTMLInputElement;
+    const noRek = screen.getByLabelText('No. Rekening') as HTMLInputElement;
+    fireEvent.change(username, { target: { value: 'budi123' } });
+
+    expect(username.value).toBe('budi123');
+    expect(noRek.value).toBe('');
+
+    fireEvent.change(noRek, { target: { value: '1234567890' } });
+    expect(username.value).toBe('budi123'); // tetap tidak berubah
+    expect(noRek.value).toBe('1234567890');
+  });
+});
