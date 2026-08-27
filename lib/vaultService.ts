@@ -16,7 +16,7 @@ import {
   LS_META, LS_PIN, LS_BACKUP, LS_BKPDATA, LS_PIN_SKIPPED,
 } from '@/lib/storage';
 import type {
-  VaultEntry, VaultMeta, CustomCategory, CategoryFieldDef,
+  VaultEntry, VaultMeta, CustomCategory, CategoryFieldDef, CryptoNetworkOption,
   VaultBackup, VaultBackupPayload,
 } from '@/lib/types';
 
@@ -31,6 +31,9 @@ export interface UnlockPayload {
   lockedCatIds: string[];
   // v1.10.0: lihat catatan lengkap di VaultBackupPayload (lib/types.ts).
   defaultCatFieldOverrides: Record<string, CategoryFieldDef[]>;
+  // v1.10.3: daftar nama jaringan crypto custom — pola sama seperti
+  // lockedCatIds/defaultCatFieldOverrides di atas.
+  customNetworks: CryptoNetworkOption[];
 }
 
 export interface SetupPayload {
@@ -72,7 +75,7 @@ export async function setupVault(payload: SetupPayload): Promise<void> {
 
   const inner: VaultBackupPayload = {
     vault: [], meta, customCats: [], lockedIds: [], recycleBin: [], lockedCatIds: [],
-    defaultCatFieldOverrides: {},
+    defaultCatFieldOverrides: {}, customNetworks: [],
   };
 
   const ciphertext = await encrypt(JSON.stringify(inner), masterPw);
@@ -102,6 +105,7 @@ export async function unlockVault(masterPw: string): Promise<UnlockPayload> {
     lockedIds:  data.lockedIds  ?? [],
     lockedCatIds: data.lockedCatIds ?? [],
     defaultCatFieldOverrides: data.defaultCatFieldOverrides ?? {},
+    customNetworks: data.customNetworks ?? [],
   };
 }
 
@@ -130,9 +134,15 @@ export async function saveVault(
   // store.defaultCatFieldOverrides — diverifikasi dengan script
   // penghitung argumen struktural, bukan grep manual saja.
   defaultCatFieldOverrides: Record<string, CategoryFieldDef[]> = {},
+  // v1.10.3: sama seperti lockedCatIds/defaultCatFieldOverrides di
+  // atas — opsional dengan default [], pelajaran yang sama diterapkan
+  // sejak titik pertama fitur ini dibuat (bukan ditemukan lewat celah
+  // data-loss seperti pendahulunya).
+  customNetworks: CryptoNetworkOption[] = [],
 ): Promise<void> {
   const inner: VaultBackupPayload = {
     vault, meta, customCats, lockedIds, recycleBin, lockedCatIds, defaultCatFieldOverrides,
+    customNetworks,
   };
   const ciphertext = await encrypt(JSON.stringify(inner), masterPw);
   saveVaultData(ciphertext);
@@ -248,9 +258,12 @@ export async function exportBackup(
   // pemanggilan lama tetap valid tanpa diedit.
   lockedCatIds: string[] = [],
   defaultCatFieldOverrides: Record<string, CategoryFieldDef[]> = {},
+  // v1.10.3: sama seperti saveVault — lihat catatan lengkap di sana.
+  customNetworks: CryptoNetworkOption[] = [],
 ): Promise<VaultBackup> {
   const inner: VaultBackupPayload = {
     vault, meta, customCats, lockedIds, recycleBin, lockedCatIds, defaultCatFieldOverrides,
+    customNetworks,
   };
   const data = await encrypt(JSON.stringify(inner), masterPw);
 
@@ -308,6 +321,7 @@ export async function importBackup(
     lockedIds:  data.lockedIds  ?? [],
     lockedCatIds: data.lockedCatIds ?? [],
     defaultCatFieldOverrides: data.defaultCatFieldOverrides ?? {},
+    customNetworks: data.customNetworks ?? [],
   };
 }
 

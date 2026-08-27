@@ -5,10 +5,10 @@
  */
 
 import { create } from 'zustand';
-import type { VaultEntry, VaultMeta, CustomCategory, CategoryFieldDef } from '@/lib/types';
+import type { VaultEntry, VaultMeta, CustomCategory, CategoryFieldDef, CryptoNetworkOption } from '@/lib/types';
 import {
   lsGet, lsSet, lsRemove, lsGetNum, lsSetNum, lsGetBool, lsSetBool, lsGetJson, lsSetJson,
-  LS_AUTOLOCK, LS_AUTOSAVE, LS_BKPIVL, LS_CATS, LS_BIO_ENABLED, LS_BIO_CRED_ID,
+  LS_AUTOLOCK, LS_AUTOSAVE, LS_BKPIVL, LS_CATS, LS_NETWORKS, LS_BIO_ENABLED, LS_BIO_CRED_ID,
   LS_PIN_ATTEMPTS, LS_PIN_LOCKED_UNTIL,
 } from '@/lib/storage';
 
@@ -39,6 +39,9 @@ interface AppState {
   // lihat lib/types.ts untuk penjelasan lengkap kenapa dua tempat berbeda).
   defaultCatFieldOverrides: Record<string, CategoryFieldDef[]>;
   customCats:      CustomCategory[];
+  // v1.10.3: daftar nama jaringan crypto custom — paralel dengan
+  // customCats di atas, pola state/persist/save identik.
+  customNetworks:  CryptoNetworkOption[];
 
   // ── UI State ──
   currentFilter:   FilterType;
@@ -90,6 +93,12 @@ interface AppState {
   addCustomCat:     (cat: CustomCategory) => void;
   removeCustomCat:  (id: string) => void;
 
+  // ── Actions: Crypto Networks ──
+  // v1.10.3: paralel dengan Actions: Categories di atas.
+  setCustomNetworks:    (nets: CryptoNetworkOption[]) => void;
+  addCustomNetwork:     (net: CryptoNetworkOption) => void;
+  removeCustomNetwork:  (id: string) => void;
+
   // ── Actions: UI ──
   setFilter:       (f: FilterType) => void;
   setSortBy:       (s: SortType)   => void;
@@ -138,6 +147,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   lockedCatIds:    [],
   defaultCatFieldOverrides: {},
   customCats:      lsGetJson<CustomCategory[]>(LS_CATS, []),
+  customNetworks:  lsGetJson<CryptoNetworkOption[]>(LS_NETWORKS, []),
 
   currentFilter:   'all',
   sortBy:          'default',
@@ -281,6 +291,41 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ customCats: next });
     } catch (err) {
       console.error('[Vault] removeCustomCat gagal simpan ke localStorage:', err);
+      throw err;
+    }
+  },
+
+  // v1.10.3: 3 action ini paralel PERSIS dengan setCustomCats/
+  // addCustomCat/removeCustomCat di atas — try/catch + re-throw yang
+  // sama, alasan yang sama (lihat komentar di atas setCustomCats).
+  setCustomNetworks: (nets) => {
+    try {
+      lsSetJson(LS_NETWORKS, nets);
+      set({ customNetworks: nets });
+    } catch (err) {
+      console.error('[Vault] setCustomNetworks gagal simpan ke localStorage:', err);
+      throw err;
+    }
+  },
+
+  addCustomNetwork: (net) => {
+    const next = [...get().customNetworks, net];
+    try {
+      lsSetJson(LS_NETWORKS, next);
+      set({ customNetworks: next });
+    } catch (err) {
+      console.error('[Vault] addCustomNetwork gagal simpan ke localStorage:', err);
+      throw err;
+    }
+  },
+
+  removeCustomNetwork: (id) => {
+    const next = get().customNetworks.filter((n) => n.id !== id);
+    try {
+      lsSetJson(LS_NETWORKS, next);
+      set({ customNetworks: next });
+    } catch (err) {
+      console.error('[Vault] removeCustomNetwork gagal simpan ke localStorage:', err);
       throw err;
     }
   },

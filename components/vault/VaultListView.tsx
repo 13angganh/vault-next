@@ -188,6 +188,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
               newLockedIds,
               store.lockedCatIds,
               store.defaultCatFieldOverrides,
+              store.customNetworks,
             );
           }
         } catch {
@@ -214,7 +215,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       store.setRecycleBin([]);
       if (store.autoSaveEnabled && store.vaultMeta) {
         try {
-          await saveVault(store.masterPw, store.vault, [], store.vaultMeta, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
+          await saveVault(store.masterPw, store.vault, [], store.vaultMeta, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
         } catch {
           // v1.7.0: sebelumnya catch {} kosong — state memori sudah
           // terlanjur "sampah dikosongkan" meski gagal tersimpan ke disk,

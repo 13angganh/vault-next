@@ -19,15 +19,18 @@
  * 4. Value yang sedang diketik tidak berubah/hilang akibat toggle.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { EntryForm } from '../EntryForm';
 import { useAppStore } from '@/lib/store/appStore';
 
 beforeEach(() => {
   // Reset store ke kondisi minimal yang valid — EntryForm langganan
   // penuh ke useAppStore(), customCats perlu array valid untuk allCats.
-  useAppStore.setState({ customCats: [] });
+  // v1.10.3: customNetworks juga direset — tanpa ini, jaringan custom
+  // yang ditambahkan di satu test (mis. lewat "+ Tambah jaringan baru")
+  // bisa bocor dan muncul di dropdown test lain yang berjalan setelahnya.
+  useAppStore.setState({ customCats: [], customNetworks: [] });
 });
 
 describe('EntryForm — toggle masking password (v1.7.0: klaim README dibuktikan)', () => {
@@ -363,6 +366,26 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
     expect(pemulihan.value).toBe('');
   });
 
+  /**
+   * v1.10.3: bug fix — Toggle.tsx sebelumnya taruh `label` HANYA di
+   * aria-label, tidak pernah dirender sebagai teks di layar. Ketiga
+   * toggle ini tampil polos tanpa keterangan (dilaporkan pengguna via
+   * screenshot). getByLabelText di atas hanya mencocokkan aria-label —
+   * TIDAK cukup untuk menangkap bug ini, karena aria-label memang
+   * sudah benar sejak awal; yang hilang adalah teks visual di DOM.
+   * Test ini query teks literal via getByText untuk memverifikasi
+   * label benar-benar ada sebagai node visual, bukan cuma atribut a11y.
+   */
+  it('label Video Selfie, Authenticator App, dan Perintah Google tampil sebagai teks visual (bukan cuma aria-label)', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+
+    expect(screen.getByText('Video Selfie')).toBeInTheDocument();
+    expect(screen.getByText('Authenticator App')).toBeInTheDocument();
+    expect(screen.getByText('Perintah Google')).toBeInTheDocument();
+  });
+
   it('toggle Video Selfie, Authenticator App, dan Perintah Google independen satu sama lain', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
     fireEvent.click(screen.getByTitle('Email'));
@@ -461,5 +484,383 @@ describe('EntryForm — Kategori Bank: Username & No. Rekening terpisah (v1.10.2
     fireEvent.change(noRek, { target: { value: '1234567890' } });
     expect(username.value).toBe('budi123'); // tetap tidak berubah
     expect(noRek.value).toBe('1234567890');
+  });
+});
+
+/**
+ * v1.10.3: Crypto — multi-jaringan, multi-alamat per jaringan. MURNI
+ * TAMBAHAN, terpisah dari network/walletAddr/walletPw lama (field itu
+ * tetap dirender lewat currentFields.map(renderField) seperti biasa —
+ * tidak diuji ulang di sini, sudah dicakup test dynamicFields yang ada).
+ *
+ * Dua bug ditemukan lewat pengujian save SUNGGUHAN (bukan review kode)
+ * saat test file ini pertama ditulis, dan sudah diperbaiki sebelum test
+ * ini ditulis:
+ * 1. hasFilledFields() tidak memeriksa walletNetworks — mengisi alamat
+ *    wallet tanpa field lain dianggap "form kosong", memicu dialog
+ *    konfirmasi "Simpan Entri Tanpa Data?" alih-alih langsung save.
+ * 2. doCatChange() tidak me-reset walletNetworks — data menempel saat
+ *    pindah kategori lalu balik lagi ke Crypto.
+ * Test grup terakhir di bawah ("data loss") secara eksplisit memverifikasi
+ * kedua fix ini tidak regresi, direproduksi ulang & dikonfirmasi gagal
+ * dulu sebelum fix ditambahkan — sama seperti pola verifikasi negatif
+ * yang dipakai di seluruh proyek ini.
+ */
+describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10.3)', () => {
+  beforeEach(() => {
+    useAppStore.setState({ customCats: [], customNetworks: [] });
+  });
+
+  it('kategori Crypto TIDAK menampilkan section jaringan sama sekali untuk kategori lain', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Email'));
+    expect(screen.queryByText('Jaringan & Alamat Wallet')).not.toBeInTheDocument();
+  });
+
+  it('awalnya tidak ada kartu jaringan sama sekali (entri baru)', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    expect(screen.getByText('Jaringan & Alamat Wallet')).toBeInTheDocument();
+    expect(screen.queryByText('Pilih jaringan…')).not.toBeInTheDocument();
+  });
+
+  it('klik "Tambah Jaringan" menampilkan satu kartu jaringan baru dengan satu baris alamat kosong', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+
+    expect(screen.getByText('Pilih jaringan…')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Alamat 1')).toBeInTheDocument();
+  });
+
+  it('klik "Tambah Jaringan" dua kali menampilkan dua kartu jaringan independen', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+
+    expect(screen.getAllByText('Pilih jaringan…')).toHaveLength(2);
+  });
+
+  it('dropdown jaringan menampilkan 3 default (BTC, EVM, Solana) dan memilih salah satunya mengisi nama jaringan', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Pilih jaringan…'));
+
+    expect(screen.getByText('BTC')).toBeInTheDocument();
+    expect(screen.getByText('EVM (ETH, BNB, dll)')).toBeInTheDocument();
+    expect(screen.getByText('Solana')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Solana'));
+    expect(screen.getByText('Solana')).toBeInTheDocument(); // sekarang jadi label tombol, bukan lagi item menu
+    expect(screen.queryByText('Pilih jaringan…')).not.toBeInTheDocument();
+  });
+
+  it('klik "+ Tambah Alamat" menambah baris alamat baru pada kartu jaringan yang sama', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+
+    expect(screen.queryByPlaceholderText('Alamat 2')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Tambah Alamat'));
+    expect(screen.getByPlaceholderText('Alamat 2')).toBeInTheDocument();
+  });
+
+  it('mengisi alamat pertama tidak memengaruhi alamat kedua, dan sebaliknya', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Tambah Alamat'));
+
+    const addr1 = screen.getByPlaceholderText('Alamat 1') as HTMLInputElement;
+    const addr2 = screen.getByPlaceholderText('Alamat 2') as HTMLInputElement;
+    fireEvent.change(addr1, { target: { value: 'addr-satu' } });
+
+    expect(addr1.value).toBe('addr-satu');
+    expect(addr2.value).toBe('');
+
+    fireEvent.change(addr2, { target: { value: 'addr-dua' } });
+    expect(addr1.value).toBe('addr-satu'); // tetap tidak berubah
+    expect(addr2.value).toBe('addr-dua');
+  });
+
+  it('tombol hapus alamat TIDAK muncul saat hanya ada satu alamat (mencegah kartu jaringan tanpa baris alamat sama sekali)', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+
+    expect(screen.queryByLabelText('Hapus alamat 1')).not.toBeInTheDocument();
+  });
+
+  it('tombol hapus alamat muncul dan berfungsi saat ada lebih dari satu alamat', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Tambah Alamat'));
+    fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'addr-satu' } });
+    fireEvent.change(screen.getByPlaceholderText('Alamat 2'), { target: { value: 'addr-dua' } });
+
+    fireEvent.click(screen.getByLabelText('Hapus alamat 1'));
+
+    // Alamat "addr-dua" yang tersisa sekarang jadi satu-satunya baris,
+    // dan harus berada di posisi "Alamat 1" (bukan tetap di "Alamat 2"
+    // yang sudah tidak ada lagi setelah baris pertama dihapus).
+    expect(screen.getByPlaceholderText('Alamat 1')).toHaveValue('addr-dua');
+    expect(screen.queryByPlaceholderText('Alamat 2')).not.toBeInTheDocument();
+  });
+
+  it('klik tombol hapus jaringan pada kartu menghapus kartu itu saja, kartu jaringan lain tidak terpengaruh', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Pilih jaringan…'));
+    fireEvent.click(screen.getByText('BTC'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Pilih jaringan…'));
+    fireEvent.click(screen.getByText('Solana'));
+
+    expect(screen.getByText('BTC')).toBeInTheDocument();
+    expect(screen.getByText('Solana')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Hapus jaringan BTC'));
+
+    expect(screen.queryByText('BTC')).not.toBeInTheDocument();
+    expect(screen.getByText('Solana')).toBeInTheDocument();
+  });
+
+  it('menambah jaringan custom baru via "+ Tambah jaringan baru" tersimpan ke store dan muncul di dropdown entri Crypto lain berikutnya', () => {
+    const { unmount } = render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Pilih jaringan…'));
+    fireEvent.click(screen.getByText('Tambah jaringan baru'));
+
+    const input = screen.getByPlaceholderText('Nama jaringan baru, mis. Base, Arbitrum…');
+    fireEvent.change(input, { target: { value: 'Base' } });
+    fireEvent.blur(input);
+
+    // Nama baru langsung terpakai di baris ini
+    expect(screen.getByText('Base')).toBeInTheDocument();
+    // DAN tersimpan ke store — bukan hanya lokal ke form ini
+    expect(useAppStore.getState().customNetworks.some((n) => n.label === 'Base')).toBe(true);
+
+    unmount();
+
+    // Render form BARU (entri Crypto lain) — "Base" harus sudah muncul
+    // di dropdown tanpa perlu ditambahkan ulang.
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Pilih jaringan…'));
+    expect(screen.getByText('Base')).toBeInTheDocument();
+  });
+
+  it('menambah nama jaringan yang sudah ada (case-insensitive) TIDAK membuat duplikat di store', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(screen.getByTitle('Crypto'));
+    fireEvent.click(screen.getByText('Tambah Jaringan'));
+    fireEvent.click(screen.getByText('Pilih jaringan…'));
+    fireEvent.click(screen.getByText('Tambah jaringan baru'));
+
+    const input = screen.getByPlaceholderText('Nama jaringan baru, mis. Base, Arbitrum…');
+    fireEvent.change(input, { target: { value: 'btc' } }); // huruf kecil, "BTC" sudah ada sbg default
+    fireEvent.blur(input);
+
+    // Dipakai label yang sudah ada apa adanya ("BTC"), bukan "btc" baru
+    expect(screen.getByText('BTC')).toBeInTheDocument();
+    expect(screen.queryByText('btc')).not.toBeInTheDocument();
+    // TIDAK ditambahkan ke customNetworks — "BTC" adalah default bawaan,
+    // bukan custom.
+    expect(useAppStore.getState().customNetworks).toHaveLength(0);
+  });
+
+  /**
+   * Test save sungguhan — masterPw & vaultMeta perlu diisi valid karena
+   * doSave() memanggil saveVault() (lib/vaultService.ts) yang sungguhan
+   * menjalankan encrypt() (Web Crypto API, PBKDF2). Ini BUKAN mock —
+   * dikonfirmasi cepat (~150-500ms) saat ditulis, jadi aman dijalankan
+   * di test tanpa memperlambat suite secara berarti.
+   */
+  describe('payload save', () => {
+    beforeEach(() => {
+      useAppStore.setState({
+        customCats: [], customNetworks: [],
+        masterPw: 'test-master-pw-untuk-suite-ini',
+        vaultMeta: { hint: '', recoveryHash: '', recovery: '', encMasterBySeed: '' },
+        vault: [], recycleBin: [],
+      });
+    });
+
+    it('walletNetworks TIDAK disertakan sama sekali di payload saat tidak ada jaringan diisi', async () => {
+      const onSaved = vi.fn();
+      render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+      fireEvent.click(screen.getByTitle('Crypto'));
+      fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Kosong' } });
+      // Isi field lama (network) supaya hasFilledFields() true tanpa
+      // perlu walletNetworks — memverifikasi walletNetworks murni
+      // opsional, tidak wajib ada untuk bisa save.
+      fireEvent.change(screen.getByLabelText('Jaringan (Network)'), { target: { value: 'Ethereum' } });
+      fireEvent.click(screen.getByText('Tambah Entri'));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      const saved = onSaved.mock.calls[0][0];
+      expect(saved.walletNetworks).toBeUndefined();
+      expect(saved.network).toBe('Ethereum'); // field lama tetap tersimpan normal
+    });
+
+    it('baris alamat kosong dibuang dari payload saat save (hanya alamat terisi yang tersimpan)', async () => {
+      const onSaved = vi.fn();
+      render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+      fireEvent.click(screen.getByTitle('Crypto'));
+      fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Solana' } });
+      fireEvent.click(screen.getByText('Tambah Jaringan'));
+      fireEvent.click(screen.getByText('Pilih jaringan…'));
+      fireEvent.click(screen.getByText('Solana'));
+      fireEvent.click(screen.getByText('Tambah Alamat')); // baris kedua, sengaja dibiarkan kosong
+      fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'sol-addr-1' } });
+      fireEvent.click(screen.getByText('Tambah Entri'));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      const saved = onSaved.mock.calls[0][0];
+      expect(saved.walletNetworks).toEqual([
+        expect.objectContaining({ network: 'Solana', addresses: ['sol-addr-1'] }),
+      ]);
+    });
+
+    it('jaringan yang semua alamatnya kosong dibuang seluruhnya dari payload (tidak menyisakan kartu kosong)', async () => {
+      const onSaved = vi.fn();
+      render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+      fireEvent.click(screen.getByTitle('Crypto'));
+      fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Campuran' } });
+      // Jaringan pertama: diisi
+      fireEvent.click(screen.getByText('Tambah Jaringan'));
+      fireEvent.click(screen.getByText('Pilih jaringan…'));
+      fireEvent.click(screen.getByText('BTC'));
+      fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'btc-addr' } });
+      // Jaringan kedua: dipilih tapi alamat dibiarkan kosong (mis.
+      // pengguna klik "+ Tambah Jaringan" lalu berubah pikiran)
+      fireEvent.click(screen.getByText('Tambah Jaringan'));
+      fireEvent.click(screen.getByText('Pilih jaringan…'));
+      fireEvent.click(screen.getByText('Solana'));
+
+      fireEvent.click(screen.getByText('Tambah Entri'));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      const saved = onSaved.mock.calls[0][0];
+      expect(saved.walletNetworks).toHaveLength(1);
+      expect(saved.walletNetworks[0].network).toBe('BTC');
+    });
+
+    it('bisa save dengan LEBIH DARI SATU alamat pada jaringan yang SAMA (satu seed, beberapa alamat)', async () => {
+      const onSaved = vi.fn();
+      render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+      fireEvent.click(screen.getByTitle('Crypto'));
+      fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Multi-Alamat' } });
+      fireEvent.click(screen.getByText('Tambah Jaringan'));
+      fireEvent.click(screen.getByText('Pilih jaringan…'));
+      fireEvent.click(screen.getByText('Solana'));
+      fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'sol-addr-1' } });
+      fireEvent.click(screen.getByText('Tambah Alamat'));
+      fireEvent.change(screen.getByPlaceholderText('Alamat 2'), { target: { value: 'sol-addr-2' } });
+      fireEvent.click(screen.getByText('Tambah Entri'));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      const saved = onSaved.mock.calls[0][0];
+      expect(saved.walletNetworks).toHaveLength(1);
+      expect(saved.walletNetworks[0].addresses).toEqual(['sol-addr-1', 'sol-addr-2']);
+    });
+
+    it('field lama network/walletAddr/walletPw TETAP tersimpan normal bersamaan dengan walletNetworks baru, tidak saling menimpa', async () => {
+      const onSaved = vi.fn();
+      render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+      fireEvent.click(screen.getByTitle('Crypto'));
+      fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Campuran Lama Baru' } });
+      fireEvent.change(screen.getByLabelText('Jaringan (Network)'), { target: { value: 'Ethereum Lama' } });
+      fireEvent.change(screen.getByLabelText('Alamat Wallet'), { target: { value: '0xLamaAlamat' } });
+      fireEvent.click(screen.getByText('Tambah Jaringan'));
+      fireEvent.click(screen.getByText('Pilih jaringan…'));
+      fireEvent.click(screen.getByText('Solana'));
+      fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'sol-addr-baru' } });
+      fireEvent.click(screen.getByText('Tambah Entri'));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      const saved = onSaved.mock.calls[0][0];
+      expect(saved.network).toBe('Ethereum Lama');
+      expect(saved.walletAddr).toBe('0xLamaAlamat');
+      expect(saved.walletNetworks).toEqual([
+        expect.objectContaining({ network: 'Solana', addresses: ['sol-addr-baru'] }),
+      ]);
+    });
+  });
+
+  /**
+   * Verifikasi negatif untuk 2 bug data-loss yang ditemukan saat test
+   * ini pertama ditulis (lihat komentar di atas describe utama). Kedua
+   * test ini dibuktikan GAGAL saat fix-nya sengaja dihapus sementara,
+   * sebelum ditulis final di sini — pola yang sama dipakai konsisten
+   * di seluruh proyek ini untuk setiap fix (lihat CLAUDE.md/README
+   * changelog versi-versi sebelumnya).
+   */
+  describe('mencegah regresi data-loss', () => {
+    beforeEach(() => {
+      useAppStore.setState({
+        customCats: [], customNetworks: [],
+        masterPw: 'test-master-pw-untuk-suite-ini',
+        vaultMeta: { hint: '', recoveryHash: '', recovery: '', encMasterBySeed: '' },
+        vault: [], recycleBin: [],
+      });
+    });
+
+    it('mengisi HANYA alamat wallet (tanpa field lain) langsung ter-save tanpa dialog konfirmasi "Simpan Entri Tanpa Data?"', async () => {
+      const onSaved = vi.fn();
+      render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+      fireEvent.click(screen.getByTitle('Crypto'));
+      fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Hanya Alamat' } });
+      fireEvent.click(screen.getByText('Tambah Jaringan'));
+      fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'addr-saja' } });
+      fireEvent.click(screen.getByText('Tambah Entri'));
+
+      // Dialog "Simpan Entri Tanpa Data?" TIDAK boleh muncul — kalau
+      // hasFilledFields() regresi (lupa cek walletNetworks lagi), test
+      // ini akan gagal di titik waitFor karena onSaved tidak pernah
+      // terpanggil (form macet menunggu klik "Simpan Tetap" yang tidak
+      // pernah dilakukan test ini secara sengaja).
+      expect(screen.queryByText('Simpan Entri Tanpa Data?')).not.toBeInTheDocument();
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    });
+
+    it('pindah dari Crypto ke kategori lain lalu balik lagi ke Crypto MENGOSONGKAN jaringan yang sudah diisi sebelumnya', async () => {
+      render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+      fireEvent.click(screen.getByTitle('Crypto'));
+      fireEvent.click(screen.getByText('Tambah Jaringan'));
+      fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'addr-yang-harus-hilang' } });
+
+      // hasFilledFields() true (alamat terisi) → pindah kategori memicu
+      // dialog konfirmasi "Ganti Kategori?" — perlu dikonfirmasi dulu.
+      fireEvent.click(screen.getByTitle('Sosmed'));
+      fireEvent.click(screen.getByText('Ganti Kategori'));
+      // Tunggu dialog benar-benar selesai unmount sebelum lanjut — tanpa
+      // ini, sisa render AnimatePresence dari dialog ini bisa membuat
+      // getByText('Ganti Kategori') pada langkah berikutnya salah
+      // menangkap elemen basi ini alih-alih dialog baru yang sungguhan
+      // (ditemukan lewat debug logging saat test ini pertama ditulis —
+      // doCatChange & hasFilledFields TERBUKTI benar lewat log manual,
+      // kegagalan sebelumnya murni soal timing di test, bukan bug nyata).
+      await waitFor(() => {
+        expect(screen.queryByText('Simpan Entri Tanpa Data?')).not.toBeInTheDocument();
+      });
+
+      // Klik balik ke Crypto. Kalau doCatChange BENAR mereset
+      // walletNetworks (fix bekerja), hasFilledFields() sudah false,
+      // maka pindah kategori terjadi LANGSUNG tanpa dialog apa pun.
+      fireEvent.click(screen.getByTitle('Crypto'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Jaringan & Alamat Wallet')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Pilih jaringan…')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Alamat 1')).not.toBeInTheDocument();
+    });
   });
 });

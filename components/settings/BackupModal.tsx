@@ -47,6 +47,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
         store.lockedIds,
         store.lockedCatIds,
         store.defaultCatFieldOverrides,
+        store.customNetworks,
       );
       const json = JSON.stringify(backup, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
@@ -122,6 +123,9 @@ export function BackupModal({ onClose }: BackupModalProps) {
     // v1.10.0: paralel dengan currentLocked/finalLocked di bawah, untuk kategori.
     const currentLockedCat = store.lockedCatIds;
     const currentFieldOverrides = store.defaultCatFieldOverrides;
+    // v1.10.3: paralel PERSIS dengan currentCats/finalCats di bawah —
+    // daftar jaringan crypto custom ikut proses import/merge yang sama.
+    const currentNetworks = store.customNetworks;
     try {
       const text    = await importFile.text();
       const payload = await importBackup(text, importPw);
@@ -132,6 +136,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
       let finalLocked  = payload.lockedIds;
       let finalLockedCat = payload.lockedCatIds;
       let finalFieldOverrides = payload.defaultCatFieldOverrides;
+      let finalNetworks = payload.customNetworks;
 
       if (importMode === 'merge') {
         // Merge: gabungkan, hindari duplikat berdasarkan ID
@@ -150,6 +155,11 @@ export function BackupModal({ onClose }: BackupModalProps) {
         // baru/otoritatif, konsisten dengan semangat union di atas),
         // key yang hanya ada di salah satu tetap dipertahankan.
         finalFieldOverrides = { ...currentFieldOverrides, ...payload.defaultCatFieldOverrides };
+        // v1.10.3: merge daftar jaringan custom — dedup by id, pola
+        // PERSIS SAMA dengan merge finalCats di atas.
+        const existingNetIds = new Set(currentNetworks.map((n) => n.id));
+        const newNetworks = payload.customNetworks.filter((n) => !existingNetIds.has(n.id));
+        finalNetworks = [...currentNetworks, ...newNetworks];
       }
 
       // Update store
@@ -160,9 +170,10 @@ export function BackupModal({ onClose }: BackupModalProps) {
       store.setLockedIds(finalLocked);
       store.setLockedCatIds(finalLockedCat);
       store.loadDefaultCatFieldOverrides(finalFieldOverrides);
+      store.setCustomNetworks(finalNetworks);
 
       // Simpan — pakai snapshot masterPw bukan store (hindari stale closure)
-      await saveVault(currentMasterPw, finalVault, finalBin, payload.meta, finalCats, finalLocked, finalLockedCat, finalFieldOverrides);
+      await saveVault(currentMasterPw, finalVault, finalBin, payload.meta, finalCats, finalLocked, finalLockedCat, finalFieldOverrides, finalNetworks);
 
       const added = importMode === 'merge'
         ? payload.vault.filter((e) => !currentVault.some((x) => x.id === e.id)).length
@@ -204,6 +215,7 @@ export function BackupModal({ onClose }: BackupModalProps) {
         store.lockedIds,
         store.lockedCatIds,
         store.defaultCatFieldOverrides,
+        store.customNetworks,
       );
       setSyncText(JSON.stringify(backup));
     } catch (e) {
@@ -238,8 +250,9 @@ export function BackupModal({ onClose }: BackupModalProps) {
       store.setLockedIds(payload.lockedIds);
       store.setLockedCatIds(payload.lockedCatIds);
       store.loadDefaultCatFieldOverrides(payload.defaultCatFieldOverrides);
+      store.setCustomNetworks(payload.customNetworks);
       // Snapshot masterPw untuk hindari stale closure
-      await saveVault(currentMasterPw, payload.vault, payload.recycleBin, payload.meta, payload.customCats, payload.lockedIds, payload.lockedCatIds, payload.defaultCatFieldOverrides);
+      await saveVault(currentMasterPw, payload.vault, payload.recycleBin, payload.meta, payload.customCats, payload.lockedIds, payload.lockedCatIds, payload.defaultCatFieldOverrides, payload.customNetworks);
       setSyncResult(`✅ Sinkron berhasil! ${payload.vault.length} entri dimuat.`);
     } catch (e) {
       setSyncError((e as Error).message);

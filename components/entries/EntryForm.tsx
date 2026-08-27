@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { X, ArrowLeft, Eye, EyeOff, ChevronDown, Check, Plus, Trash2 } from 'lucide-react';
 import { Button, Toggle, ConfirmDialog } from '@/components/ui/primitives';
 import { useAppStore }           from '@/lib/store/appStore';
 import { saveVault }              from '@/lib/vaultService';
@@ -9,8 +9,20 @@ import { CategoryIcon }           from '@/components/entries/CategoryIcon';
 import { PasswordStrengthMeter }  from '@/components/ui/PasswordStrengthMeter';
 import { PasswordGenerator }      from '@/components/ui/PasswordGenerator';
 import { DEFAULT_CATEGORIES }     from '@/lib/types';
-import type { VaultEntry, CustomCategory, CategoryFieldDef } from '@/lib/types';
+import type { VaultEntry, CustomCategory, CategoryFieldDef, CryptoWalletNetwork } from '@/lib/types';
 import { generateId } from '@/lib/utils';  // F2-11
+
+// v1.10.3: 3 jaringan default yang selalu tersedia di dropdown Crypto —
+// digabung dengan store.customNetworks (jaringan yang pengguna tambah
+// sendiri) saat dropdown dirender. id diawali 'builtin_' agar tidak
+// pernah bentrok dengan id custom (`net_${Date.now()}...` — lihat
+// addCustomNetwork), dan TIDAK PERNAH disimpan sebagai bagian dari
+// store.customNetworks — murni konstanta UI, tidak butuh persist.
+const DEFAULT_CRYPTO_NETWORKS = [
+  { id: 'builtin_btc',   label: 'BTC' },
+  { id: 'builtin_evm',   label: 'EVM (ETH, BNB, dll)' },
+  { id: 'builtin_sol',   label: 'Solana' },
+];
 
 interface EntryFormProps {
   entry?:   VaultEntry;
@@ -250,6 +262,66 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [seedWords,   setSeedWords]   = useState<string[]>(entry?.seedPhrase ?? Array(12).fill(''));
   const [seedMode,    setSeedMode]    = useState<'grid' | 'text'>('grid');
 
+  // v1.10.3: Crypto — multi-jaringan, multi-alamat per jaringan. MURNI
+  // TAMBAHAN, terpisah dari network/walletAddr/walletPw lama di atas
+  // (values state) yang tetap dipakai apa adanya untuk entri lama.
+  // Nilai awal dari entry.walletNetworks kalau ada (mode edit), array
+  // kosong kalau tidak (entri baru, atau entri lama yang belum pernah
+  // memakai field ini). id dibuat sekali saat baris ditambah — dipakai
+  // sebagai React key yang stabil (BUKAN index, yang berubah saat
+  // baris di tengah dihapus dan bisa membuat React mengaitkan input
+  // state ke baris yang salah — kelas bug yang sama seperti alasan
+  // ingredient.id pada resep, atau seedWords per-index yang aman HANYA
+  // karena panjangnya selalu tetap 12/24, tidak pernah tambah/hapus
+  // baris dinamis seperti di sini).
+  const [walletNetworks, setWalletNetworks] = useState<CryptoWalletNetwork[]>(
+    entry?.walletNetworks ?? []
+  );
+
+  const addWalletNetwork = () => {
+    setWalletNetworks((prev) => [
+      ...prev,
+      { id: `net_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, network: '', addresses: [''] },
+    ]);
+  };
+
+  const removeWalletNetwork = (id: string) => {
+    setWalletNetworks((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const setWalletNetworkName = (id: string, network: string) => {
+    setWalletNetworks((prev) => prev.map((n) => n.id === id ? { ...n, network } : n));
+  };
+
+  const addWalletAddress = (netId: string) => {
+    setWalletNetworks((prev) => prev.map((n) =>
+      n.id === netId ? { ...n, addresses: [...n.addresses, ''] } : n
+    ));
+  };
+
+  const removeWalletAddress = (netId: string, addrIndex: number) => {
+    setWalletNetworks((prev) => prev.map((n) =>
+      n.id === netId ? { ...n, addresses: n.addresses.filter((_, i) => i !== addrIndex) } : n
+    ));
+  };
+
+  const setWalletAddressValue = (netId: string, addrIndex: number, value: string) => {
+    setWalletNetworks((prev) => prev.map((n) =>
+      n.id === netId
+        ? { ...n, addresses: n.addresses.map((a, i) => i === addrIndex ? value : a) }
+        : n
+    ));
+  };
+
+  // Dropdown nama jaringan per baris — mengikuti pola openTypeDropdownFor
+  // di CategoryManager.tsx (hanya 1 dropdown terbuka dalam satu waktu,
+  // di-keyed per baris karena bisa ada beberapa jaringan sekaligus).
+  const [openNetDropdownFor, setOpenNetDropdownFor] = useState<string | null>(null);
+  // Mode tambah-jaringan-baru per baris — saat true, baris itu tampil
+  // sebagai input teks bebas alih-alih dropdown (untuk nama jaringan
+  // yang belum ada di daftar default/custom).
+  const [addingNetFor, setAddingNetFor] = useState<string | null>(null);
+
   // v1.10.0: Verifikasi 2 Langkah (kategori Email) — state kode cadangan
   // memakai pola IDENTIK dengan seedWords/seedMode/seedRawText di atas,
   // hanya beda jumlah tetap (10, tanpa opsi ganti-panjang 12↔24 seperti
@@ -380,6 +452,19 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         ? textToCodes(backupCodesRawText, BACKUP_CODE_COUNT)
         : backupCodes;
 
+      // v1.10.3: bersihkan walletNetworks sebelum save — buang alamat
+      // kosong per jaringan (baris "+ Tambah Alamat" yang tidak jadi
+      // diisi), lalu buang jaringan yang setelah itu jadi tidak punya
+      // alamat sama sekali (baris "+ Tambah Jaringan" yang tidak jadi
+      // dipakai). Nama jaringan TIDAK di-trim-filter di sini — jaringan
+      // dengan alamat terisi tapi nama belum dipilih tetap disimpan
+      // (network: ''), karena pengguna mungkin sengaja isi alamat dulu
+      // baru pilih jaringan setelahnya; validasi nama kosong bukan
+      // tanggung jawab logika save.
+      const finalWalletNetworks = walletNetworks
+        .map((n) => ({ ...n, addresses: n.addresses.map((a) => a.trim()).filter(Boolean) }))
+        .filter((n) => n.addresses.length > 0);
+
       const newEntry: VaultEntry = {
         ...(entry ?? {}),
         ...values,
@@ -390,6 +475,13 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         ts:   Date.now(),
         ...(cat === 'crypto' && finalSeedWords.some((w) => w.trim())
           ? { seedPhrase: finalSeedWords.map((w) => w.trim()).filter(Boolean) }
+          : {}),
+        // v1.10.3: walletNetworks — sama pola dengan seedPhrase di atas,
+        // hanya disertakan kalau benar-benar ada isinya setelah
+        // dibersihkan. Field lama network/walletAddr/walletPw TIDAK
+        // disentuh di sini — tetap masuk lewat ...values seperti biasa.
+        ...(cat === 'crypto' && finalWalletNetworks.length > 0
+          ? { walletNetworks: finalWalletNetworks }
           : {}),
         ...(cat === 'email'
           ? {
@@ -451,7 +543,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
       }
       store.setVault(newVault);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, newVault, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
+      await saveVault(store.masterPw, newVault, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
       onSaved(newEntry);
       onClose();
     } catch (err) {
@@ -473,7 +565,14 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     seedWords.some((w) => w.trim() !== '') ||
     backupCodes.some((c) => c.trim() !== '') ||
     Object.values(customFieldValues).some((v) => v.trim() !== '') ||
-    Object.values(customMultiValues).some((arr) => arr.some((v) => v.trim() !== ''));
+    Object.values(customMultiValues).some((arr) => arr.some((v) => v.trim() !== '')) ||
+    // v1.10.3: BUG FIX — walletNetworks sebelumnya tidak dicek di sini
+    // sama sekali (ditemukan lewat pengujian save sungguhan, bukan
+    // review kode). Akibatnya mengisi alamat wallet TANPA mengisi field
+    // lain dianggap "form kosong" oleh dialog konfirmasi di doSave/
+    // handleSave, dan doCatChange juga tidak akan mengonfirmasi sebelum
+    // menghapus data yang sudah diisi di sini saat ganti kategori.
+    walletNetworks.some((n) => n.addresses.some((a) => a.trim() !== ''));
 
   const doCatChange = (catId: string) => {
     setCat(catId);
@@ -496,6 +595,12 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     setCustomMultiValues({});
     setCustomMultiMode({});
     setCustomMultiRawText({});
+    // v1.10.3: reset walletNetworks juga — sama alasannya seperti
+    // seedWords/backupCodes di atas. Ditemukan lewat pengujian
+    // sungguhan (bukan review kode) bersamaan dengan bug hasFilledFields
+    // di atas — keduanya luput karena walletNetworks ditambahkan
+    // sebagai state terpisah baru, bukan bagian dari `values`.
+    setWalletNetworks([]);
   };
 
   const handleCatChange = (catId: string) => {
@@ -850,6 +955,163 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
     );
   };
 
+  // v1.10.3: Crypto — multi-jaringan, multi-alamat per jaringan. MURNI
+  // TAMBAHAN di luar network/walletAddr/walletPw lama (yang tetap
+  // dirender lewat currentFields.map(renderField) seperti biasa untuk
+  // entri lama). Dropdown nama jaringan: gabungan DEFAULT_CRYPTO_NETWORKS
+  // (BTC/EVM/Solana, selalu ada) + store.customNetworks (ditambahkan
+  // pengguna sendiri, persisten lewat store.addCustomNetwork — lihat
+  // appStore.ts). Opsi "+ Tambah jaringan baru" di paling bawah menu
+  // membuka mode input teks bebas untuk baris itu; menekan Enter atau
+  // blur menyimpannya baik ke baris ini MAUPUN ke store.customNetworks
+  // (agar tersedia di dropdown untuk entri Crypto lain berikutnya —
+  // sama seperti CustomCategory tersedia lintas-entri).
+  const renderCryptoNetworksSection = () => {
+    if (cat !== 'crypto') return null;
+
+    const allNetworkOptions = [...DEFAULT_CRYPTO_NETWORKS, ...store.customNetworks];
+
+    const commitNewNetworkName = (netId: string, rawName: string) => {
+      const trimmed = rawName.trim();
+      if (!trimmed) { setAddingNetFor(null); return; }
+      // Cek dulu apakah nama ini (case-insensitive) sudah ada di daftar
+      // (default ATAU custom) — kalau sudah ada, pakai label yang sudah
+      // ada apa adanya (hindari duplikat "Base" dan "base" di dropdown).
+      const existing = allNetworkOptions.find(
+        (o) => o.label.trim().toLowerCase() === trimmed.toLowerCase()
+      );
+      const finalName = existing ? existing.label : trimmed;
+      setWalletNetworkName(netId, finalName);
+      if (!existing) {
+        try {
+          store.addCustomNetwork({ id: `net_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, label: finalName });
+        } catch {
+          // Gagal simpan ke localStorage (mis. kuota penuh) — nama
+          // jaringan TETAP terpakai untuk baris ini (finalName di atas
+          // sudah ter-set), hanya tidak tersedia di dropdown untuk
+          // entri lain berikutnya. Tidak fatal untuk save entry ini.
+        }
+      }
+      setAddingNetFor(null);
+    };
+
+    return (
+      <div className="form-group">
+        <div className="form-label-row">
+          <label className="form-label">Jaringan &amp; Alamat Wallet</label>
+        </div>
+        <p className="form-hint">
+          Satu wallet bisa punya lebih dari satu jaringan, dan lebih dari satu alamat per jaringan.
+        </p>
+
+        {walletNetworks.map((net) => (
+          <div className="crypto-net-card" key={net.id}>
+            <div className="crypto-net-card__header">
+              {addingNetFor === net.id ? (
+                <input
+                  type="text"
+                  className="input"
+                  autoFocus
+                  placeholder="Nama jaringan baru, mis. Base, Arbitrum…"
+                  defaultValue={net.network}
+                  maxLength={32}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.currentTarget.blur(); }
+                    if (e.key === 'Escape') { setAddingNetFor(null); }
+                  }}
+                  onBlur={(e) => commitNewNetworkName(net.id, e.target.value)}
+                />
+              ) : (
+                <div className="crypto-net-dropdown-wrap">
+                  <button
+                    type="button"
+                    className={
+                      'crypto-net-dropdown-btn' +
+                      (openNetDropdownFor === net.id ? ' crypto-net-dropdown-btn--active' : '') +
+                      (!net.network ? ' crypto-net-dropdown-btn--placeholder' : '')
+                    }
+                    onClick={() => setOpenNetDropdownFor((v) => v === net.id ? null : net.id)}
+                    aria-label={`Pilih jaringan${net.network ? `: ${net.network}` : ''}`}
+                  >
+                    {net.network || 'Pilih jaringan…'}
+                    <ChevronDown size={14} />
+                  </button>
+                  {openNetDropdownFor === net.id && (
+                    <>
+                      <div className="crypto-net-dropdown-backdrop" onClick={() => setOpenNetDropdownFor(null)} />
+                      <div className="crypto-net-dropdown-menu">
+                        {allNetworkOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            className={`crypto-net-dropdown-item${net.network === opt.label ? ' crypto-net-dropdown-item--active' : ''}`}
+                            onClick={() => { setWalletNetworkName(net.id, opt.label); setOpenNetDropdownFor(null); }}
+                          >
+                            {net.network === opt.label && <Check size={12} />}
+                            {opt.label}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className="crypto-net-dropdown-item crypto-net-dropdown-item--add"
+                          onClick={() => { setOpenNetDropdownFor(null); setAddingNetFor(net.id); }}
+                        >
+                          <Plus size={12} />
+                          Tambah jaringan baru
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              <Button
+                variant="ghost" size="sm" className="crypto-net-icon-btn"
+                aria-label={`Hapus jaringan${net.network ? ` ${net.network}` : ''}`}
+                onClick={() => removeWalletNetwork(net.id)}
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
+
+            <div className="crypto-net-addr-list">
+              {net.addresses.map((addr, i) => (
+                <div className="crypto-net-addr-row" key={i}>
+                  <input
+                    type="text"
+                    className="input mono"
+                    value={addr}
+                    placeholder={`Alamat ${i + 1}`}
+                    onChange={(e) => setWalletAddressValue(net.id, i, e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  {net.addresses.length > 1 && (
+                    <Button
+                      variant="ghost" size="sm" className="crypto-net-icon-btn"
+                      aria-label={`Hapus alamat ${i + 1}`}
+                      onClick={() => removeWalletAddress(net.id, i)}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button variant="ghost" size="sm" onClick={() => addWalletAddress(net.id)}>
+                <Plus size={12} />
+                Tambah Alamat
+              </Button>
+            </div>
+          </div>
+        ))}
+
+        <Button variant="ghost" size="sm" onClick={addWalletNetwork}>
+          <Plus size={14} />
+          Tambah Jaringan
+        </Button>
+      </div>
+    );
+  };
+
   // v1.10.0: Verifikasi 2 Langkah (kategori Email). Pola input kode
   // cadangan IDENTIK dengan renderSeedSection() di atas (grid per-item
   // bernomor / mode teks satu blok) — beda hanya jumlah tetap 10 (tanpa
@@ -900,12 +1162,24 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
 
             {/* v1.10.2: 5 opsi tambahan Verifikasi 2 Langkah — permintaan
                 eksplisit pengguna, di luar 3 field yang sudah ada di atas. */}
+            {/* v1.10.3: bug fix — label toggle tidak pernah dirender secara
+                visual (Toggle.tsx hanya taruh `label` di aria-label, bukan
+                teks di layar). 3 toggle ini sebelumnya tampil polos tanpa
+                keterangan. Dibungkus .form-label-row + <label>, pola yang
+                sama persis dipakai toggle "Verifikasi 2 Langkah" di atas —
+                BUKAN mengubah Toggle.tsx itu sendiri, karena 7 pemakaian
+                Toggle lain di proyek ini sudah punya label eksternal
+                sendiri-sendiri; mengubah Toggle.tsx akan menduplikasi teks
+                di tempat-tempat itu. */}
             <div className="form-group">
-              <Toggle
-                checked={twoFAVideoSelfie}
-                onChange={setTwoFAVideoSelfie}
-                label="Video Selfie"
-              />
+              <div className="form-label-row">
+                <label className="form-label">Video Selfie</label>
+                <Toggle
+                  checked={twoFAVideoSelfie}
+                  onChange={setTwoFAVideoSelfie}
+                  label="Video Selfie"
+                />
+              </div>
             </div>
 
             <div className="form-group">
@@ -923,19 +1197,25 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
             </div>
 
             <div className="form-group">
-              <Toggle
-                checked={twoFAAuthenticatorApp}
-                onChange={setTwoFAAuthenticatorApp}
-                label="Authenticator App"
-              />
+              <div className="form-label-row">
+                <label className="form-label">Authenticator App</label>
+                <Toggle
+                  checked={twoFAAuthenticatorApp}
+                  onChange={setTwoFAAuthenticatorApp}
+                  label="Authenticator App"
+                />
+              </div>
             </div>
 
             <div className="form-group">
-              <Toggle
-                checked={twoFAGoogleCommand}
-                onChange={setTwoFAGoogleCommand}
-                label="Perintah Google"
-              />
+              <div className="form-label-row">
+                <label className="form-label">Perintah Google</label>
+                <Toggle
+                  checked={twoFAGoogleCommand}
+                  onChange={setTwoFAGoogleCommand}
+                  label="Perintah Google"
+                />
+              </div>
               {twoFAGoogleCommand && (
                 <input
                   type="text"
@@ -1134,6 +1414,7 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
           {/* Dynamic fields */}
           {currentFields.map(renderField)}
           {renderSeedSection()}
+          {renderCryptoNetworksSection()}
           {renderTwoFASection()}
         </div>
 

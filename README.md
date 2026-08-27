@@ -2,7 +2,7 @@
 
 **PWA password manager offline-first** berbasis Next.js (App Router), TypeScript strict, Zustand, dan enkripsi AES-256-GCM.
 
-> **Versi saat ini:** v1.10.2  
+> **Versi saat ini:** v1.10.3  
 > **Repo:** https://github.com/13angganh/vault-next  
 > **Deploy:** Vercel (auto-deploy dari GitHub push)
 
@@ -234,7 +234,217 @@ Ketiganya punya `:hover`, `:active` (scale 0.88), dan `aria-label` yang konsiste
 
 ## Changelog
 
-### v1.10.2 — Perluasan Verifikasi 2 Langkah, Pisah Field Bank, Upgrade Next.js 16.3.2 (2026-08-12)
+### v1.10.3 — Bug Fix Label Toggle, Restrukturisasi Pengaturan, Crypto Multi-Jaringan (2026-08-26)
+
+**Konteks:** 3 permintaan sekaligus dari pengguna, didiskusikan dan
+disepakati sebelum eksekusi — (1) bug label toggle kosong tanpa
+keterangan di kategori Email (dilaporkan lewat screenshot); (2)
+restrukturisasi menu Pengaturan yang dirasa terlalu banyak section
+terpisah dan animasi expand/collapse-nya laggy; (3) fitur Crypto:
+mendukung lebih dari satu jaringan per entri, dan lebih dari satu
+alamat per jaringan (satu wallet self-custody bisa punya banyak
+alamat dari seed yang sama). Pengguna secara eksplisit meminta audit
+menyeluruh di luar area yang diminta, bukan hanya area yang disebut,
+untuk mencegah bug baru seperti temuan #1 di bawah.
+
+#### 1. Bug Fix: Label Toggle Verifikasi 2 Langkah Tidak Tampil
+
+Akar masalah: `Toggle.tsx` (komponen primitif, dipakai di 7+ tempat
+di seluruh proyek) hanya meneruskan prop `label` ke `aria-label` —
+tidak pernah dirender sebagai teks visual di layar. 3 toggle baru
+dari v1.10.2 (Video Selfie, Authenticator App, Perintah Google)
+mengandalkan `label` untuk keterangan visualnya (asumsi yang salah),
+sehingga tampil sebagai toggle polos tanpa teks sama sekali —
+persis yang dilaporkan pengguna lewat 3 screenshot.
+
+**Fix bukan di `Toggle.tsx` itu sendiri** — 7 pemakaian `Toggle`
+lain di proyek (toggle 2FA utama, Tandai Favorit, Auto-save,
+Biometrik) semuanya *sudah* punya label teks eksternal di
+`<label>` terpisah di sebelahnya; mengubah `Toggle.tsx` untuk
+merender `label` sebagai teks akan menduplikasi teks di
+tempat-tempat yang sudah benar. Diperbaiki dengan membungkus
+ketiga toggle bermasalah dalam `.form-label-row` + `<label
+className="form-label">`, pola yang sama persis dengan toggle 2FA
+utama di atasnya.
+
+**Test:** 1 test baru memverifikasi label tampil sebagai teks
+visual (`getByText`, bukan cuma `getByLabelText`/`aria-label` yang
+tidak akan pernah menangkap bug jenis ini) — dibuktikan gagal saat
+bug direproduksi ulang sebelum fix ditulis final.
+
+#### 2. Restrukturisasi Pengaturan: 8 Section → 3 + Fix Animasi Laggy
+
+**Pengelompokan** (murni tampilan, mekanisme collapsible/Framer
+Motion yang sama dipertahankan — bukan diganti struktur menu/
+submenu 2-level): 8 section flat lama (Tampilan, Biometrik,
+Keamanan, Penyimpanan, Backup & Sync, Kategori, Kesehatan Password,
+Info Vault) dikonsolidasi jadi **Keamanan** (Auto-lock, PIN,
+Biometrik, Kesehatan Password), **Tampilan** (Tema, Kategori),
+**Data** (Auto-save, Pengingat Backup, Export & Import, Sync).
+**Info Vault** dikeluarkan dari collapsible sepenuhnya — jadi
+section statis (header tanpa chevron, tanpa `onClick`, body selalu
+terbuka) berdiri sendiri paling bawah. Footer teks kecil duplikat
+(`.settings-signature`, `Vault Next v{APP_VERSION} · 100% Offline ·
+AES-256-GCM`) yang sebelumnya berada di luar section manapun
+**dihapus** — informasi yang sama sudah terwakili oleh section
+statis Info Vault.
+
+**Fix animasi laggy** — root cause: Framer Motion
+`height: "auto"` bukan nilai yang bisa dianimasikan secara native
+oleh browser; setiap frame animasi memaksa browser recalculate
+layout (reflow) untuk mensimulasikannya, alih-alih compositing
+murni di GPU — inilah yang terasa berat/tersendat, terutama di
+WebView Android. Diganti dengan mengukur tinggi konten sungguhan
+lewat `ref.scrollHeight` sekali saat section terbuka
+(`useLayoutEffect`, mencegah flicker frame pertama), lalu Framer
+Motion animate ke **nilai piksel pasti** alih-alih string `"auto"`.
+Prop `dynamicHeight` (sebelumnya berarti "skip animasi tinggi sama
+sekali, hanya animate opacity" — workaround untuk section berisi
+panel yang tingginya bisa berubah sendiri, seperti PIN panel) diubah
+maknanya jadi "pasang `ResizeObserver` untuk re-measure otomatis
+saat konten di dalam berubah tinggi ketika section sudah terbuka" —
+memperbaiki akar masalah alih-alih menghindarinya. Section Keamanan
+baru **wajib** `dynamicHeight` karena sekarang berisi dua sumber
+tinggi dinamis sekaligus (PIN panel + Health Check panel expand),
+bukan cuma satu seperti section Keamanan lama.
+
+**Bug ditemukan & diperbaiki di tengah sesi:** `ResizeObserver`
+ternyata tidak tersedia di semua lingkungan — dikonfirmasi lewat
+reproduksi langsung (`ReferenceError: ResizeObserver is not
+defined`) saat menulis test untuk `SettingsView.tsx`, yang
+sebelumnya **tidak punya file test sama sekali** di proyek ini.
+Diperbaiki dengan guard `typeof ResizeObserver === 'undefined'` —
+tanpa `ResizeObserver`, section `dynamicHeight` tetap dapat
+pengukuran tinggi sekali di awal (bukan animasi terpotong seperti
+mekanisme lama), hanya kehilangan auto-resize saat konten berubah
+tinggi ketika section sedang terbuka. Mock `ResizeObserver` juga
+ditambahkan ke `vitest.setup.ts` (proyek-wide, bukan cuma untuk fix
+ini) agar test suite ke depan bisa menguji komponen yang memakai
+`ResizeObserver` secara nyata, bukan cuma jalur fallback-nya.
+
+**Test:** 12 test baru (file test pertama untuk `SettingsView.tsx`)
+— struktur 3 section baru, isi masing-masing section benar,
+Info Vault statis (bukan `<button>`, selalu terbuka tanpa
+interaksi), footer duplikat sudah tidak ada, dan guard
+`ResizeObserver` tidak crash baik saat tersedia maupun sengaja
+dibuat tidak tersedia. Divalidasi lewat 3 skenario reproduksi-bug
+manual (hapus guard, kembalikan header jadi `<button>`, kembalikan
+footer) — ketiganya dibuktikan membuat test yang relevan gagal
+sebelum fix/test final ditulis.
+
+**Audit visual:** dikonfirmasi lewat Playwright terhadap dev server
+Next.js sungguhan (bukan dump HTML statis) — state collapsed
+default, expanded penuh dengan scroll, dan interaksi dropdown/
+toggle di dalamnya, semuanya dirender dalam pembungkus `.app-shell`
+yang sama seperti aplikasi asli (kondisi awal sempat salah meniru
+tanpa pembungkus ini, menghasilkan artefak tumpang-tindih header
+palsu — dikoreksi setelah ditelusuri, bukan bug kode sungguhan).
+
+#### 3. Crypto: Multi-Jaringan, Multi-Alamat per Jaringan
+
+Field lama (`network`, `walletAddr`, `walletPw`, `seedPhrase`)
+**tidak diubah maknanya sama sekali** — dikonfirmasi masih aktif
+dipakai untuk entri self-custody 12/24-seed pengguna, bukan field
+kosong. Field baru `VaultEntry.walletNetworks?:
+CryptoWalletNetwork[]` ditambahkan sebagai **murni tambahan**
+(Schema BEKU dihormati): array jaringan, masing-masing punya `id`
+(React key stabil, bukan index — mencegah salah kaitan input state
+saat baris di tengah dihapus), `network` (nama jaringan), dan
+`addresses: string[]` (bisa lebih dari satu alamat per jaringan —
+permintaan eksplisit pengguna, karena satu wallet self-custody bisa
+generate banyak alamat dari seed yang sama, terutama Solana/EVM).
+Password wallet (`walletPw`) sengaja tetap satu per entri seperti
+semula — bukan per-jaringan (keputusan eksplisit pengguna).
+
+**Dropdown nama jaringan** — bukan `<select>` native (pelajaran
+dari bug v1.10.1: `<select>` di dalam flex container tidak reliable
+di WebView Android), tapi dropdown kustom dengan pola visual yang
+sama seperti dropdown tipe-field di `CategoryManager.tsx`. 3
+jaringan default selalu tersedia (BTC, EVM, Solana), digabung
+dengan daftar jaringan custom yang pengguna tambahkan sendiri lewat
+opsi "+ Tambah jaringan baru" (dedup case-insensitive terhadap
+nama yang sudah ada). UI: tombol "+ Tambah Jaringan" untuk baris
+kartu jaringan baru, "+ Tambah Alamat" per kartu untuk baris alamat
+baru, tombol hapus di kedua level.
+
+**Arsitektur data — pelajaran arsitektur di tengah sesi:** daftar
+jaringan custom awalnya (keliru) direncanakan masuk `VaultMeta` by
+analogi ke `CustomCategory`, tanpa verifikasi langsung ke kode.
+Setelah ditelusuri `appStore.ts`/`vaultService.ts`, ternyata
+`customCats` bukan bagian `VaultMeta` — melainkan top-level field
+tersendiri di `VaultBackupPayload` dengan parameter wajib eksplisit
+di `saveVault`/`exportBackup`, persis pola yang membuat proyek ini
+sebelumnya pernah punya bug data-loss nyata (`lockedCatIds`,
+`defaultCatFieldOverrides` — 11 titik panggilan sempat terlewat
+sebelum ditemukan). Dikoreksi sebelum implementasi berlanjut:
+`customNetworks` mengikuti pola `customCats` persis — field baru di
+`VaultBackupPayload`, `UnlockPayload`, parameter baru (opsional,
+default `[]`) di `saveVault`/`exportBackup`/`setupVault`/
+`unlockVault`/`importBackup`. **Ditelusuri dan diperbaiki secara
+eksplisit di seluruh 18 titik panggilan** `saveVault`/`exportBackup`
+di 6 file (`VaultListView.tsx`, `BackupModal.tsx`,
+`CategoryManager.tsx`, `EntryForm.tsx`, `EntryCard.tsx`,
+`DetailView.tsx`) — dihitung manual dan diverifikasi satu per satu
+(bukan cuma percaya hasil `sed`, yang sempat keliru mengenai satu
+baris `getFieldsForCat` tidak terkait karena kebetulan berakhir
+dengan pola teks yang sama; ditemukan lewat `tsc --noEmit` dan
+diperbaiki). `handleUnlocked` (`app/page.tsx`) juga diperbaiki —
+tanpa `store.setCustomNetworks(payload.customNetworks)` di sana,
+jaringan custom yang sudah tersimpan di vault terenkripsi tidak
+akan pernah tampil lagi di UI setelah reload/unlock ulang, persis
+kelas bug yang sama seperti yang sudah pernah terjadi untuk
+`lockedCatIds`.
+
+**2 bug data-loss ditemukan lewat pengujian save SUNGGUHAN (bukan
+review kode)** — percobaan pertama menjalankan alur simpan end-to-end
+lewat UI selalu timeout, ditelusuri sampai akar: (1)
+`hasFilledFields()` tidak memeriksa `walletNetworks` sama sekali —
+mengisi alamat wallet tanpa field lain dianggap "form kosong",
+memicu dialog "Simpan Entri Tanpa Data?" alih-alih save langsung;
+(2) `doCatChange()` tidak mereset `walletNetworks` — pindah kategori
+lalu balik lagi ke Crypto menyisakan data jaringan lama (beda
+perilaku dari `seedWords`/`backupCodes` yang sudah benar direset).
+Keduanya diperbaiki. Payload save: `walletNetworks` dibersihkan
+sebelum disimpan (alamat kosong dibuang per jaringan, jaringan yang
+jadi tidak punya alamat sama sekali ikut dibuang), dan hanya
+disertakan di payload kalau benar-benar ada isinya setelah
+dibersihkan — pola yang sama dengan `seedPhrase`.
+
+**Test:** 19 test baru — rendering dasar, tambah/hapus jaringan &
+alamat independen satu sama lain, dropdown 3 default + custom
+persisten lintas-form, dedup case-insensitive, payload save (baris
+kosong dibuang, jaringan tanpa alamat dibuang, multi-alamat pada
+jaringan yang sama, koeksistensi dengan field lama), dan 2 test
+verifikasi-negatif khusus untuk kedua bug data-loss di atas. Salah
+satu test verifikasi-negatif sempat "lolos" pada percobaan pertama
+karena alasan yang salah (dialog sisa render `AnimatePresence` dari
+langkah sebelumnya, bukan karena fix bekerja) — ditelusuri tuntas
+lewat debug logging manual sampai ditemukan akar masalah
+sesungguhnya (timing test, bukan bug nyata), ditulis ulang dengan
+`waitFor` yang benar, dan diverifikasi ulang bisa gagal saat bug
+direproduksi sebelum difinalisasi. 186→205 test, semuanya lolos.
+
+**Audit visual:** dikonfirmasi lewat Playwright terhadap dev server
+sungguhan (`EntryForm` dalam pembungkus `.app-shell` yang sama
+seperti aplikasi asli) — tampilan default, satu & dua kartu
+jaringan, dropdown terbuka, dua alamat dalam satu jaringan, mode
+tambah-jaringan-baru, dan mode edit dengan data existing pre-filled.
+**1 bug visual ditemukan & diperbaiki**: tombol hapus jaringan/
+alamat awalnya 40×32px (di bawah target sentuh minimal 44×44px)
+karena reuse keliru class `.settings-row__action` (dirancang untuk
+tombol berteks di Settings, bukan tombol ikon-saja). Diperbaiki
+dengan class baru `.crypto-net-icon-btn` (40×40px persegi, sejajar
+tinggi dengan dropdown di sampingnya) — diverifikasi ulang lewat
+pengukuran `boundingBox()` piksel langsung, bukan cuma inspeksi
+visual.
+
+**Verifikasi:** `tsc --noEmit` 0 error, `eslint --max-warnings 0` 0
+error/warning, `vitest run` 205/205 lolos (173→174 dari poin 1,
+174→186 dari poin 2, 186→205 dari poin 3 — lihat urutan kerja di
+atas). Dikonfirmasi dari fresh extract+install+full-test-run zip
+final.
+
+
 
 **Konteks:** permintaan fitur baru dari pengguna (bukan bug fix) —
 (1) 5 opsi tambahan untuk Verifikasi 2 Langkah kategori Email: video

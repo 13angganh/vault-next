@@ -50,6 +50,11 @@ export default function Page() {
     // ulang (persis kesalahan yang sempat terjadi & diperbaiki untuk
     // lockedCatIds di sesi sebelumnya).
     store.loadDefaultCatFieldOverrides(payload.defaultCatFieldOverrides);
+    // v1.10.3: sama alasannya seperti komentar di atas — tanpa ini,
+    // daftar jaringan crypto custom yang sudah tersimpan di vault
+    // terenkripsi tidak akan pernah tampil lagi di UI setelah
+    // reload/unlock ulang, meski datanya aman di disk.
+    store.setCustomNetworks(payload.customNetworks);
     try { sessionStorage.setItem('vault_ss_mpw', masterPw); } catch {}
   };
 

@@ -113,6 +113,13 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
   // jadi kosong secara diam-diam (pelajaran dari celah data-loss
   // lockedCatIds sebelumnya).
   const defaultCatFieldOverrides = useAppStore((s) => s.defaultCatFieldOverrides);
+  // v1.10.3: sama seperti defaultCatFieldOverrides di atas — dibutuhkan
+  // agar saveVault (parameter ke-9) tidak menimpa daftar jaringan
+  // crypto custom milik pengguna jadi kosong secara diam-diam. File
+  // ini TIDAK mengubah customNetworks (murni membaca untuk diteruskan
+  // apa adanya ke saveVault), berbeda dari customCats yang memang
+  // dikelola langsung oleh CategoryManager.
+  const customNetworks = useAppStore((s) => s.customNetworks);
   const setDefaultCatFieldOverrides = useAppStore((s) => s.setDefaultCatFieldOverrides);
 
   const [mode,          setMode]          = useState<'list' | 'add' | 'edit' | 'edit-fields'>('list');
@@ -228,7 +235,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
     // Simpan ke vault terenkripsi agar persistens setelah restart
     if (masterPw && vaultMeta) {
       setSaving(true);
-      saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, defaultCatFieldOverrides)
+      saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, defaultCatFieldOverrides, customNetworks)
         .then(() => setMode('list'))
         .catch(() => {
           // Gagal simpan — rollback state kategori agar konsisten dgn disk,
@@ -246,7 +253,8 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
 
     setMode('list');
   }, [label, iconKey, color, mode, editTarget, customCats, addCustomCat, setCustomCats,
-      masterPw, vault, recycleBin, vaultMeta, lockedIds, lockedCatIds, defaultCatFieldOverrides, showToast]);
+      masterPw, vault, recycleBin, vaultMeta, lockedIds, lockedCatIds, defaultCatFieldOverrides,
+      customNetworks, showToast]);
 
   const handleDelete = (id: string) => {
     // v1.10.0: guard defense-in-depth — tombol Hapus sudah disabled di UI
@@ -382,7 +390,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
       const nextCats = fieldsIsDefault
         ? customCats
         : customCats.map((c) => c.id === fieldsTargetId ? { ...c, fields: trimmedFields } : c);
-      saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, nextOverrides)
+      saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, nextOverrides, customNetworks)
         .then(() => setMode('list'))
         .catch(() => {
           // Rollback — sama alasannya seperti handleSave di atas.
@@ -820,7 +828,7 @@ export function CategoryManager({ onClose }: CategoryManagerProps) {
           // Simpan ke vault terenkripsi setelah hapus
           const nextCats = customCats.filter((c) => c.id !== deleteTarget.id);
           if (masterPw && vaultMeta) {
-            saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, defaultCatFieldOverrides).catch(() => {
+            saveVault(masterPw, vault, recycleBin, vaultMeta, nextCats, lockedIds, lockedCatIds, defaultCatFieldOverrides, customNetworks).catch(() => {
               try { setCustomCats(prevCats); } catch { /* state memori tetap salah, tapi UI sudah diberi tahu */ }
               showToast('Gagal menghapus kategori, coba lagi', 'error');
             });

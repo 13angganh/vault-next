@@ -220,7 +220,7 @@ export function EntryCard({
     store.setVault(updated);
     if (store.autoSaveEnabled) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, updated, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
+      await saveVault(store.masterPw, updated, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
     }
   };
 
@@ -233,7 +233,7 @@ export function EntryCard({
       store.setRecycleBin(updated);
       if (store.autoSaveEnabled) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        await saveVault(store.masterPw, store.vault, updated, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
+        await saveVault(store.masterPw, store.vault, updated, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
       }
     } else {
       // Move to recycle bin
@@ -243,7 +243,7 @@ export function EntryCard({
       store.setRecycleBin(newBin);
       if (store.autoSaveEnabled) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
+      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
       }
     }
   };
@@ -257,7 +257,7 @@ export function EntryCard({
     store.setVault(newVault);
     if (store.autoSaveEnabled) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides);
+      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
     }
   };
 
@@ -277,7 +277,7 @@ export function EntryCard({
     // Selalu simpan locked state — ini data penting, tidak tergantung autoSave
     try {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked, store.lockedCatIds, store.defaultCatFieldOverrides);
+      await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
     } catch {
       // Rollback jika save gagal
       store.setLockedIds(lockedIds);

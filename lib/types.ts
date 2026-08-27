@@ -30,6 +30,17 @@ export interface VaultEntry {
   wifiPass?:   string;
   emailAddr?:  string;
 
+  // ── Field BARU v1.10.3 — Crypto: multi-jaringan, multi-alamat per
+  // jaringan. Permintaan eksplisit pengguna, MURNI TAMBAHAN — field
+  // lama network/walletAddr/walletPw DI ATAS TETAP DIPAKAI APA ADANYA
+  // untuk entri lama (data pengguna existing pola self-custody
+  // 12/24-seed, dikonfirmasi masih aktif dipakai, BUKAN kosong).
+  // walletNetworks di sini adalah struktur TERPISAH, opsional — hanya
+  // terisi untuk entri yang dibuat/diedit setelah fitur ini ada.
+  // walletPw (password wallet) sengaja TETAP satu per entri (field
+  // lama di atas), TIDAK per-jaringan — keputusan eksplisit pengguna.
+  walletNetworks?: CryptoWalletNetwork[];
+
   // ── Field BARU v1.10.2 — kategori Bank: pisah Username dari No. Rekening ──
   // Sebelumnya digabung dalam satu field 'user' berlabel
   // "Username / No. Rekening". Field 'user' TETAP dipakai untuk
@@ -61,6 +72,37 @@ export interface VaultEntry {
   // (field bawaan tetap disimpan di properti asli seperti user/pass/dst
   // di atas, TIDAK di sini — demi backward-compat dengan data lama).
   customFields?: Record<string, string>;
+}
+
+// ── Crypto: satu jaringan (mis. BTC/EVM/Solana) + daftar alamat di
+// dalamnya. Satu wallet self-custody yang sama BISA punya lebih dari
+// satu alamat pada jaringan yang sama (mis. beberapa alamat Solana
+// dari satu seed) — karena itu `addresses` adalah array, bukan string
+// tunggal. `id` untuk key React yang stabil saat baris ditambah/
+// dihapus dinamis (BUKAN index array, yang berubah saat item di
+// tengah dihapus dan menyebabkan React salah mengaitkan input state
+// dengan baris yang salah).
+export interface CryptoWalletNetwork {
+  id:        string;
+  network:   string;   // nama jaringan — bebas teks, DAN/ATAU dari daftar
+                        // custom pengguna (lihat CryptoNetworkOption di bawah)
+  addresses: string[];
+}
+
+// ── Crypto: satu opsi nama jaringan pada dropdown "Jaringan". Sama
+// polanya dengan CustomCategory — mulai dari beberapa default (BTC,
+// EVM, Solana), pengguna bisa tambah nama jaringan baru sendiri
+// (crypto lahir jaringan baru setiap saat, permintaan eksplisit
+// pengguna). PENTING: array daftar ini (bukan objek tunggal ini)
+// disimpan sebagai TOP-LEVEL field baru VaultBackupPayload.customNetworks
+// (lihat di bawah) dan parameter baru di saveVault/exportBackup — pola
+// PERSIS SAMA dengan CustomCategory[] (bukan bagian dari VaultMeta) —
+// supaya ikut payload vault terenkripsi dan tersinkron dengan disiplin
+// parameter wajib yang sudah ada untuk customCats/lockedCatIds/
+// defaultCatFieldOverrides (lihat komentar di saveVault, vaultService.ts).
+export interface CryptoNetworkOption {
+  id:    string;
+  label: string;
 }
 
 // ─── VaultMeta ────────────────────────────────────────────────────────────────
@@ -119,6 +161,13 @@ export interface VaultBackupPayload {
   // di sini — field ini KHUSUS kategori default karena mereka tidak
   // punya objek CustomCategory sendiri untuk menampung field custom.
   defaultCatFieldOverrides?: Record<string, CategoryFieldDef[]>;
+  // v1.10.3: daftar nama jaringan crypto custom yang pengguna tambahkan
+  // sendiri lewat dropdown "+ Tambah Jaringan" di form entri Crypto —
+  // di luar 3 default (BTC, EVM, Solana) yang selalu tersedia tanpa
+  // perlu disimpan di sini. Pola PERSIS SAMA dengan lockedCatIds/
+  // defaultCatFieldOverrides di atas: opsional untuk backward-compat
+  // backup lama (fallback `?? []` di titik baca vaultService.ts).
+  customNetworks?: CryptoNetworkOption[];
 }
 
 /**

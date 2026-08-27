@@ -16,6 +16,7 @@ export const LS_BKPDISM    = 'vault_bkp_dism';   // dismiss timestamp reminder
 export const LS_AUTOLOCK   = 'vault_autolock';   // menit auto-lock
 export const LS_AUTOSAVE   = 'vault_autosave';   // boolean autosave aktif
 export const LS_CATS       = 'vault_cats';       // kategori custom (JSON)
+export const LS_NETWORKS   = 'vault_networks';   // jaringan crypto custom (JSON)
 export const LS_PIN_SKIPPED   = 'vault_pin_skip';   // boolean skip setup PIN
 export const LS_BIO_ENABLED   = 'vault_bio_enabled'; // boolean biometrik aktif
 export const LS_BIO_CRED_ID   = 'vault_bio_cred';    // base64 credentialId WebAuthn
