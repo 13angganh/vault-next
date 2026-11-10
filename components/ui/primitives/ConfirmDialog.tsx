@@ -44,9 +44,9 @@ export interface ConfirmDialogProps {
 }
 
 const VARIANT_CONFIG = {
-  danger:  { icon: <Trash2  size={18} />, btnVariant: 'danger'  as const, defaultLabel: 'Hapus'   },
-  warning: { icon: <AlertTriangle size={18} />, btnVariant: 'danger' as const, defaultLabel: 'Lanjutkan' },
-  lock:    { icon: <Lock    size={18} />, btnVariant: 'gold'   as const, defaultLabel: 'Kunci'   },
+  danger:  { icon: <Trash2  size={26} />, btnVariant: 'danger'  as const, defaultLabel: 'Hapus'   },
+  warning: { icon: <AlertTriangle size={26} />, btnVariant: 'danger' as const, defaultLabel: 'Lanjutkan' },
+  lock:    { icon: <Lock    size={26} />, btnVariant: 'gold'   as const, defaultLabel: 'Kunci'   },
 } satisfies Record<ConfirmVariant, { icon: ReactNode; btnVariant: 'danger' | 'gold'; defaultLabel: string }>;
 
 export function ConfirmDialog({
@@ -125,7 +125,7 @@ export function ConfirmDialog({
                 type="button"
                 disabled={loading}
               >
-                <X size={15} />
+                <X size={18} />
               </button>
             </div>
 
@@ -140,7 +140,6 @@ export function ConfirmDialog({
             <div className="confirm-footer">
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={onCancel}
                 disabled={loading}
               >
@@ -149,7 +148,6 @@ export function ConfirmDialog({
               <Button
                 ref={confirmRef}
                 variant={cfg.btnVariant}
-                size="sm"
                 onClick={onConfirm}
                 loading={loading}
                 disabled={loading}

@@ -6,10 +6,10 @@ import { runHealthCheck, scoreColor, scoreLabel } from '@/lib/healthCheck';
 import type { HealthIssue } from '@/lib/healthCheck';
 
 const IMETA: Record<HealthIssue['type'],{icon:React.ReactNode;label:string;color:string}> = {
-  duplicate: {icon:<Copy size={13}/>,          label:'Password duplikat', color:'var(--red)'},
-  weak:      {icon:<AlertTriangle size={13}/>,  label:'Password lemah',   color:'var(--gold)'},
-  no_password:{icon:<Shield size={13}/>,        label:'Tanpa password',   color:'var(--muted)'},
-  old:       {icon:<Clock size={13}/>,          label:'Tidak diupdate',   color:'var(--muted)'},
+  duplicate: {icon:<Copy size={17}/>,          label:'Password duplikat', color:'var(--red)'},
+  weak:      {icon:<AlertTriangle size={17}/>,  label:'Password lemah',   color:'var(--gold)'},
+  no_password:{icon:<Shield size={17}/>,        label:'Tanpa password',   color:'var(--muted)'},
+  old:       {icon:<Clock size={17}/>,          label:'Tidak diupdate',   color:'var(--muted)'},
 };
 
 // Jumlah masalah yang tampil sebelum daftar dipangkas & tombol "+N lainnya" muncul.
@@ -43,10 +43,10 @@ export function HealthCheckPanel() {
       </div>
       {report.issues.length>0&&(
         <div className="health-summary">
-          {duplicateGroups>0&&<div className="health-pill health-pill--red"><Copy size={11}/> {duplicateGroups} duplikat</div>}
-          {weakCount>0&&<div className="health-pill health-pill--gold"><AlertTriangle size={11}/> {weakCount} lemah</div>}
-          {noPassCount>0&&<div className="health-pill health-pill--muted"><Shield size={11}/> {noPassCount} kosong</div>}
-          {oldCount>0&&<div className="health-pill health-pill--muted"><Clock size={11}/> {oldCount} tua</div>}
+          {duplicateGroups>0&&<div className="health-pill health-pill--red"><Copy size={15}/> {duplicateGroups} duplikat</div>}
+          {weakCount>0&&<div className="health-pill health-pill--gold"><AlertTriangle size={15}/> {weakCount} lemah</div>}
+          {noPassCount>0&&<div className="health-pill health-pill--muted"><Shield size={15}/> {noPassCount} kosong</div>}
+          {oldCount>0&&<div className="health-pill health-pill--muted"><Clock size={15}/> {oldCount} tua</div>}
         </div>
       )}
       {report.issues.length===0&&<div className="health-perfect"><CheckCircle size={18} style={{color:'var(--teal)'}}/><span>Semua password aman!</span></div>}
@@ -69,7 +69,7 @@ export function HealthCheckPanel() {
             <button type="button" className="health-more" aria-expanded={expanded}
               onClick={()=>setExpanded((v)=>!v)}>
               {expanded ? 'Tampilkan lebih sedikit' : `+${report.issues.length-VISIBLE_ISSUES_LIMIT} masalah lainnya`}
-              <ChevronDown size={12} className={`health-more__chevron${expanded?' health-more__chevron--open':''}`}/>
+              <ChevronDown size={14} className={`health-more__chevron${expanded?' health-more__chevron--open':''}`}/>
             </button>
           )}
         </div>

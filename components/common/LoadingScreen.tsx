@@ -1,66 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { APP_VERSION } from '@/lib/constants';
 
 // ─── VaultIcon SVG — kunci + perisai, aksen gold ──────────────────────────────
 export function VaultIcon({ size = 56 }: { size?: number }) {
+  const gid = `am${useId().replace(/:/g, '')}`;
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 56 56"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      {/* Perisai */}
-      <path
-        d="M28 4L8 12V28C8 39.5 16.8 48.6 28 52C39.2 48.6 48 39.5 48 28V12L28 4Z"
-        fill="url(#shieldGrad)"
-        opacity="0.18"
-      />
-      <path
-        d="M28 4L8 12V28C8 39.5 16.8 48.6 28 52C39.2 48.6 48 39.5 48 28V12L28 4Z"
-        stroke="url(#strokeGrad)"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      {/* Badan kunci */}
-      <rect
-        x="19"
-        y="26"
-        width="18"
-        height="14"
-        rx="3"
-        fill="url(#lockGrad)"
-      />
-      {/* Busur kunci */}
-      <path
-        d="M22 26V21C22 17.686 25 15 28 15C31 15 34 17.686 34 21V26"
-        stroke="url(#strokeGrad)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* Lubang kunci */}
-      <circle cx="28" cy="32" r="2.5" fill="var(--bg)" opacity="0.7" />
-      <rect x="27" y="33" width="2" height="3" rx="1" fill="var(--bg)" opacity="0.7" />
-
+    <svg width={size} height={size} viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
-        <linearGradient id="shieldGrad" x1="8" y1="4" x2="48" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="var(--gold)" />
-          <stop offset="1" stopColor="var(--gold2)" />
-        </linearGradient>
-        <linearGradient id="strokeGrad" x1="8" y1="4" x2="48" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="var(--gold)" />
-          <stop offset="1" stopColor="var(--gold2)" />
-        </linearGradient>
-        <linearGradient id="lockGrad" x1="19" y1="26" x2="37" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stopColor="var(--gold)" />
-          <stop offset="1" stopColor="var(--gold2)" />
+        <linearGradient id={gid} gradientUnits="userSpaceOnUse" x1="15" y1="11" x2="41" y2="45">
+          <stop stopColor="#F7D58B" />
+          <stop offset="0.55" stopColor="#E8B04A" />
+          <stop offset="1" stopColor="#CF9024" />
         </linearGradient>
       </defs>
+      <path d="M15.3 42 L28 12.7 L40.7 42" stroke={`url(#${gid})`} strokeWidth="5.1" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="28" cy="30.5" r="3.5" fill="#F7D58B" />
+      <path d="M26.4 33.1 H29.6 L30.5 40.1 H25.5 Z" fill="#F7D58B" stroke="#F7D58B" strokeWidth="0.65" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -92,7 +49,7 @@ export function LoadingScreen({ onComplete, duration = 700 }: LoadingScreenProps
       style={{
         position: 'fixed', inset: 0,
         background: 'var(--bg)',
-        zIndex: 9999,
+        zIndex: 'var(--z-top)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -138,7 +95,7 @@ export function LoadingScreen({ onComplete, duration = 700 }: LoadingScreenProps
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: 'var(--logo-shadow)',
         }}>
-          <VaultIcon size={56} />
+          <VaultIcon size={90} />
         </div>
       </div>
 
@@ -151,7 +108,7 @@ export function LoadingScreen({ onComplete, duration = 700 }: LoadingScreenProps
         letterSpacing: 'var(--ls-tight)',
         animation: 'loadingFadeUp 0.6s ease 0.3s both',
       }}>
-        Vault<span style={{ color: 'var(--gold)', fontWeight: 800 }}> Next</span>
+        <span style={{ color: 'var(--gold)', fontWeight: 800 }}>Aurum</span><span style={{ fontWeight: 500 }}> Vault</span>
       </div>
 
       {/* Subtitle */}
@@ -184,7 +141,7 @@ export function LoadingScreen({ onComplete, duration = 700 }: LoadingScreenProps
       {/* Version */}
       <div style={{
         position: 'absolute', bottom: 28,
-        fontSize: 'var(--text-xs)',
+        fontSize: 'var(--text-sm)',
         color: 'var(--muted)',
         fontFamily: 'var(--font-mono)',
         letterSpacing: '0.05em',

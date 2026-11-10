@@ -10,6 +10,7 @@
  */
 
 import { encrypt, decrypt, decryptLegacy, sha256, hashStr } from '@/lib/crypto';
+import { clearPinLength } from '@/lib/pinLength';
 import {
   lsGet, lsSet, lsRemove, lsGetJson, lsSetJson,
   saveVaultData, loadVaultData, hasVaultData,
@@ -212,6 +213,7 @@ export function isPinSkipped(): boolean {
 
 /** Hapus PIN */
 export function removePin(): void {
+  clearPinLength(); // v2.0.0: lewat modul pinLength (kunci vault_pin_len tidak ditulis ulang sebagai literal)
   lsRemove(LS_PIN);
   lsRemove(LS_PIN_SKIPPED);
 }

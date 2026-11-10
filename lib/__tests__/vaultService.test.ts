@@ -14,10 +14,13 @@ import {
   verifyPin,
   hasPinSetup,
   removePin,
+  exportBackup,
+  importBackup,
   type SetupPayload,
   type UnlockPayload,
 } from '../vaultService';
 import { clearAllVaultData } from '../storage';
+import type { VaultEntry, VaultMeta } from '../types';
 
 // Clear semua data sebelum setiap test
 beforeEach(() => {
@@ -119,5 +122,62 @@ describe('setupPin + verifyPinAndGetMaster', () => {
     expect(hasPinSetup()).toBe(true);
     removePin();
     expect(hasPinSetup()).toBe(false);
+  });
+});
+
+// v1.11.0 (Tahap 6 QA final): verifikasi field brandIconSlug (redesain
+// visual, penambahan additive di VaultEntry) aman melewati siklus
+// export->import, DAN backup lama (tanpa field ini sama sekali) tetap
+// bisa di-import tanpa crash — memvalidasi klaim yang sebelumnya hanya
+// dari pembacaan kode (importBackup meneruskan data.vault apa adanya,
+// tanpa whitelist field), sekarang dibuktikan lewat eksekusi nyata.
+describe('exportBackup + importBackup — kompatibilitas brandIconSlug (v1.11.0)', () => {
+  const minimalMeta: VaultMeta = {
+    hint: 'hint test',
+    recoveryHash: 'dummy-hash-utk-test',
+    recovery: 'dummy-recovery-utk-test',
+    encMasterBySeed: 'dummy-enc-utk-test',
+  };
+
+  it('entry dengan brandIconSlug SELAMAT UTUH setelah export lalu import kembali', async () => {
+    const entryWithBrand: VaultEntry = {
+      id: 'e1', cat: 'crypto', name: 'Binance', brandIconSlug: 'binance',
+    };
+    const backup = await exportBackup(
+      baseSetup.masterPw, [entryWithBrand], [], minimalMeta, [], [],
+    );
+    const restored = await importBackup(JSON.stringify(backup), baseSetup.masterPw);
+    expect(restored.vault).toHaveLength(1);
+    expect(restored.vault[0].brandIconSlug).toBe('binance');
+  });
+
+  it('backup LAMA (JSON manual, entry TANPA field brandIconSlug sama sekali) di-import TANPA CRASH, brandIconSlug jadi undefined', async () => {
+    // Simulasi backup dari versi app SEBELUM v1.11.0 — dibuat manual
+    // (bukan via exportBackup versi baru) agar benar2 tidak menyertakan
+    // brandIconSlug sama sekali, bukan cuma diset undefined.
+    const oldStyleEntry = { id: 'e2', cat: 'email', name: 'Gmail Lama' };
+    const oldBackup = await exportBackup(
+      baseSetup.masterPw,
+      [oldStyleEntry as VaultEntry],
+      [], minimalMeta, [], [],
+    );
+    const restored = await importBackup(JSON.stringify(oldBackup), baseSetup.masterPw);
+    expect(restored.vault).toHaveLength(1);
+    expect(restored.vault[0].brandIconSlug).toBeUndefined();
+    expect(restored.vault[0].name).toBe('Gmail Lama'); // field lain tetap utuh
+  });
+
+  it('campuran entry lama (tanpa brandIconSlug) DAN baru (dengan brandIconSlug) dalam satu backup, keduanya utuh setelah import', async () => {
+    const mixedVault = [
+      { id: 'e3', cat: 'email', name: 'Entry Lama' } as VaultEntry,
+      { id: 'e4', cat: 'crypto', name: 'Entry Baru', brandIconSlug: 'gmail' } as VaultEntry,
+    ];
+    const backup = await exportBackup(
+      baseSetup.masterPw, mixedVault, [], minimalMeta, [], [],
+    );
+    const restored = await importBackup(JSON.stringify(backup), baseSetup.masterPw);
+    expect(restored.vault).toHaveLength(2);
+    expect(restored.vault.find((e) => e.id === 'e3')?.brandIconSlug).toBeUndefined();
+    expect(restored.vault.find((e) => e.id === 'e4')?.brandIconSlug).toBe('gmail');
   });
 });

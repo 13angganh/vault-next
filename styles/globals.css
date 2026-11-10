@@ -12,4 +12,6 @@
 @import './components/sidebar.css';
 @import './components/lock.css';
 @import './components/entries.css';
+@import './components/brand-picker.css';
 @import './components/settings.css';
+@import './redesign.css';

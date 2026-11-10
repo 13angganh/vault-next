@@ -1,23 +1,25 @@
 'use client';
 
 /**
- * Vault Next — EntryCard
- * Kartu entri expandable di VaultListView.
+ * components/entries/EntryCard.tsx — Vault Next v2 (redesain performa)
  *
- * Collapsed: emoji kategori + nama + user/URL + badge fav + badge lock
- * Expanded:  semua field per kategori, copy, show/hide password, actions
- * Locked:    tampilkan gembok, klik → expand minta PIN/master password
+ * Perubahan dari v1.11.0 (murni untuk menghilangkan lag saat klik/expand):
+ *  - Tidak lagi subscribe ke SELURUH store: tiap kartu hanya subscribe ke
+ *    boolean miliknya sendiri → expand 1 kartu tidak me-render ulang semua kartu.
+ *  - Tidak ada framer-motion layout/layoutId per kartu (penyebab utama lag:
+ *    setiap expand memicu pengukuran & animasi layout seluruh daftar).
+ *  - Expand/collapse via CSS grid-template-rows (0fr→1fr), tanpa JS per frame.
+ *  - 5 ConfirmDialog per kartu diganti 1 dialog yang hanya dibuat saat dibutuhkan.
+ *  - Badan kartu baru dibuat saat pertama kali dibuka.
  */
-
-import { useState, useEffect, useRef, memo } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useState, useEffect, memo } from 'react';
 import { Pencil, Lock, Unlock, Star, RotateCcw, Trash2, Copy, Eye, EyeOff, Check, ChevronDown, User, Key } from 'lucide-react';
 import { useAppStore }      from '@/lib/store/appStore';
 import { saveVault }         from '@/lib/vaultService';
-import { CategoryIcon }      from '@/components/entries/CategoryIcon';
+import { EntryIcon }         from '@/components/entries/EntryIcon';
+import { getBrandIconBySlug } from '@/lib/brand-icons';
 import { ConfirmDialog }     from '@/components/ui/primitives';
 import type { VaultEntry }   from '@/lib/types';
-import { DUR, EASE } from '@/lib/animation';
 
 interface EntryCardProps {
   entry:            VaultEntry;
@@ -28,11 +30,6 @@ interface EntryCardProps {
   onRequestUnlock?: (entry: VaultEntry) => void;
 }
 
-/* ── Field: top-level component, bukan dideklarasikan di dalam EntryCard ──
-   v1.4.0: pola yang sama dengan fix SectionWrap (v1.3.6) dan FieldRow
-   di DetailView — re-creation komponen tiap render menyebabkan children
-   unmount+mount = berkedip pada hover/transition state.
-   ─────────────────────────────────────────────────────────────────────── */
 interface FieldProps {
   label:            string;
   value?:           string;
@@ -127,226 +124,134 @@ function SeedField({ seedPhrase, seedShow, onToggleVisible, onCopyField }: SeedF
   );
 }
 
-export function EntryCard({
-  entry,
-  isRecycleBin = false,
-  onEdit,
-  onDetail: _onDetail,
-  onCopy,
-  onRequestUnlock,
-}: EntryCardProps) {
-  const store          = useAppStore();
-  const customCats     = store.customCats;
-  const lockedIds      = store.lockedIds;
-  const expandedIds    = store.expandedIds;
-  const pwVisible      = store.pwVisible;
-  const seedVisible    = store.seedVisible;
-  const prefersReduced = useReducedMotion();
 
-  const isLocked   = lockedIds.includes(entry.id);
-  const isExpanded = expandedIds.includes(entry.id);
+type ConfirmKind = 'delete' | 'lock' | 'unlock' | 'fav' | 'restore';
 
-  // Local: show unlock prompt overlay
-  const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
-  const [unlockInput,      setUnlockInput]      = useState('');
-  const [_unlockError,      setUnlockError]      = useState('');
-  const [_unlockLoading,    setUnlockLoading]    = useState(false);
-  const unlockRef = useRef<HTMLInputElement>(null);
+const persist = async (vault: VaultEntry[], bin: VaultEntry[], lockedIds: string[]) => {
+  const st = useAppStore.getState();
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  await saveVault(st.masterPw, vault, bin, st.vaultMeta!, st.customCats, lockedIds, st.lockedCatIds, st.defaultCatFieldOverrides, st.customNetworks);
+};
 
-  // Konfirmasi dialog states
-  const [quickCopied, setQuickCopied] = useState<'user'|'pass'|null>(null);
-  const handleQuickCopy=(text:string|undefined,field:'user'|'pass')=>{if(!text||isLocked)return;navigator.clipboard.writeText(text).then(()=>{setQuickCopied(field);if(onCopy)onCopy(text,field==='user'?'Username':'Password');setTimeout(()=>setQuickCopied(null),1500);});};
+export function EntryCard({ entry, isRecycleBin = false, onEdit, onCopy, onRequestUnlock }: EntryCardProps) {
+  const customCats = useAppStore((s) => s.customCats);
+  const isLocked   = useAppStore((s) => s.lockedIds.includes(entry.id));
+  const isExpanded = useAppStore((s) => s.expandedIds.includes(entry.id));
+  const pwShow     = useAppStore((s) => !!s.pwVisible[entry.id]);
+  const seedShow   = useAppStore((s) => !!s.seedVisible[entry.id]);
+  const tgPw   = () => useAppStore.getState().togglePwVisible(entry.id);
+  const tgSeed = () => useAppStore.getState().toggleSeedVisible(entry.id);
 
-  const [confirmDelete,  setConfirmDelete]  = useState(false);
-  const [confirmLock,    setConfirmLock]    = useState(false);
-  const [confirmUnlock,  setConfirmUnlock]  = useState(false);
-  const [confirmFav,     setConfirmFav]     = useState(false);
-  const [confirmRestore, setConfirmRestore] = useState(false);
-
+  const [everOpen, setEverOpen] = useState(isExpanded);
+  const [ready, setReady]       = useState(false);
   useEffect(() => {
-    if (showUnlockPrompt && unlockRef.current) {
-      unlockRef.current.focus();
-    }
-  }, [showUnlockPrompt]);
+    if (!isExpanded) { setReady(false); return; }
+    setEverOpen(true);
+    let r2 = 0;
+    const r1 = requestAnimationFrame(() => { r2 = requestAnimationFrame(() => setReady(true)); });
+    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
+  }, [isExpanded]);
+  const open = isExpanded && ready;
+
+  const [confirm, setConfirm]         = useState<ConfirmKind | null>(null);
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+  const [quickCopied, setQuickCopied] = useState<'user' | 'pass' | null>(null);
 
   const handleToggleExpand = () => {
-    if (isLocked && !isExpanded) {
-      // Pakai callback ke parent (VaultListView) yang render overlay di luar transform context
-      if (onRequestUnlock) {
-        onRequestUnlock(entry);
-      } else {
-        setShowUnlockPrompt(true);
-      }
-      return;
-    }
-    store.toggleExpanded(entry.id);
-  };
-
-  const _handleUnlockEntry = async () => {
-    if (!unlockInput.trim()) return;
-    setUnlockLoading(true);
-    setUnlockError('');
-
-    try {
-      const { verifyPin, hasPinSetup } = await import('@/lib/vaultService');
-      let ok = false;
-
-      if (hasPinSetup()) {
-        ok = await verifyPin(unlockInput);
-      }
-      if (!ok && unlockInput === store.masterPw) {
-        ok = true;
-      }
-
-      if (ok) {
-        setShowUnlockPrompt(false);
-        setUnlockInput('');
-        // Setelah verifikasi berhasil, expand entry (tanpa unlock permanen)
-        store.toggleExpanded(entry.id);
-      } else {
-        setUnlockError('PIN atau password salah');
-      }
-    } catch {
-      setUnlockError('Terjadi kesalahan');
-    } finally {
-      setUnlockLoading(false);
-    }
+    if (isLocked && !isExpanded) { onRequestUnlock?.(entry); return; }
+    useAppStore.getState().toggleExpanded(entry.id);
   };
 
   const doFav = async () => {
-    const updated = store.vault.map((e) =>
-      e.id === entry.id ? { ...e, fav: !e.fav } : e,
-    );
-    store.setVault(updated);
-    if (store.autoSaveEnabled) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, updated, store.recycleBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
-    }
+    const st = useAppStore.getState();
+    const updated = st.vault.map((e) => (e.id === entry.id ? { ...e, fav: !e.fav } : e));
+    st.setVault(updated);
+    if (st.autoSaveEnabled) await persist(updated, st.recycleBin, st.lockedIds);
   };
-
-  const handleFav = () => setConfirmFav(true);
-
   const doDelete = async () => {
+    const st = useAppStore.getState();
     if (isRecycleBin) {
-      // Permanent delete
-      const updated = store.recycleBin.filter((e) => e.id !== entry.id);
-      store.setRecycleBin(updated);
-      if (store.autoSaveEnabled) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        await saveVault(store.masterPw, store.vault, updated, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
-      }
+      const updated = st.recycleBin.filter((e) => e.id !== entry.id);
+      st.setRecycleBin(updated);
+      if (st.autoSaveEnabled) await persist(st.vault, updated, st.lockedIds);
     } else {
-      // Move to recycle bin
-      const newVault = store.vault.filter((e) => e.id !== entry.id);
-      const newBin   = [...store.recycleBin, { ...entry, ts: Date.now() }];
-      store.setVault(newVault);
-      store.setRecycleBin(newBin);
-      if (store.autoSaveEnabled) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
-      }
+      const newVault = st.vault.filter((e) => e.id !== entry.id);
+      const newBin   = [...st.recycleBin, { ...entry, ts: Date.now() }];
+      st.setVault(newVault);
+      st.setRecycleBin(newBin);
+      if (st.autoSaveEnabled) await persist(newVault, newBin, st.lockedIds);
     }
   };
-
-  const handleDelete = () => setConfirmDelete(true);
-
   const doRestore = async () => {
-    const newBin   = store.recycleBin.filter((e) => e.id !== entry.id);
-    const newVault = [...store.vault, { ...entry }];
-    store.setRecycleBin(newBin);
-    store.setVault(newVault);
-    if (store.autoSaveEnabled) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, newVault, newBin, store.vaultMeta!, store.customCats, store.lockedIds, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
-    }
+    const st = useAppStore.getState();
+    const newBin   = st.recycleBin.filter((e) => e.id !== entry.id);
+    const newVault = [...st.vault, { ...entry }];
+    st.setRecycleBin(newBin);
+    st.setVault(newVault);
+    if (st.autoSaveEnabled) await persist(newVault, newBin, st.lockedIds);
   };
-
-  const handleRestore = () => setConfirmRestore(true);
-
   const doToggleLock = async () => {
-    // Hitung newLocked dulu dari closure yang konsisten — hindari race condition
-    const newLocked = lockedIds.includes(entry.id)
-      ? lockedIds.filter((id) => id !== entry.id)
-      : [...lockedIds, entry.id];
-    // Update store
-    store.setLockedIds(newLocked);
-    // Collapse jika sedang dikunci
-    if (!lockedIds.includes(entry.id) && isExpanded) {
-      store.toggleExpanded(entry.id);
-    }
-    // Selalu simpan locked state — ini data penting, tidak tergantung autoSave
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await saveVault(store.masterPw, store.vault, store.recycleBin, store.vaultMeta!, store.customCats, newLocked, store.lockedCatIds, store.defaultCatFieldOverrides, store.customNetworks);
-    } catch {
-      // Rollback jika save gagal
-      store.setLockedIds(lockedIds);
-    }
+    const st = useAppStore.getState();
+    const prev = st.lockedIds;
+    const newLocked = prev.includes(entry.id) ? prev.filter((id) => id !== entry.id) : [...prev, entry.id];
+    st.setLockedIds(newLocked);
+    if (!prev.includes(entry.id) && isExpanded) st.toggleExpanded(entry.id);
+    try { await persist(st.vault, st.recycleBin, newLocked); }
+    catch { useAppStore.getState().setLockedIds(prev); }
   };
-
-  const handleToggleLock = () => {
-    if (isLocked) {
-      setConfirmUnlock(true);
-    } else {
-      setConfirmLock(true);
-    }
-  };
-
-  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
 
   const copy = (text: string | undefined, label: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
       onCopy?.(text, label);
-      // Tampilkan checkmark sesaat di tombol yang diklik
       setCopiedLabel(label);
       setTimeout(() => setCopiedLabel(null), 1500);
-    }).catch(() => {
-      // Fallback untuk browser/PWA yang restrict clipboard
-      onCopy?.(text, label);
+    }).catch(() => { onCopy?.(text, label); });
+  };
+  const handleQuickCopy = (text: string | undefined, field: 'user' | 'pass') => {
+    if (!text || isLocked) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setQuickCopied(field);
+      onCopy?.(text, field === 'user' ? 'Username' : 'Password');
+      setTimeout(() => setQuickCopied(null), 1500);
     });
   };
-
-  const pwShow   = pwVisible[entry.id]   ?? false;
-  const seedShow = seedVisible[entry.id] ?? false;
-
-  // ── Category-specific fields ─────────────────────────────────────────────
 
   const renderFields = () => {
     switch (entry.cat) {
       case 'crypto':
         return <>
           <Field label="Username"         value={entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
-          <Field label="Password"         value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password"         value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Network"          value={entry.network} copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Alamat Wallet"    value={entry.walletAddr} mono copiedLabel={copiedLabel} onCopyField={copy} />
-          <Field label="Password Wallet"  value={entry.walletPw} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
-          <SeedField seedPhrase={entry.seedPhrase} seedShow={seedShow} onToggleVisible={() => store.toggleSeedVisible(entry.id)} onCopyField={copy} />
+          <Field label="Password Wallet"  value={entry.walletPw} sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <SeedField seedPhrase={entry.seedPhrase} seedShow={seedShow} onToggleVisible={() => tgSeed()} onCopyField={copy} />
           <Field label="URL"              value={entry.url} copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Catatan"          value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
 
       case 'kartu':
         return <>
-          <Field label="Nomor Kartu"  value={entry.cardNo}     sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Nomor Kartu"  value={entry.cardNo}     sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Nama Pemegang" value={entry.cardHolder} copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Masa Berlaku" value={entry.cardExpiry} copiedLabel={copiedLabel} onCopyField={copy} />
-          <Field label="CVV"          value={entry.cardCVV}    sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
-          <Field label="PIN"          value={entry.pass}       sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="CVV"          value={entry.cardCVV}    sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="PIN"          value={entry.pass}       sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Catatan"      value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
 
       case 'wifi':
         return <>
           <Field label="Nama Jaringan (SSID)" value={entry.wifiSSID ?? entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
-          <Field label="Password Wi-Fi"       value={entry.wifiPass ?? entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password Wi-Fi"       value={entry.wifiPass ?? entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Catatan"              value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
 
       case 'bank':
         return <>
           <Field label="Username / No. Rekening" value={entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
-          <Field label="Password"                value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password"                value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="URL"                     value={entry.url} copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Catatan"                 value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
@@ -355,7 +260,7 @@ export function EntryCard({
         return <>
           <Field label="Alamat Email"   value={entry.emailAddr ?? entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Username"       value={entry.emailAddr ? entry.user : undefined} copiedLabel={copiedLabel} onCopyField={copy} />
-          <Field label="Password"       value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password"       value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="URL"            value={entry.url} copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Catatan"        value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
@@ -363,7 +268,7 @@ export function EntryCard({
       default:
         return <>
           <Field label="Username" value={entry.user} copiedLabel={copiedLabel} onCopyField={copy} />
-          <Field label="Password" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => store.togglePwVisible(entry.id)} mono copiedLabel={copiedLabel} onCopyField={copy} />
+          <Field label="Password" value={entry.pass} sensitive isVisible={pwShow} onToggleVisible={() => tgPw()} mono copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="URL"      value={entry.url} copiedLabel={copiedLabel} onCopyField={copy} />
           <Field label="Catatan"  value={entry.note} copiedLabel={copiedLabel} onCopyField={copy} />
         </>;
@@ -371,7 +276,6 @@ export function EntryCard({
   };
 
   // ── Sub-label under name in collapsed view ───────────────────────────────
-
   const subLabel = (() => {
     if (entry.cat === 'wifi')  return entry.wifiSSID ?? entry.user ?? '';
     if (entry.cat === 'kartu') return entry.cardHolder ?? '';
@@ -379,231 +283,121 @@ export function EntryCard({
     return entry.user ?? entry.url ?? '';
   })();
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  const brand = entry.brandIconSlug ? getBrandIconBySlug(entry.brandIconSlug) : undefined;
+  const brandVar = brand ? ({ '--brand': `#${brand.accent ?? brand.hex}` } as React.CSSProperties) : undefined;
 
-  // Framer Motion variants (ease harus string atau EasingFunction bukan number[])
-  const cardVariants = {
-    initial: { opacity: 0, y: 6 },
-    animate: { opacity: 1, y: 0 },
-  };
-  const cardTransition = { duration: DUR.normal, ease: EASE.out };
+  const confirmCfg = (() => {
+    switch (confirm) {
+      case 'delete':  return { title: isRecycleBin ? 'Hapus Permanen?' : 'Pindahkan ke Sampah?', variant: 'danger' as const, confirmLabel: isRecycleBin ? 'Hapus Permanen' : 'Pindahkan', run: doDelete,
+        message: isRecycleBin ? <><strong>{entry.name}</strong> akan dihapus selamanya dan tidak bisa dipulihkan.</> : <><strong>{entry.name}</strong> akan dipindahkan ke sampah. Bisa dipulihkan nanti.</> };
+      case 'lock':    return { title: 'Kunci Entri?', variant: 'lock' as const, confirmLabel: 'Kunci', run: doToggleLock, message: <>Entri <strong>{entry.name}</strong> akan dikunci. Butuh PIN/password untuk membukanya.</> };
+      case 'unlock':  return { title: 'Lepas Kunci Entri?', variant: 'warning' as const, confirmLabel: 'Lepas Kunci', run: doToggleLock, message: <>Entri <strong>{entry.name}</strong> tidak akan memerlukan PIN lagi untuk dibuka.</> };
+      case 'fav':     return { title: entry.fav ? 'Hapus dari Favorit?' : 'Tandai Favorit?', variant: 'warning' as const, confirmLabel: entry.fav ? 'Hapus Favorit' : 'Tandai Favorit', run: doFav,
+        message: entry.fav ? <><strong>{entry.name}</strong> akan dihapus dari daftar favorit.</> : <><strong>{entry.name}</strong> akan ditambahkan ke daftar favorit.</> };
+      case 'restore': return { title: 'Pulihkan Entri?', variant: 'warning' as const, confirmLabel: 'Pulihkan', run: doRestore, message: <><strong>{entry.name}</strong> akan dipindahkan kembali ke vault.</> };
+      default: return null;
+    }
+  })();
 
   return (
     <>
-    <motion.div
-      className={`entry-card ${isExpanded ? 'entry-card--expanded' : ''} ${isLocked ? 'entry-card--locked' : ''} ${isRecycleBin ? 'entry-card--bin' : ''}`}
-      data-id={entry.id}
-      layout="position"
-      layoutId={`card-${entry.id}`}
-      variants={prefersReduced ? undefined : cardVariants}
-      initial={prefersReduced ? false : 'initial'}
-      animate={prefersReduced ? false : 'animate'}
-      whileHover={prefersReduced ? {} : { y: -1 }}
-      whileTap={prefersReduced ? {} : { scale: 0.995 }}
-      transition={cardTransition}
-    >
-      {/* ── Collapsed row ── */}
       <div
-        className="entry-card__header"
-        onClick={handleToggleExpand}
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        aria-label={isExpanded ? `Tutup ${entry.name}` : `Buka ${entry.name}`}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleExpand(); } }}
+        className={`entry-card ${isExpanded ? 'entry-card--expanded' : ''} ${isLocked ? 'entry-card--locked' : ''} ${isRecycleBin ? 'entry-card--bin' : ''}`}
+        style={brandVar}
+        data-id={entry.id}
       >
-        <CategoryIcon catId={entry.cat} customCats={customCats} size="md" />
-
-        <div className="entry-card__title-wrap">
-          <span className="entry-card__name">{entry.name}</span>
-          {subLabel && (
-            <span className="entry-card__sub">{subLabel}</span>
+        <div
+          className="entry-card__header"
+          onClick={handleToggleExpand}
+          role="button"
+          tabIndex={0}
+          aria-expanded={isExpanded}
+          aria-label={isExpanded ? `Tutup ${entry.name}` : `Buka ${entry.name}`}
+          // v2.0.0 (Tahap 4C): hanya tanggapi keyboard milik kepala ITU SENDIRI. Tombol salin cepat berada di
+          // dalam kepala (role=button); tanpa pengecekan target, Enter/Spasi pada tombol itu naik (bubble) ke sini,
+          // mengembangkan kartu dan preventDefault membatalkan klik tombol — salin cepat mustahil lewat keyboard.
+          onKeyDown={(e) => {
+            if (e.target !== e.currentTarget) return;
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleExpand(); }
+          }}
+        >
+          <EntryIcon entry={entry} customCats={customCats} size="xl" />
+          <div className="entry-card__title-wrap">
+            <span className="entry-card__name-row">
+              <span className="entry-card__name">{entry.name}</span>
+              {entry.fav && <span className="entry-card__fav" aria-label="Favorit"><Star size={14} fill="currentColor" /></span>}
+              {isLocked && <span className="entry-card__lock-badge" aria-label="Terkunci"><Lock size={14} /></span>}
+            </span>
+            {subLabel && <span className="entry-card__sub">{subLabel}</span>}
+          </div>
+          {!isExpanded && !isLocked && !isRecycleBin && (entry.user || entry.pass) && (
+            <div className="entry-card__quick-copy" onClick={(e) => e.stopPropagation()}>
+              {entry.user && (
+                <button type="button" className={`entry-card__qc-btn${quickCopied === 'user' ? ' entry-card__qc-btn--copied' : ''}`}
+                  onClick={() => handleQuickCopy(entry.user, 'user')} aria-label="Salin username" title="Salin Username">
+                  {quickCopied === 'user' ? <Check size={13} /> : <User size={13} />}
+                </button>
+              )}
+              {entry.pass && (
+                <button type="button" className={`entry-card__qc-btn${quickCopied === 'pass' ? ' entry-card__qc-btn--copied' : ''}`}
+                  onClick={() => handleQuickCopy(entry.pass, 'pass')} aria-label="Salin password" title="Salin Password">
+                  {quickCopied === 'pass' ? <Check size={13} /> : <Key size={13} />}
+                </button>
+              )}
+            </div>
           )}
+          <span className="entry-card__chevron" aria-hidden="true"><ChevronDown size={18} /></span>
         </div>
 
-        <div className="entry-card__badges">
-          {entry.fav && <span className="entry-card__fav" aria-label="Favorit"><Star size={12} fill="currentColor" /></span>}
-          {isLocked  && <span className="entry-card__lock-badge" aria-label="Terkunci"><Lock size={12} /></span>}
-        </div>
-
-        {!isExpanded && !isLocked && !isRecycleBin && (entry.user || entry.pass) && (
-          <div className="entry-card__quick-copy" onClick={(e)=>e.stopPropagation()}>
-            {entry.user && (
-              <motion.button className={`entry-card__qc-btn${quickCopied==='user'?' entry-card__qc-btn--copied':''}`}
-                onClick={()=>handleQuickCopy(entry.user,'user')} aria-label="Salin username" title="Salin Username"
-                whileTap={prefersReduced?{}:{scale:0.85}} transition={{duration:DUR.tap}}>
-                {quickCopied==='user'?<Check size={11}/>:<User size={11}/>}
-              </motion.button>
-            )}
-            {entry.pass && (
-              <motion.button className={`entry-card__qc-btn${quickCopied==='pass'?' entry-card__qc-btn--copied':''}`}
-                onClick={()=>handleQuickCopy(entry.pass,'pass')} aria-label="Salin password" title="Salin Password"
-                whileTap={prefersReduced?{}:{scale:0.85}} transition={{duration:DUR.tap}}>
-                {quickCopied==='pass'?<Check size={11}/>:<Key size={11}/>}
-              </motion.button>
-            )}
+        {everOpen && (
+          <div className={`entry-card__body-wrap${open ? ' entry-card__body-wrap--open' : ''}`} inert={!open}>
+            <div className="entry-card__body-inner">
+              <div className="entry-card__body">
+                <div className="entry-card__fields">{renderFields()}</div>
+                <div className="entry-card__actions">
+                  {!isRecycleBin && onEdit && (
+                    <button type="button" className="entry-action-btn entry-action-btn--edit" onClick={() => onEdit(entry)}>
+                      <Pencil size={14} /> Edit
+                    </button>
+                  )}
+                  {!isRecycleBin && (
+                    <button type="button" className="entry-action-btn entry-action-btn--lock" onClick={() => setConfirm(isLocked ? 'unlock' : 'lock')}>
+                      {isLocked ? <><Unlock size={14} /> Lepas</> : <><Lock size={14} /> Kunci</>}
+                    </button>
+                  )}
+                  {!isRecycleBin && (
+                    <button type="button" className={`entry-action-btn entry-action-btn--fav ${entry.fav ? 'entry-action-btn--fav-active' : ''}`} onClick={() => setConfirm('fav')}>
+                      <Star size={14} fill={entry.fav ? 'currentColor' : 'none'} /> Favorit
+                    </button>
+                  )}
+                  {isRecycleBin && (
+                    <button type="button" className="entry-action-btn entry-action-btn--restore" onClick={() => setConfirm('restore')}>
+                      <RotateCcw size={14} /> Pulihkan
+                    </button>
+                  )}
+                  <button type="button" className="entry-action-btn entry-action-btn--delete" onClick={() => setConfirm('delete')}>
+                    <Trash2 size={14} /> {isRecycleBin ? 'Hapus Permanen' : 'Hapus'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-        <motion.span
-          className="entry-card__chevron"
-          aria-hidden="true"
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: prefersReduced ? 0 : 0.2, ease: EASE.inOut }}
-        >
-          <ChevronDown size={16} />
-        </motion.span>
       </div>
 
-      {/* ── Expanded body — AnimatePresence untuk smooth height ── */}
-      <AnimatePresence initial={false}>
-      {isExpanded && (
-        <motion.div
-          className="entry-card__body-wrap"
-          key={`body-${entry.id}`}
-          initial={prefersReduced ? false : { opacity: 0, height: 0 }}
-          animate={prefersReduced ? {} : { opacity: 1, height: 'auto' }}
-          exit={prefersReduced ? {} : { opacity: 0, height: 0 }}
-          transition={{ duration: DUR.expand, ease: EASE.inOut }}
-          style={{ overflow: 'hidden' }}
-        >
-          <div className="entry-card__body-inner">
-          <div className="entry-card__body">
-          {/* Fields */}
-          <div className="entry-card__fields">
-            {renderFields()}
-          </div>
-
-          {/* Action row */}
-          <div className="entry-card__actions">
-            {!isRecycleBin && onEdit && (
-              <motion.button className="entry-action-btn entry-action-btn--edit"
-                onClick={() => onEdit(entry)} title="Edit"
-                whileTap={prefersReduced ? {} : { scale: 0.9 }}
-                transition={{ duration: DUR.tap }}>
-                <Pencil size={13} /> Edit
-              </motion.button>
-            )}
-
-            {!isRecycleBin && (
-              <motion.button className="entry-action-btn entry-action-btn--lock"
-                onClick={handleToggleLock}
-                title={isLocked ? 'Lepas kunci' : 'Kunci entri'}
-                whileTap={prefersReduced ? {} : { scale: 0.9 }}
-                transition={{ duration: DUR.tap }}>
-                {isLocked ? <><Unlock size={13} /> Lepas</> : <><Lock size={13} /> Kunci</>}
-              </motion.button>
-            )}
-
-            {!isRecycleBin && (
-              <motion.button
-                className={`entry-action-btn entry-action-btn--fav ${entry.fav ? 'entry-action-btn--fav-active' : ''}`}
-                onClick={handleFav}
-                title={entry.fav ? 'Hapus favorit' : 'Tandai favorit'}
-                whileTap={prefersReduced ? {} : { scale: 0.88 }}
-                transition={{ duration: DUR.tap }}>
-                <motion.span
-                  animate={prefersReduced ? {} : { rotate: entry.fav ? [0, -15, 15, 0] : 0 }}
-                  transition={{ duration: DUR.emph }}
-                  style={{ display:'inline-flex' }}>
-                  <Star size={13} fill={entry.fav ? 'currentColor' : 'none'} />
-                </motion.span>
-                {entry.fav ? 'Favorit' : 'Favorit'}
-              </motion.button>
-            )}
-
-            {isRecycleBin && (
-              <motion.button className="entry-action-btn entry-action-btn--restore"
-                onClick={handleRestore} title="Pulihkan"
-                whileTap={prefersReduced ? {} : { scale: 0.9 }}
-                transition={{ duration: DUR.tap }}>
-                <RotateCcw size={13} /> Pulihkan
-              </motion.button>
-            )}
-
-            <motion.button className="entry-action-btn entry-action-btn--delete"
-              onClick={handleDelete}
-              title={isRecycleBin ? 'Hapus permanen' : 'Hapus'}
-              whileTap={prefersReduced ? {} : { scale: 0.88 }}
-              transition={{ duration: DUR.tap }}>
-              <Trash2 size={13} />
-              {isRecycleBin ? 'Hapus Permanen' : 'Hapus'}
-            </motion.button>
-          </div>
-          </div>
-          </div>
-        </motion.div>
+      {confirmCfg && (
+        <ConfirmDialog
+          open
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => { setConfirm(null); confirmCfg.run(); }}
+          title={confirmCfg.title}
+          message={confirmCfg.message}
+          confirmLabel={confirmCfg.confirmLabel}
+          variant={confirmCfg.variant}
+        />
       )}
-      </AnimatePresence>
-
-
-    </motion.div>
-
-    {/* ── Confirm: Hapus / Hapus Permanen ── */}
-    <ConfirmDialog
-      open={confirmDelete}
-      onCancel={() => setConfirmDelete(false)}
-      onConfirm={() => { setConfirmDelete(false); doDelete(); }}
-      title={isRecycleBin ? 'Hapus Permanen?' : 'Pindahkan ke Sampah?'}
-      message={
-        isRecycleBin
-          ? <><strong>{entry.name}</strong> akan dihapus selamanya dan tidak bisa dipulihkan.</>
-          : <><strong>{entry.name}</strong> akan dipindahkan ke sampah. Bisa dipulihkan nanti.</>
-      }
-      confirmLabel={isRecycleBin ? 'Hapus Permanen' : 'Pindahkan'}
-      variant="danger"
-    />
-
-    {/* ── Confirm: Kunci Entri ── */}
-    <ConfirmDialog
-      open={confirmLock}
-      onCancel={() => setConfirmLock(false)}
-      onConfirm={() => { setConfirmLock(false); doToggleLock(); }}
-      title="Kunci Entri?"
-      message={<>Entri <strong>{entry.name}</strong> akan dikunci. Butuh PIN/password untuk membukanya.</>}
-      confirmLabel="Kunci"
-      variant="lock"
-    />
-
-    {/* ── Confirm: Lepas Kunci Entri ── */}
-    <ConfirmDialog
-      open={confirmUnlock}
-      onCancel={() => setConfirmUnlock(false)}
-      onConfirm={() => { setConfirmUnlock(false); doToggleLock(); }}
-      title="Lepas Kunci Entri?"
-      message={<>Entri <strong>{entry.name}</strong> tidak akan memerlukan PIN lagi untuk dibuka.</>}
-      confirmLabel="Lepas Kunci"
-      variant="warning"
-    />
-
-    {/* ── Confirm: Toggle Favorit ── */}
-    <ConfirmDialog
-      open={confirmFav}
-      onCancel={() => setConfirmFav(false)}
-      onConfirm={() => { setConfirmFav(false); doFav(); }}
-      title={entry.fav ? 'Hapus dari Favorit?' : 'Tandai Favorit?'}
-      message={
-        entry.fav
-          ? <><strong>{entry.name}</strong> akan dihapus dari daftar favorit.</>
-          : <><strong>{entry.name}</strong> akan ditambahkan ke daftar favorit.</>
-      }
-      confirmLabel={entry.fav ? 'Hapus Favorit' : 'Tandai Favorit'}
-      variant="warning"
-    />
-
-    {/* ── Confirm: Pulihkan dari Sampah ── */}
-    <ConfirmDialog
-      open={confirmRestore}
-      onCancel={() => setConfirmRestore(false)}
-      onConfirm={() => { setConfirmRestore(false); doRestore(); }}
-      title="Pulihkan Entri?"
-      message={<><strong>{entry.name}</strong> akan dipindahkan kembali ke vault.</>}
-      confirmLabel="Pulihkan"
-      variant="warning"
-    />
     </>
   );
 }
 
-// Sesi 6: memo untuk hindari re-render tidak perlu
-// EntryCard di-render banyak kali di list, memo signifikan
 export const EntryCardMemo = memo(EntryCard);

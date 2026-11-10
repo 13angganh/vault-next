@@ -26,7 +26,7 @@ export async function exportVaultPdf({vault,customCats,appVersion}:ExportPdfOpti
   const wm=(p:ReturnType<typeof doc.addPage>)=>p.drawText('VAULT NEXT — DOKUMEN SENSITIF',{x:80,y:PH/2-10,size:22,font:fB,color:rgb(.85,.85,.88),opacity:.1,rotate:degrees(45)});
   const ft=(p:ReturnType<typeof doc.addPage>,n:number,t:number)=>{
     p.drawLine({start:{x:M,y:32},end:{x:PW-M,y:32},thickness:.4,color:C.line});
-    p.drawText(`Vault Next v${appVersion}  •  Hal ${n}/${t}  •  ${new Date().toLocaleDateString('id-ID')}`,{x:M,y:20,size:7.5,font:fR,color:C.muted});
+    p.drawText(`Aurum Vault v${appVersion}  •  Hal ${n}/${t}  •  ${new Date().toLocaleDateString('id-ID')}`,{x:M,y:20,size:7.5,font:fR,color:C.muted});
   };
   const np=()=>{pg=doc.addPage([PW,PH]);y=PH-M;pg.drawRectangle({x:0,y:0,width:PW,height:PH,color:C.bg});};
   const en=(n:number)=>{if(y-n<50)np();};
@@ -53,7 +53,7 @@ export async function exportVaultPdf({vault,customCats,appVersion}:ExportPdfOpti
   // Cover
   pg.drawRectangle({x:0,y:0,width:PW,height:PH,color:C.dark});
   pg.drawRectangle({x:0,y:PH-6,width:PW,height:6,color:C.gold});
-  pg.drawText('Vault Next',{x:M,y:PH-100,size:40,font:fB,color:C.white});
+  pg.drawText('Aurum Vault',{x:M,y:PH-100,size:40,font:fB,color:C.white});
   pg.drawText('Password Backup',{x:M,y:PH-130,size:16,font:fR,color:C.gold});
   const now=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
   pg.drawText(`Diekspor: ${now}`,{x:M,y:PH-200,size:11,font:fR,color:C.muted});

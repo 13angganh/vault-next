@@ -1,16 +1,27 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, ArrowLeft, Eye, EyeOff, ChevronDown, Check, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, ChevronDown, Check, Plus, Trash2, Pencil, Star } from 'lucide-react';
+import { OptionSheet } from '@/components/ui/OptionSheet';
+import { getBrandIconBySlug } from '@/lib/brand-icons';
 import { Button, Toggle, ConfirmDialog } from '@/components/ui/primitives';
 import { useAppStore }           from '@/lib/store/appStore';
 import { saveVault }              from '@/lib/vaultService';
 import { CategoryIcon }           from '@/components/entries/CategoryIcon';
+import { EntryIcon }              from '@/components/entries/EntryIcon';
+import { BrandIconPicker }        from '@/components/entries/BrandIconPicker';
 import { PasswordStrengthMeter }  from '@/components/ui/PasswordStrengthMeter';
 import { PasswordGenerator }      from '@/components/ui/PasswordGenerator';
 import { DEFAULT_CATEGORIES }     from '@/lib/types';
 import type { VaultEntry, CustomCategory, CategoryFieldDef, CryptoWalletNetwork } from '@/lib/types';
 import { generateId } from '@/lib/utils';  // F2-11
+
+// v2.0.0: warna aksen hero form. Setara dengan ekspresi inline sebelumnya
+// (slug terpilih & dikenal -> accent ?? hex; selain itu emas), tanpa `!`.
+function brandHeroColor(slug: string | undefined): string {
+  const brand = slug ? getBrandIconBySlug(slug) : undefined;
+  return brand ? `#${brand.accent ?? brand.hex}` : 'var(--gold)';
+}
 
 // v1.10.3: 3 jaringan default yang selalu tersedia di dropdown Crypto —
 // digabung dengan store.customNetworks (jaringan yang pengguna tambah
@@ -223,6 +234,15 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   const [cat,         setCat]         = useState(entry?.cat ?? 'sosmed');
   const [name,        setName]        = useState(entry?.name ?? '');
   const [fav,         setFav]         = useState(entry?.fav ?? false);
+  // v1.11.0: logo brand asli per-entri (redesain visual) — pola PERSIS
+  // sama dengan cat/name/fav di atas: state top-level terpisah, HARUS
+  // ditambahkan eksplisit di object newEntry saat handleSave (tidak
+  // ikut otomatis lewat spread ...values, sama seperti field lain di
+  // grup ini — lihat komentar twoFAVideoSelfie dkk di handleSave untuk
+  // penjelasan pola yang sama).
+  const [brandIconSlug, setBrandIconSlug] = useState(entry?.brandIconSlug);
+  const [brandPickerOpen, setBrandPickerOpen] = useState(false);
+  const [catSheetOpen, setCatSheetOpen] = useState(false);
   const [values,      setValues]      = useState<Partial<VaultEntry>>(entry ?? {});
   // v1.10.0: field KUSTOM (key di luar VaultEntry) disimpan terpisah
   // dari `values` di atas karena `values` bertipe Partial<VaultEntry> —
@@ -473,6 +493,13 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         name: name.trim(),
         fav,
         ts:   Date.now(),
+        // v1.11.0: brandIconSlug — field top-level state terpisah (lihat
+        // deklarasi useState di atas), tidak ikut otomatis lewat ...values.
+        // undefined (tidak dipilih user) berarti field ini DIHAPUS dari
+        // entry — bukan dibiarkan menyimpan nilai lama entry sebelumnya
+        // via spread ...(entry ?? {}) di atas, jika user membuka
+        // BrandIconPicker dan eksplisit memilih "Tanpa logo".
+        brandIconSlug,
         ...(cat === 'crypto' && finalSeedWords.some((w) => w.trim())
           ? { seedPhrase: finalSeedWords.map((w) => w.trim()).filter(Boolean) }
           : {}),
@@ -1347,88 +1374,67 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
   return (
     <>
       {/* Full-page form — menggantikan list view */}
-      <div className="entry-form-page">
-
-        {/* Header sticky — konsisten dengan page-header token */}
-        <div className="page-header">
-          <button className="page-header__back" onClick={onClose} aria-label="Kembali">
-            <ArrowLeft size={18} />
-          </button>
-          <h2 className="page-header__title">
-            {isEdit ? 'Edit Entri' : 'Tambah Entri Baru'}
-          </h2>
-          <button className="page-header__back" onClick={onClose} aria-label="Tutup" title="Tutup">
-            <X size={18} />
-          </button>
+      <div className="entry-form-page ef2">
+        <div className="ef2-top">
+          <button className="ef2-icon" onClick={onClose} aria-label="Kembali"><ArrowLeft size={18} /></button>
+          <h2>{isEdit ? 'Edit entri' : 'Entri baru'}</h2>
+          <span style={{ width: 40 }} aria-hidden="true" />
         </div>
 
-        {/* Scrollable content */}
-        <div className="entry-form-page__body">
-
-          {/* Nama */}
-          <div className="form-group">
-            <label htmlFor="form-name" className="form-label">
-              Nama <span className="form-required">*</span>
-            </label>
-            <input
-              ref={nameRef}
-              id="form-name"
-              type="text"
-              className={`input ${nameError ? 'input--error' : ''}`}
-              value={name}
-              placeholder="Contoh: Gmail Utama"
-              onChange={(e) => { setName(e.target.value); setNameError(''); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
-              autoComplete="off"
-            />
-            {nameError && <p className="form-error">{nameError}</p>}
-          </div>
-
-          {/* Kategori — tampil full, tidak scroll sendiri */}
-          <div className="form-group">
-            <label className="form-label">Kategori</label>
-            <div className="cat-picker cat-picker--full">
-              {allCats.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`cat-picker__item ${cat === c.id ? 'cat-picker__item--active' : ''}`}
-                  onClick={() => handleCatChange(c.id)}
-                  title={c.label}
-                >
-                  <CategoryIcon catId={c.id} customCats={customCats} size="sm" />
-                  <span className="cat-picker__label">{c.label}</span>
-                </button>
-              ))}
+        <div className="ef2-body">
+          <section className="ef2-hero" style={{ '--brand': brandHeroColor(brandIconSlug) } as React.CSSProperties}>
+            <button type="button" className="brand-avatar-trigger" onClick={() => setBrandPickerOpen(true)} aria-label="Pilih logo brand" title="Pilih logo brand">
+              <EntryIcon entry={{ id: 'preview', cat, name, brandIconSlug } as VaultEntry} customCats={customCats} size="lg" />
+              <span className="brand-avatar-trigger__badge" aria-hidden="true"><Pencil size={12} /></span>
+            </button>
+            <div className="ef2-name">
+              <input
+                ref={nameRef}
+                id="form-name"
+                type="text"
+                className={nameError ? 'ef2-name--error' : undefined}
+                value={name}
+                placeholder="Nama entri"
+                aria-label="Nama entri"
+                onChange={(e) => { setName(e.target.value); setNameError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
+                autoComplete="off"
+              />
+              <small>{nameError ? <span className="form-error" style={{ margin: 0 }}>{nameError}</span> : (allCats.find((c) => c.id === cat)?.label ?? 'Pilih kategori')}</small>
             </div>
-          </div>
+            <button type="button" className="ef2-fav" aria-pressed={fav} aria-label="Tandai favorit" onClick={() => setFav(!fav)}>
+              <Star size={18} fill={fav ? 'currentColor' : 'none'} />
+            </button>
+          </section>
 
-          {/* Favorit */}
-          <div className="form-group form-group--inline">
-            <label htmlFor="form-fav" className="form-label">Tandai Favorit</label>
-            <Toggle checked={fav} onChange={setFav} label="Tandai Favorit" />
-          </div>
+          <section>
+            <h3 className="ef2-sec">Kategori</h3>
+            <button type="button" className="ef2-select" onClick={() => setCatSheetOpen(true)} aria-haspopup="dialog">
+              <CategoryIcon catId={cat} customCats={customCats} size="sm" />
+              <span>{allCats.find((c) => c.id === cat)?.label ?? 'Pilih kategori'}</span>
+              <ChevronDown size={18} />
+            </button>
+          </section>
 
-          <div className="form-divider" />
-
-          {/* Dynamic fields */}
-          {currentFields.map(renderField)}
-          {renderSeedSection()}
-          {renderCryptoNetworksSection()}
-          {renderTwoFASection()}
+          <section>
+            <h3 className="ef2-sec">Detail</h3>
+            <div className="ef2-card">
+              {currentFields.map(renderField)}
+              {renderSeedSection()}
+              {renderCryptoNetworksSection()}
+              {renderTwoFASection()}
+            </div>
+          </section>
         </div>
 
-        {/* Footer sticky — selalu terlihat */}
-        <div className="entry-form-page__footer">
+        <div className="ef2-footer">
           {saveError && <p className="form-error" role="alert">{saveError}</p>}
           <Button variant="ghost" onClick={onClose} disabled={saving}>Batal</Button>
           <Button variant="primary" onClick={handleSave} disabled={saving} loading={saving}>
-            {saving ? 'Menyimpan…' : isEdit ? 'Simpan Perubahan' : 'Tambah Entri'}
+            {saving ? 'Menyimpan…' : isEdit ? 'Simpan perubahan' : 'Tambah entri'}
           </Button>
         </div>
       </div>
-
-      {/* Password Generator */}
       {showPwGen && (
         <div className="modal-overlay" role="dialog" aria-modal="true"
           onClick={() => setShowPwGen(false)}>
@@ -1464,6 +1470,17 @@ export function EntryForm({ entry, onClose, onSaved }: EntryFormProps) {
         message={<>Entri <strong>{name.trim()}</strong> akan disimpan tanpa password, username, atau data lain. Anda bisa mengisinya nanti.</>}
         confirmLabel="Simpan Tetap"
         variant="warning"
+      />
+
+      {/* ── v1.11.0: Picker logo brand asli per-entri ── */}
+      <OptionSheet open={catSheetOpen} title="Pilih kategori" value={cat} onClose={() => setCatSheetOpen(false)}
+        onSelect={(id) => handleCatChange(id)}
+        options={allCats.map((c) => ({ id: c.id, label: c.label, icon: <CategoryIcon catId={c.id} customCats={customCats} size="sm" /> }))} />
+      <BrandIconPicker
+        open={brandPickerOpen}
+        onClose={() => setBrandPickerOpen(false)}
+        currentSlug={brandIconSlug}
+        onSelect={setBrandIconSlug}
       />
     </>
   );

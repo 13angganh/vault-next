@@ -8,20 +8,17 @@
 .ripple-effect {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255,255,255,0.10);
+  background: var(--ripple);
   transform: scale(0);
   animation: ripple 480ms var(--ease-out);
   pointer-events: none;
 }
 
 /* Sidebar item: ripple lebih subtle */
-.sidebar-item .ripple-effect {
-  background: rgba(255,255,255,0.08);
-}
 
 /* Icon btn: ripple putih-abu */
 .icon-btn .ripple-effect {
-  background: rgba(255,255,255,0.12);
+  background: var(--ripple-icon);
 }
 
 /* SKELETON LOADER */
@@ -64,7 +61,10 @@ select option { background: var(--bg-s2); color: var(--text); }
   justify-content: center;
   gap: var(--space-2);
   padding: 10px 18px;
-  border-radius: var(--radius-md);
+  /* v1.11.0 (redesain visual Tahap 5): radius-md(12px)->radius-lg(16px),
+     konsisten dgn skala radius yg sudah dinaikkan di elemen lain sejak
+     Tahap 3/4. */
+  border-radius: var(--radius-lg);
   border: none;
   cursor: pointer;
   font-family: var(--font-sans);
@@ -79,7 +79,11 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 .btn-gold {
   background: linear-gradient(135deg, var(--gold), var(--gold2));
-  color: #000;
+  color: var(--on-gold);
+  /* v1.11.0: shadow ditambahkan — tombol primer, elemen paling
+     menonjol di app, sebelumnya tanpa shadow sama sekali sementara
+     elemen gold lain (chip/nav aktif) sudah punya. */
+  box-shadow: var(--shadow-gold), inset 0 1px 0 var(--hl-gold-0);
 }
 .btn-gold:hover { opacity: 0.87; transform: translateY(-1px); }
 .btn-ghost {
@@ -89,19 +93,19 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 .btn-ghost:hover { border-color: var(--gold); color: var(--text); }
 .btn-danger {
-  background: rgba(255,77,109,0.1);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
   color: var(--red);
-  border: 1px solid rgba(255,77,109,0.25);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
 }
-.btn-danger:hover { background: rgba(255,77,109,0.18); }
+.btn-danger:hover { background: color-mix(in srgb, var(--danger) 18%, transparent); }
 .btn-teal {
-  background: rgba(0,212,170,0.1);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
   color: var(--teal);
-  border: 1px solid rgba(0,212,170,0.25);
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
 }
-.btn-teal:hover { background: rgba(0,212,170,0.18); }
+.btn-teal:hover { background: color-mix(in srgb, var(--success) 18%, transparent); }
 .btn-sm { padding: 6px 13px; font-size: var(--text-sm); }
-.btn-xs { padding: 8px var(--space-3); font-size: var(--text-xs); min-height: 36px; }  /* F2-06: min touch target */
+.btn-xs { padding: 8px var(--space-3); font-size: var(--text-sm); min-height: 36px; }  /* F2-06: min touch target */
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
 /* Spinner di dalam button (F2-09) */
@@ -138,7 +142,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 .ibtn:hover { border-color: var(--gold); color: var(--text); background: var(--bg-s2); }
 .ibtn:active { transform: scale(0.88); transition: transform 120ms var(--ease-spring); }
 .ibtn.del:hover { border-color: var(--red); color: var(--red); }
-.ibtn.lock-active { border-color: var(--blue); color: var(--blue); background: rgba(77,142,255,0.1); }
+.ibtn.lock-active { border-color: var(--blue); color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, transparent); }
 /* v1.10.0: state disabled — dipakai tombol Edit/Hapus kategori saat
  * terkunci. Meniadakan hover/active supaya tidak terlihat masih
  * responsif terhadap klik. */
@@ -149,11 +153,14 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 
 /* CARD */
+/* v1.11.0 (Tahap 6 QA final): primitive ini TIDAK dipakai di mana pun
+   saat ini (diverifikasi via grep codebase) — diperbarui murni utk
+   konsistensi/pencegahan jika dipakai di masa depan. */
 .card {
-  background: var(--bg-s1);
+  background: linear-gradient(160deg, var(--card-bg-1) 0%, var(--card-bg-3) 100%);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
   transition: border-color var(--transition-fast),
               background-color var(--transition-fast),
               transform var(--transition-fast),
@@ -190,7 +197,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 
 .strength-meter__label {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   min-width: 80px;
   text-align: right;
@@ -265,8 +272,8 @@ select option { background: var(--bg-s2); color: var(--text); }
 
 .pw-gen__copy--copied {
   color: var(--teal) !important;
-  background: rgba(0,212,170,0.12) !important;
-  border-color: rgba(0,212,170,0.3) !important;
+  background: color-mix(in srgb, var(--success) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--success) 30%, transparent) !important;
 }
 
 .pw-gen__row {
@@ -277,7 +284,7 @@ select option { background: var(--bg-s2); color: var(--text); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
@@ -286,7 +293,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 
 .pw-gen__length-val {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
   font-size: var(--text-sm);
 }
@@ -340,7 +347,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 
 .btn--sm {
   padding: 4px var(--space-3);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 
@@ -389,7 +396,7 @@ select option { background: var(--bg-s2); color: var(--text); }
   font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  box-shadow: var(--shadow);
   animation: toastSlideUp 0.28s var(--ease-spring) both;
 }
 
@@ -398,9 +405,9 @@ select option { background: var(--bg-s2); color: var(--text); }
   to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
 
-.toast--success { background: #166534; color: #86efac; }
-.toast--error   { background: #7f1d1d; color: #fca5a5; }
-.toast--info    { background: #1e3a5f; color: #93c5fd; }
+.toast--success { background: var(--toast-success-bg); color: var(--toast-success-fg); }
+.toast--error   { background: var(--toast-error-bg); color: var(--toast-error-fg); }
+.toast--info    { background: var(--toast-info-bg); color: var(--toast-info-fg); }
 .toast__icon    { display: flex; align-items: center; flex-shrink: 0; }
 
 
@@ -420,8 +427,10 @@ select option { background: var(--bg-s2); color: var(--text); }
 /* btn-primary — F2-08: ganti alias double-dash dengan single-dash */
 .btn-primary {
   background: linear-gradient(135deg, var(--gold), var(--gold2));
-  color: #000;
+  color: var(--on-gold);
   font-weight: 700;
+  /* v1.11.0: konsisten dgn .btn-gold — lihat catatan di sana */
+  box-shadow: var(--shadow-gold), inset 0 1px 0 var(--hl-gold-0);
 }
 .btn-primary:hover {
   opacity: 0.88;
@@ -434,8 +443,8 @@ select option { background: var(--bg-s2); color: var(--text); }
 }
 
 
-.entry-field__btn { width:28px;height:28px;background:none;border:1px solid var(--border);cursor:pointer;color:var(--muted2);display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);transition:all var(--transition-fast);flex-shrink:0;position:relative;z-index:1;touch-action:manipulation; }
-.entry-field__btn > svg { position:relative;z-index:2; }
+.entry-field__btn { width:28px;height:28px;background:none;border:1px solid var(--border);cursor:pointer;color:var(--muted2);display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);transition:all var(--transition-fast);flex-shrink:0;position:relative;z-index:var(--z-raised);touch-action:manipulation; }
+.entry-field__btn > svg { position:relative;z-index:calc(var(--z-raised) + 1); }
 .entry-field__btn:hover { color:var(--text);background:var(--bg-s3);border-color:var(--border2); }
 
 /* Vault entries scroll area — mandiri, tidak ikut header */
@@ -448,16 +457,16 @@ select option { background: var(--bg-s2); color: var(--text); }
   gap: 3px;
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   line-height: 1.4;
 }
 .badge__icon { display: flex; align-items: center; }
 .badge--gold  { background: var(--gold-dim);  color: var(--gold);  border: 1px solid var(--gold-border); }
-.badge--teal  { background: rgba(0,212,170,0.1); color: var(--teal); border: 1px solid rgba(0,212,170,0.25); }
-.badge--red   { background: rgba(255,77,109,0.1); color: var(--red);  border: 1px solid rgba(255,77,109,0.25); }
+.badge--teal  { background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--teal); border: 1px solid color-mix(in srgb, var(--success) 25%, transparent); }
+.badge--red   { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--red);  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent); }
 .badge--muted { background: var(--bg-s2);   color: var(--muted2); border: 1px solid var(--border); }
-.badge--blue  { background: rgba(77,142,255,0.1); color: var(--blue); border: 1px solid rgba(77,142,255,0.25); }
+.badge--blue  { background: color-mix(in srgb, var(--blue) 10%, transparent); color: var(--blue); border: 1px solid color-mix(in srgb, var(--blue) 25%, transparent); }
 
 /* Field wrapper (Input/Textarea dengan label & error) */
 .field { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -482,7 +491,7 @@ select option { background: var(--bg-s2); color: var(--text); }
 .field__suffix { right: 8px; pointer-events: auto; }
 .field__input--error { border-color: var(--red) !important; }
 .field__error {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--red);
   margin-top: -2px;
 }
@@ -548,7 +557,7 @@ textarea:focus {
 .btn-gold:hover:not(:disabled) {
   opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-gold), 0 4px 12px rgba(240,165,0,0.25);
+  box-shadow: var(--shadow-gold), 0 4px 12px color-mix(in srgb, var(--gold) 25%, transparent);
 }
 
 .btn-primary:active:not(:disabled),

@@ -4,13 +4,13 @@
 
 :root {
   /* Type Scale (8 level) */
-  --text-xs: 10px;
-  --text-sm: 12px;
-  --text-base: 14px;
-  --text-md: 16px;
-  --text-lg: 18px;
-  --text-xl: 22px;
-  --text-2xl: 28px;
+  --text-xs: 12px;
+  --text-sm: 13.5px;
+  --text-base: 15px;
+  --text-md: 16.5px;
+  --text-lg: 19px;
+  --text-xl: 24px;
+  --text-2xl: 30px;
   --text-3xl: 36px;
 
   /* Line Height */
@@ -23,8 +23,8 @@
   --ls-tight:  -0.02em;
 
   /* Font Families */
-  --font-sans: 'Outfit', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: var(--font-outfit), 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* Spacing Scale (4px base) */
   --space-1: 4px;
@@ -39,17 +39,17 @@
   --space-16: 64px;
 
   /* Border Radius Scale */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
   --radius-full: 9999px;
 
   /* Transition Easing */
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-out:     cubic-bezier(0, 0, 0.2, 1);
+  --ease-out:     cubic-bezier(.2,.8,.2,1);
 
   /* Transitions */
   --transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -59,17 +59,23 @@
 
   /* Layout */
   --sidebar-width:   260px;
-  --appbar-height:   56px;
+  --appbar-height:   60px;
   --content-max:     960px;
   --modal-width:     480px;
   --modal-width-sm:  360px;
 
   /* Z-Index Scale */
-  --z-sticky:   10;
-  --z-content:  10;
+  --z-behind: -1;
+  --z-base: 0;
+  --z-raised: 1;
+  --z-bar: 5;
+  --z-sticky: 10;
+  --z-content: 10;
   --z-dropdown: 20;
-  --z-sidebar:  30;
-  --z-modal:    200;
-  --z-toast:    300;
-  --z-top:      9999;
+  --z-sidebar: 30;
+  --z-popover: 40;
+  --z-modal: 200;
+  --z-sheet: 300;
+  --z-toast: 300;
+  --z-top: 9999;
 }

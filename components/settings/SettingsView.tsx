@@ -1,421 +1,205 @@
 'use client';
 
 /**
- * Vault Next — SettingsView
- * Sesi B: refactor pakai Button + Toggle primitives.
+ * SettingsView v2.2 (Tahap 5: + kelompok "Tentang" berisi satu baris navigasi "Atribusi & lisensi")
+ * — satu pola tampilan untuk SEMUA baris:
+ *   • baris saklar (boolean)  → toggle di kanan
+ *   • baris navigasi          → nilai saat ini + panah; ketuk membuka sheet/halaman
+ * Tidak ada lagi segmented, select native, atau blok yang mengembang di tempat.
  */
-
-import { useState, useCallback, useRef, useLayoutEffect } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { ArrowLeft, Cloud, LayoutGrid, Sun, Moon, Fingerprint, ChevronDown } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import {
+  ArrowLeft, ChevronRight, Cloud, Fingerprint, HeartPulse, LayoutGrid, Moon, Sun, Timer, Save, Bell,
+  ShieldCheck, KeyRound, Navigation, Trash2, Scale,
+} from 'lucide-react';
 import { lsGet, LS_BIO_CRED_ID } from '@/lib/storage';
-import { AUTOLOCK_OPTIONS_MIN, APP_VERSION } from '@/lib/constants';
+import { AUTOLOCK_OPTIONS_MIN, APP_VERSION, APP_NAME } from '@/lib/constants';
 import { useAppStore }         from '@/lib/store/appStore';
+import { DEFAULT_CATEGORIES }  from '@/lib/types';
 import { useTheme }            from '@/components/providers/ThemeProvider';
+import { useNavMode, type NavMode } from '@/lib/navMode';
+import { hasPinSetup }         from '@/lib/vaultService';
 import { PINSettingsPanel }    from '@/components/settings/PINSettingsPanel';
 import { CategoryManager }     from '@/components/settings/CategoryManager';
 import { BackupModal }         from '@/components/settings/BackupModal';
+import { HealthCheckPanel }    from '@/components/settings/HealthCheckPanel';
+import { AttributionPanel }    from '@/components/settings/AttributionPanel';
 import { BiometricHintModal, clearBioSession } from '@/components/lock/BiometricHintModal';
-import { Button, Toggle, ConfirmDialog } from '@/components/ui/primitives';
-import { HealthCheckPanel } from '@/components/settings/HealthCheckPanel';
-import { EASE } from '@/lib/animation';
+import { Toggle, ConfirmDialog } from '@/components/ui/primitives';
+import { OptionSheet }         from '@/components/ui/OptionSheet';
+import { PanelSheet }          from '@/components/ui/PanelSheet';
 
-interface SettingsViewProps {
-  onClose?: () => void;
-}
+interface SettingsViewProps { onClose?: () => void }
+type Tone = 'gold' | 'teal' | 'blue' | 'red' | 'violet';
+type Sheet = null | 'theme' | 'nav' | 'lock' | 'backupInt' | 'pin' | 'health' | 'attribution';
 
-type SubView = 'main' | 'categories';
-
-/* ── SectionItem: komponen section collapsible di luar SettingsView ──────
-   Harus di LUAR SettingsView agar tidak dibuat ulang setiap render.
-   Re-creation komponen = semua children unmount+mount → berkedip.
-   ─────────────────────────────────────────────────────────────────────── */
-interface SectionItemProps {
-  skey:           string;
-  title:          string;
-  badge?:         React.ReactNode;
-  dynamicHeight?: boolean;
-  openSections:   Record<string, boolean>;
-  onToggle:       (key: string) => void;
-  prefersReduced: boolean;
-  children:       React.ReactNode;
-}
-
-function SectionItem({
-  skey, title, badge, dynamicHeight,
-  openSections, onToggle, prefersReduced, children,
-}: SectionItemProps) {
-  const isOpen = openSections[skey] ?? false;
-  const MUTED_BADGES = ['Nonaktif', 'Auto-save Mati', 'Belum Terdaftar'];
-
-  // v1.10.3: fix animasi laggy/kurang smooth — permintaan pengguna.
-  // Root cause: height:"auto" bukan nilai yang bisa di-animate secara
-  // native oleh browser; Framer Motion terpaksa recalculate layout
-  // (reflow) tiap frame untuk mensimulasikannya, alih-alih compositing
-  // murni di GPU — inilah yang terasa berat/tersendat terutama di
-  // WebView Android. Diganti dengan mengukur tinggi konten sungguhan
-  // via ref (contentRef.scrollHeight) sekali saat terbuka, lalu Framer
-  // Motion animate ke NILAI PIKSEL PASTI, bukan string "auto" — piksel
-  // pasti BISA dianimasikan secara native (transform/height numerik).
-  //
-  // Sebelumnya prop `dynamicHeight` adalah workaround: section yang
-  // isinya bisa berubah tinggi (PIN panel, Health Check panel) di-skip
-  // dari animasi tinggi sama sekali (initial/exit height:"auto" instan,
-  // hanya opacity yang animate) karena animasi tinggi lama tidak bisa
-  // mengikuti ketika konten di dalamnya berubah tinggi. Sekarang
-  // ResizeObserver mengatasi akar masalah itu — re-measure otomatis
-  // kapan pun konten di dalam section berubah tinggi SAAT section
-  // sudah terbuka, jadi animasi tinggi asli tetap berjalan mulus untuk
-  // SEMUA section, termasuk yang dynamicHeight. Prop dynamicHeight
-  // dipertahankan di interface (tidak breaking untuk call-site lama)
-  // tapi sekarang murni sinyal "pasang ResizeObserver", bukan lagi
-  // sinyal "skip animasi tinggi".
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [measuredHeight, setMeasuredHeight] = useState(0);
-
-  useLayoutEffect(() => {
-    if (!isOpen || !contentRef.current) return;
-    const el = contentRef.current;
-
-    // Ukur sekali segera saat terbuka — mencegah frame pertama animasi
-    // start dari 0 tanpa target yang sudah diketahui (flicker).
-    setMeasuredHeight(el.scrollHeight);
-
-    if (!dynamicHeight) return;
-    // v1.10.3: ResizeObserver tidak ada di semua lingkungan (jsdom test
-    // environment proyek ini termasuk salah satunya, dikonfirmasi
-    // reproduksi langsung — ReferenceError tanpa guard ini; browser
-    // WebView lama berpotensi sama). Guard defensif: tanpa
-    // ResizeObserver, section dynamicHeight tetap dapat pengukuran
-    // sekali di atas (bukan animasi terpotong seperti mekanisme lama),
-    // hanya kehilangan auto-resize saat konten berubah tinggi SAAT
-    // section sedang terbuka — aman, bukan crash.
-    if (typeof ResizeObserver === 'undefined') return;
-    // Hanya section dynamicHeight yang butuh terus mengamati — section
-    // biasa isinya statis, ResizeObserver di situ hanya overhead tanpa
-    // manfaat (tidak pernah ada perubahan tinggi untuk diamati).
-    const observer = new ResizeObserver(() => {
-      setMeasuredHeight(el.scrollHeight);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [isOpen, dynamicHeight]);
-
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="settings-section settings-section--collapsible">
-      <button
-        className={"settings-section__header" + (isOpen ? " settings-section__header--open" : "")}
-        onClick={() => onToggle(skey)}
-        aria-expanded={isOpen}
-        type="button"
-      >
-        <span className="settings-section-title">{title}</span>
-        {badge && !isOpen && (
-          <span className={
-            "settings-section__badge" +
-            (typeof badge === "string" && MUTED_BADGES.includes(badge)
-              ? " settings-section__badge--muted" : "")
-          }>{badge}</span>
-        )}
-        <span
-          className={"settings-section__chevron" + (isOpen ? " settings-section__chevron--open" : "")}
-          aria-hidden="true"
-        >
-          <ChevronDown size={13} />
-        </span>
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            key="body"
-            className="settings-section__body"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: measuredHeight }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: prefersReduced ? 0 : 0.22, ease: EASE.inOut }}
-            style={{ overflow: "hidden" }}
-          >
-            <div ref={contentRef}>
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <section className="st-group">
+      <h3 className="st-group__title">{title}</h3>
+      <div className="st-card">{children}</div>
+    </section>
+  );
+}
+
+/** Satu-satunya komponen baris. `toggle` → saklar; selain itu → baris navigasi. */
+function Row({ icon, tone = 'gold', label, desc, value, onClick, toggle, danger }: {
+  icon: React.ReactNode; tone?: Tone; label: string; desc?: string; value?: string;
+  onClick?: () => void; toggle?: React.ReactNode; danger?: boolean;
+}) {
+  const body = (
+    <>
+      <span className={`st-ico st-ico--${danger ? 'red' : tone}`}>{icon}</span>
+      <span className="st-row__info">
+        <span className="st-row__label">{label}</span>
+        {desc && <span className="st-row__desc">{desc}</span>}
+      </span>
+      {toggle ?? (
+        <>
+          {value && <span className="st-row__value">{value}</span>}
+          <ChevronRight size={18} className="st-row__chev" />
+        </>
+      )}
+    </>
+  );
+  return (
+    <div className="st-rowwrap">
+      {toggle
+        ? <div className="st-row">{body}</div>
+        : <button type="button" className={`st-row st-row--tap${danger ? ' st-row--danger' : ''}`} onClick={onClick}>{body}</button>}
     </div>
   );
 }
 
+const NAV_LABEL: Record<NavMode, string> = { bottom: 'Bar bawah', sidebar: 'Sidebar' };
+const BACKUP_OPTIONS = [
+  { value: 0, label: 'Nonaktif' }, { value: 24, label: 'Setiap hari' },
+  { value: 72, label: 'Setiap 3 hari' }, { value: 168, label: 'Setiap minggu' },
+];
+
 export function SettingsView({ onClose }: SettingsViewProps) {
-  const autoLockMinutes   = useAppStore((s) => s.autoLockMinutes);
-  const setAutoLock       = useAppStore((s) => s.setAutoLockMinutes);
-  const autoSaveEnabled   = useAppStore((s) => s.autoSaveEnabled);
-  const setAutoSave       = useAppStore((s) => s.setAutoSaveEnabled);
-  const backupIntervalHrs = useAppStore((s) => s.backupIntervalHrs);
-  const setBackupInterval = useAppStore((s) => s.setBackupIntervalHrs);
-  const vault             = useAppStore((s) => s.vault);
-  const recycleBin        = useAppStore((s) => s.recycleBin);
-  const customCats        = useAppStore((s) => s.customCats);
-  const biometricEnabled  = useAppStore((s) => s.biometricEnabled);
+  const autoLockMinutes     = useAppStore((s) => s.autoLockMinutes);
+  const setAutoLock         = useAppStore((s) => s.setAutoLockMinutes);
+  const autoSaveEnabled     = useAppStore((s) => s.autoSaveEnabled);
+  const setAutoSave         = useAppStore((s) => s.setAutoSaveEnabled);
+  const backupIntervalHrs   = useAppStore((s) => s.backupIntervalHrs);
+  const setBackupInterval   = useAppStore((s) => s.setBackupIntervalHrs);
+  const vault               = useAppStore((s) => s.vault);
+  const recycleBin          = useAppStore((s) => s.recycleBin);
+  const customCats          = useAppStore((s) => s.customCats);
+  const biometricEnabled    = useAppStore((s) => s.biometricEnabled);
   const setBiometricEnabled = useAppStore((s) => s.setBiometricEnabled);
   const setBiometricCredId  = useAppStore((s) => s.setBiometricCredId);
-  const masterPw          = useAppStore((s) => s.masterPw);
-  const { theme, toggleTheme } = useTheme();
+  const masterPw            = useAppStore((s) => s.masterPw);
+  const { theme, setTheme } = useTheme();
+  const navMode    = useNavMode((s) => s.mode);
+  const setNavMode = useNavMode((s) => s.setMode);
 
-  const [subView,           setSubView]           = useState<SubView>('main');
-
-  // Collapsible sections
-  // v1.10.3: restrukturisasi — 8 section flat lama (tampilan, biometrik,
-  // keamanan, penyimpanan, backup, kategori, health, info) dikelompokkan
-  // ulang jadi 3 collapsible (keamanan, tampilan, data) + Info Vault
-  // dikeluarkan jadi section statis (bukan collapsible, tidak butuh key
-  // openSections lagi — lihat render-nya di bawah, di luar peta ini).
-  //   - keamanan: Auto-lock, PIN, Biometrik, Kesehatan Password
-  //   - tampilan: Tema, Kategori
-  //   - data:     Auto-save, Pengingat Backup, Export & Import, Sync
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    keamanan: false, tampilan: false, data: false,
-  });
-  const prefersReduced = useReducedMotion();
-  const toggleSection = useCallback((key: string) => {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  }, []);
-  const [showBackup,        setShowBackup]        = useState(false);
-  const [showBioModal,      setShowBioModal]      = useState(false);
-  const [confirmDeleteBio,  setConfirmDeleteBio]  = useState(false);
-
-  // v1.7.0: sama seperti fix di AppShell.tsx — onClose yang stabil mencegah
-  // useFocusTrap di dalam BackupModal re-run efeknya (dan merebut fokus dari
-  // textarea sync manual) setiap kali SettingsView re-render.
-  const handleOpenBackup  = useCallback(() => setShowBackup(true), []);
-  const handleCloseBackup = useCallback(() => setShowBackup(false), []);
+  const [subView,          setSubView]          = useState<'main' | 'categories'>('main');
+  const [sheet,            setSheet]            = useState<Sheet>(null);
+  const [showBackup,       setShowBackup]       = useState(false);
+  const [showBioModal,     setShowBioModal]     = useState(false);
+  const [confirmDeleteBio, setConfirmDeleteBio] = useState(false);
+  const closeSheet  = useCallback(() => setSheet(null), []);
+  const closeBackup = useCallback(() => setShowBackup(false), []);
 
   const isWebAuthnSupported = typeof window !== 'undefined' && !!window.PublicKeyCredential;
-  const hasBioCredential    = typeof window !== 'undefined' && !!lsGet(LS_BIO_CRED_ID);  // F2-07
-
-  const backupOptions = [
-    { value: 0, label: 'Nonaktif' },   { value: 24, label: 'Setiap hari' },
-    { value: 72, label: 'Setiap 3 hari' }, { value: 168, label: 'Setiap minggu' },
-  ];
+  const hasBioCredential    = typeof window !== 'undefined' && !!lsGet(LS_BIO_CRED_ID);
+  const pinOn   = hasPinSetup();
+  const favs    = vault.filter((e) => e.fav).length;
+  const lockLbl = AUTOLOCK_OPTIONS_MIN.find((o) => o.value === autoLockMinutes)?.label ?? '';
+  const backupLbl = BACKUP_OPTIONS.find((o) => o.value === backupIntervalHrs)?.label ?? '';
 
   if (subView === 'categories') return <CategoryManager onClose={() => setSubView('main')} />;
 
   return (
     <>
-      <div className="settings-page">
-        <div className="page-header">
-          {onClose && (
-            <button className="page-header__back" onClick={onClose} aria-label="Kembali ke vault">
-              <ArrowLeft size={18} />
-            </button>
-          )}
-          <h2 className="page-header__title">Pengaturan</h2>
-        </div>
-        <div className="settings-page__body">
-
-          {/* v1.10.3: restrukturisasi Pengaturan — permintaan pengguna:
-              8 section flat lama dikelompokkan jadi 3 collapsible (murni
-              pengelompokan tampilan, mekanisme collapsible/Framer Motion
-              yang sama dipertahankan, bukan diganti struktur menu/submenu
-              2-level). Setiap sub-blok tetap dibungkus .settings-row (atau
-              .settings-row--block untuk yang punya panel anak) agar garis
-              pemisah otomatis dari CSS ".settings-row + .settings-row"
-              tetap berlaku sebagai pemisah visual antar sub-blok. */}
-
-          {/* ── Keamanan: Auto-lock, PIN, Biometrik, Kesehatan Password ──
-              dynamicHeight dipertahankan (sebelumnya hanya untuk PIN) —
-              sekarang WAJIB karena section ini juga berisi HealthCheckPanel,
-              yang punya expand/collapse internal sendiri ("+N masalah
-              lainnya"); height:auto tetap perlu bisa mengikuti kapan pun
-              salah satu dari dua sub-panel ini berubah tinggi. */}
-          <SectionItem skey="keamanan" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Keamanan" badge={AUTOLOCK_OPTIONS_MIN.find((o) => o.value === autoLockMinutes)?.label ?? ""} dynamicHeight>
-            <div className="settings-row">
-              <div className="settings-row__info">
-                <span className="settings-row__label">Auto-lock</span>
-                <span className="settings-row__desc">Kunci otomatis saat tidak aktif</span>
-              </div>
-              <select className="settings-select" value={autoLockMinutes}
-                onChange={(e) => setAutoLock(Number(e.target.value))} aria-label="Pilih waktu auto-lock">
-                {AUTOLOCK_OPTIONS_MIN.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-            </div>
-            <div className="settings-row settings-row--block">
-              <div className="settings-row__info">
-                <span className="settings-row__label">PIN</span>
-                <span className="settings-row__desc">Login cepat dengan kode numerik 4–8 digit</span>
-              </div>
-              <PINSettingsPanel />
-            </div>
-            {isWebAuthnSupported && (
-              <>
-                <div className="settings-row">
-                  <div className="settings-row__info">
-                    <span className="settings-row__label">
-                      <Fingerprint size={14} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
-                      Login Sidik Jari
-                    </span>
-                    <span className="settings-row__desc">
-                      {hasBioCredential
-                        ? biometricEnabled ? "Aktif — buka vault dengan sidik jari" : "Terdaftar tapi nonaktif"
-                        : "Belum didaftarkan"}
-                    </span>
-                  </div>
-                  {hasBioCredential ? (
-                    <Toggle checked={biometricEnabled} onChange={setBiometricEnabled}
-                      label={biometricEnabled ? "Nonaktifkan biometrik" : "Aktifkan biometrik"} />
-                  ) : (
-                    <Button variant="ghost" size="sm" className="settings-row__action"
-                      onClick={() => setShowBioModal(true)} disabled={!masterPw}
-                      title={!masterPw ? "Tidak bisa mendaftarkan — sesi tidak aktif" : undefined}>
-                      Daftarkan
-                    </Button>
-                  )}
-                </div>
-                {hasBioCredential && (
-                  <div className="settings-row">
-                    <div className="settings-row__info">
-                      <span className="settings-row__label">Hapus Registrasi</span>
-                      <span className="settings-row__desc">Hapus data sidik jari dari perangkat ini</span>
-                    </div>
-                    <Button variant="danger" size="sm" className="settings-row__action"
-                      onClick={() => setConfirmDeleteBio(true)}>
-                      Hapus
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-            <div className="settings-row settings-row--block">
-              <div className="settings-row__info">
-                <span className="settings-row__label">Kesehatan Password</span>
-                <span className="settings-row__desc">{vault.length} entri diperiksa</span>
-              </div>
-              <HealthCheckPanel />
-            </div>
-          </SectionItem>
-
-          {/* ── Tampilan: Tema, Kategori ── */}
-          <SectionItem skey="tampilan" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Tampilan" badge={theme === "dark" ? "Gelap" : "Terang"}>
-            <div className="settings-row">
-              <div className="settings-row__info">
-                <span className="settings-row__label">Tema Tampilan</span>
-                <span className="settings-row__desc">Aktif: <strong>{theme === "dark" ? "Gelap" : "Terang"}</strong> — klik untuk mengganti</span>
-              </div>
-              <Button variant="ghost" size="sm" className="settings-row__action" onClick={toggleTheme}
-                leftIcon={theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}>
-                {theme === "dark" ? "Ke Terang" : "Ke Gelap"}
-              </Button>
-            </div>
-            <div className="settings-row">
-              <div className="settings-row__info">
-                <span className="settings-row__label">Kelola Kategori</span>
-                <span className="settings-row__desc">{customCats.length} custom · 8 bawaan</span>
-              </div>
-              <Button variant="ghost" size="sm" className="settings-row__action"
-                onClick={() => setSubView("categories")} leftIcon={<LayoutGrid size={14} />}>
-                Buka
-              </Button>
-            </div>
-          </SectionItem>
-
-          {/* ── Data: Auto-save, Pengingat Backup, Export & Import, Sync ── */}
-          <SectionItem skey="data" openSections={openSections} onToggle={toggleSection} prefersReduced={!!prefersReduced} title="Data" badge={autoSaveEnabled ? "Auto-save Aktif" : "Auto-save Mati"}>
-            <div className="settings-row">
-              <div className="settings-row__info">
-                <span className="settings-row__label">Auto-save</span>
-                <span className="settings-row__desc">Simpan otomatis setiap perubahan</span>
-              </div>
-              <Toggle checked={autoSaveEnabled} onChange={setAutoSave} label="Toggle auto-save" />
-            </div>
-            <div className="settings-row">
-              <div className="settings-row__info">
-                <span className="settings-row__label">Pengingat backup</span>
-                <span className="settings-row__desc">Ingatkan untuk backup secara berkala</span>
-              </div>
-              <select className="settings-select" value={backupIntervalHrs}
-                onChange={(e) => setBackupInterval(Number(e.target.value))} aria-label="Pilih interval backup">
-                {backupOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-            </div>
-            <div className="settings-row">
-              <div className="settings-row__info">
-                <span className="settings-row__label">Export &amp; Import</span>
-                <span className="settings-row__desc">Simpan file .vault atau pulihkan dari backup</span>
-              </div>
-              <Button variant="ghost" size="sm" className="settings-row__action"
-                onClick={handleOpenBackup} leftIcon={<Cloud size={14} />}>
-                Buka
-              </Button>
-            </div>
-            <div className="settings-row">
-              <div className="settings-row__info">
-                <span className="settings-row__label">Sinkron Antar Perangkat</span>
-                <span className="settings-row__desc">Salin teks terenkripsi ke perangkat lain</span>
-              </div>
-              <Button variant="ghost" size="sm" className="settings-row__action"
-                onClick={handleOpenBackup} leftIcon={<Cloud size={14} />}>
-                Buka
-              </Button>
-            </div>
-          </SectionItem>
-
-          {/* ── Info Vault: dikeluarkan dari collapsible, section statis
-              paling bawah (permintaan pengguna eksplisit) — bukan lagi
-              memakai SectionItem/openSections sama sekali. Footer
-              .settings-signature duplikatif (info yang sama, di luar
-              sejak awal) DIHAPUS di bawah karena section statis ini
-              sekarang jadi satu-satunya sumber info versi/enkripsi. ── */}
-          <div className="settings-section settings-section--static">
-            <div className="settings-section__header settings-section__header--static">
-              <span className="settings-section-title">Info Vault</span>
-            </div>
-            <div className="settings-section__body" style={{ overflow: "visible" }}>
-              <div className="settings-info-grid-wrap">
-                <div className="settings-info-grid">
-                  <div className="settings-info-item">
-                    <span className="settings-info-item__val">{vault.length}</span>
-                    <span className="settings-info-item__label">Entri</span>
-                  </div>
-                  <div className="settings-info-item">
-                    <span className="settings-info-item__val">{recycleBin.length}</span>
-                    <span className="settings-info-item__label">Sampah</span>
-                  </div>
-                  <div className="settings-info-item">
-                    <span className="settings-info-item__val">AES-256</span>
-                    <span className="settings-info-item__label">Enkripsi</span>
-                  </div>
-                  <div className="settings-info-item">
-                    <span className="settings-info-item__val">v{APP_VERSION}</span>
-                    <span className="settings-info-item__label">Versi</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div className="st-page">
+        <div className="st-inner">
+          <div className="st-head">
+            {onClose && <button className="st-back" onClick={onClose} aria-label="Kembali ke vault"><ArrowLeft size={19} /></button>}
+            <h2 className="st-title">Pengaturan</h2>
           </div>
 
+          <section className="st-hero" aria-label="Ringkasan keamanan">
+            <div className="st-hero__top">
+              <span className="st-hero__shield"><ShieldCheck size={26} /></span>
+              <div>
+                <div className="st-hero__title">Brankas terlindungi</div>
+                <div className="st-hero__sub">AES-256-GCM · PBKDF2 dua lapis · tanpa server</div>
+              </div>
+            </div>
+            <div className="st-hero__chips">
+              <span className={`st-chip${pinOn ? ' st-chip--ok' : ''}`}><KeyRound size={13} />PIN {pinOn ? 'aktif' : 'belum'}</span>
+              <span className={`st-chip${hasBioCredential && biometricEnabled ? ' st-chip--ok' : ''}`}><Fingerprint size={13} />Biometrik {hasBioCredential ? (biometricEnabled ? 'aktif' : 'mati') : 'belum'}</span>
+              <span className="st-chip st-chip--ok"><Timer size={13} />Auto-lock {lockLbl}</span>
+            </div>
+            <div className="st-hero__stats">
+              <div><b>{vault.length}</b><span>Entri</span></div>
+              <div><b>{favs}</b><span>Favorit</span></div>
+              <div><b>{recycleBin.length}</b><span>Sampah</span></div>
+            </div>
+          </section>
+
+          <Group title="Tampilan">
+            <Row icon={theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />} tone="violet" label="Tema" value={theme === 'dark' ? 'Gelap' : 'Terang'} onClick={() => setSheet('theme')} />
+            <Row icon={<Navigation size={18} />} tone="blue" label="Gaya navigasi" desc="Hanya satu yang tampil" value={NAV_LABEL[navMode]} onClick={() => setSheet('nav')} />
+            <Row icon={<LayoutGrid size={18} />} tone="gold" label="Kategori" value={`${customCats.length + DEFAULT_CATEGORIES.length} kategori`} onClick={() => setSubView('categories')} />
+          </Group>
+
+          <Group title="Keamanan">
+            <Row icon={<Timer size={18} />} tone="gold" label="Kunci otomatis" value={lockLbl} onClick={() => setSheet('lock')} />
+            <Row icon={<KeyRound size={18} />} tone="teal" label="PIN" value={pinOn ? 'Aktif' : 'Belum diatur'} onClick={() => setSheet('pin')} />
+            {isWebAuthnSupported && (hasBioCredential ? (
+              <>
+                <Row icon={<Fingerprint size={18} />} tone="teal" label="Sidik jari" desc="Buka brankas dengan biometrik"
+                  toggle={<Toggle checked={biometricEnabled} onChange={setBiometricEnabled} label={biometricEnabled ? 'Nonaktifkan biometrik' : 'Aktifkan biometrik'} />} />
+                <Row icon={<Trash2 size={18} />} danger label="Hapus registrasi sidik jari" onClick={() => setConfirmDeleteBio(true)} />
+              </>
+            ) : (
+              <Row icon={<Fingerprint size={18} />} tone="teal" label="Sidik jari" value="Belum didaftarkan" onClick={() => { if (masterPw) setShowBioModal(true); }} />
+            ))}
+            <Row icon={<HeartPulse size={18} />} tone="red" label="Kesehatan password" value={`${vault.length} entri`} onClick={() => setSheet('health')} />
+          </Group>
+
+          <Group title="Data & cadangan">
+            <Row icon={<Save size={18} />} tone="teal" label="Simpan otomatis" desc="Simpan setiap ada perubahan"
+              toggle={<Toggle checked={autoSaveEnabled} onChange={setAutoSave} label="Toggle simpan otomatis" />} />
+            <Row icon={<Bell size={18} />} tone="gold" label="Pengingat backup" value={backupLbl} onClick={() => setSheet('backupInt')} />
+            <Row icon={<Cloud size={18} />} tone="blue" label="Cadangan & sinkronisasi" desc="Backup, pulihkan, dan pindah antar perangkat" onClick={() => setShowBackup(true)} />
+          </Group>
+
+          <Group title="Tentang">
+            <Row icon={<Scale size={18} />} tone="violet" label="Atribusi & lisensi" desc="Sumber logo dan lisensi aplikasi" onClick={() => setSheet('attribution')} />
+          </Group>
+
+          <p className="st-foot">{APP_NAME} v{APP_VERSION} · semua data tersimpan di perangkat ini</p>
         </div>
       </div>
 
-      {showBackup && <BackupModal onClose={handleCloseBackup} />}
-      {showBioModal && (
-        <BiometricHintModal mode="register" masterPw={masterPw} onClose={() => setShowBioModal(false)} />
-      )}
+      <OptionSheet open={sheet === 'theme'} title="Tema" value={theme} onClose={closeSheet} onSelect={(id) => setTheme(id as 'dark' | 'light')}
+        options={[{ id: 'dark', label: 'Gelap', icon: <Moon size={20} /> }, { id: 'light', label: 'Terang', icon: <Sun size={20} /> }]} />
+      <OptionSheet open={sheet === 'nav'} title="Gaya navigasi" value={navMode} onClose={closeSheet} onSelect={(id) => setNavMode(id as NavMode)}
+        options={[{ id: 'bottom', label: 'Bar bawah', hint: 'Menu di bagian bawah layar, tombol tambah di tengah' }, { id: 'sidebar', label: 'Sidebar', hint: 'Menu geser dari kiri lewat tombol di header' }]} />
+      <OptionSheet open={sheet === 'lock'} title="Kunci otomatis" value={String(autoLockMinutes)} onClose={closeSheet} onSelect={(id) => setAutoLock(Number(id))}
+        options={AUTOLOCK_OPTIONS_MIN.map((o) => ({ id: String(o.value), label: o.label }))} />
+      <OptionSheet open={sheet === 'backupInt'} title="Pengingat backup" value={String(backupIntervalHrs)} onClose={closeSheet} onSelect={(id) => setBackupInterval(Number(id))}
+        options={BACKUP_OPTIONS.map((o) => ({ id: String(o.value), label: o.label }))} />
 
-      {/* ── Confirm: Hapus Registrasi Biometrik ── */}
+      {sheet === 'pin' && <PanelSheet title="PIN" icon={<KeyRound size={18} />} onClose={closeSheet}><PINSettingsPanel /></PanelSheet>}
+      {sheet === 'health' && <PanelSheet title="Kesehatan password" icon={<HeartPulse size={18} />} onClose={closeSheet}><HealthCheckPanel /></PanelSheet>}
+      {sheet === 'attribution' && <PanelSheet title="Atribusi & lisensi" icon={<Scale size={18} />} onClose={closeSheet}><AttributionPanel /></PanelSheet>}
+      {showBackup && <BackupModal onClose={closeBackup} />}
+      {showBioModal && <BiometricHintModal mode="register" masterPw={masterPw} onClose={() => setShowBioModal(false)} />}
       <ConfirmDialog
         open={confirmDeleteBio}
         onCancel={() => setConfirmDeleteBio(false)}
-        onConfirm={() => {
-          setBiometricEnabled(false);
-          setBiometricCredId(null);
-          clearBioSession();
-          setConfirmDeleteBio(false);
-        }}
+        onConfirm={() => { setBiometricEnabled(false); setBiometricCredId(null); clearBioSession(); setConfirmDeleteBio(false); }}
         title="Hapus Registrasi Biometrik?"
         message="Data sidik jari akan dihapus dari perangkat ini. Login biometrik tidak bisa digunakan sebelum didaftarkan ulang."
         confirmLabel="Hapus Registrasi"
         variant="danger"
       />
-
     </>
   );
 }

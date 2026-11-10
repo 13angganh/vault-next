@@ -7,12 +7,14 @@ import { useRipple }            from '@/lib/hooks/useRipple';
 import { AutoLockManager }      from '@/components/shell/AutoLockManager';
 import { Sidebar }              from '@/components/shell/Sidebar';
 import { Header }               from '@/components/shell/Header';
+import { BottomNav }            from '@/components/shell/BottomNav';
 import { VaultListView }        from '@/components/vault/VaultListView';
 import type { VaultListViewRef } from '@/components/vault/VaultListView';
 import { SettingsView }         from '@/components/settings/SettingsView';
 import { BackupReminderModal }  from '@/components/settings/BackupReminderModal';
 import { BackupModal }          from '@/components/settings/BackupModal';
 import { useAppStore }          from '@/lib/store/appStore';
+import { useNavMode }           from '@/lib/navMode';
 import { APP_NAME }             from '@/lib/constants';
 
 type ShellView = 'vault' | 'settings';
@@ -24,6 +26,7 @@ export function AppShell() {
   const [swUpdate,    setSwUpdate]    = useState(false);
   const vaultListRef = useRef<VaultListViewRef>(null);
 
+  const navMode = useNavMode((s) => s.mode);
   const autoLockMinutes = useAppStore((s) => s.autoLockMinutes);
   const lastActivityAt  = useAppStore((s) => s.lastActivityAt);
   const setFilter       = useAppStore((s) => s.setFilter);
@@ -128,7 +131,7 @@ export function AppShell() {
 
   return (
     <motion.div
-      className="app-shell"
+      className="app-shell" data-nav={navMode}
       initial={prefersReduced ? false : { opacity: 0, y: 6 }}
       animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
       transition={{ duration: DUR.expand, ease: EASE.out }}
@@ -158,17 +161,20 @@ export function AppShell() {
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         sidebarOpen={sidebarOpen}
         activeView={viewTitle}
+        navMode={navMode}
         autoLockMinutes={autoLockMinutes}
         lastActivityAt={lastActivityAt}
       />
 
       {/* Sidebar overlay */}
-      <Sidebar
+      {navMode === 'sidebar' && (
+        <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onSettingsClick={handleNavSettings}
         onNavVault={() => setShellView('vault')}
       />
+      )}
 
       {/* Konten utama — HARUS scrollable */}
       <main className="app-main" id="main-content" tabIndex={-1}>
@@ -184,6 +190,9 @@ export function AppShell() {
         )}
       </main>
 
+      {navMode === 'bottom' && (
+        <BottomNav shellView={shellView} onVault={() => setShellView('vault')} onSettings={handleNavSettings} onAdd={handleAddEntry} />
+      )}
       <BackupReminderModal onOpenBackup={handleOpenBackup} />
       {showBackup && <BackupModal onClose={handleCloseBackup} />}
     </motion.div>

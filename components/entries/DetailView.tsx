@@ -19,7 +19,7 @@ import { useState, useEffect } from 'react';
 import { X, Star, Lock, Unlock, Eye, EyeOff, Copy, Pencil, Trash2 } from 'lucide-react';
 import { useAppStore }       from '@/lib/store/appStore';
 import { saveVault }          from '@/lib/vaultService';
-import { CategoryIcon }       from '@/components/entries/CategoryIcon';
+import { EntryIcon }          from '@/components/entries/EntryIcon';
 import { ConfirmDialog }      from '@/components/ui/primitives';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
 import type { VaultEntry }    from '@/lib/types';
@@ -249,7 +249,8 @@ export function DetailView({ entry, onClose, onEdit, onCopy }: DetailViewProps) 
 
         {/* Header */}
         <div className="detail-header">
-          <CategoryIcon catId={entry.cat} customCats={customCats} size="lg" />
+          {/* v1.11.0: EntryIcon — lihat catatan yang sama di EntryCard.tsx */}
+          <EntryIcon entry={entry} customCats={customCats} size="lg" />
           <div className="detail-header__info">
             <h2 className="detail-header__name">{entry.name}</h2>
             <span className="detail-header__cat">{catInfo.label}</span>

@@ -9,6 +9,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAppStore }          from '@/lib/store/appStore';
 import { lsSet, lsGetNum, LS_BACKUP, LS_BKPDISM, LS_BKPIVL } from '@/lib/storage';
 import { useFocusTrap }         from '@/lib/hooks/useFocusTrap';
+import { DatabaseBackup }       from 'lucide-react';
 import { Button }               from '@/components/ui/primitives';
 
 interface BackupReminderModalProps {
@@ -60,7 +61,7 @@ export function BackupReminderModal({ onOpenBackup }: BackupReminderModalProps) 
     : new Date(lastBackupTs).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="modal-overlay backup-reminder-overlay" style={{ zIndex: 9999 }} onClick={handleDismiss}>
+    <div className="modal-overlay backup-reminder-overlay" style={{ zIndex: 'var(--z-top)' }} onClick={handleDismiss}>
       <div
         ref={trapRef}
         className="modal backup-reminder-modal"
@@ -70,11 +71,13 @@ export function BackupReminderModal({ onOpenBackup }: BackupReminderModalProps) 
         aria-describedby="backup-reminder-desc"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* v2.0.0 (Tahap 3): hero ikon; deskripsi tidak lagi memakai opacity inline (kontras < 4,5:1) */}
+        <span className="backup-reminder__hero" aria-hidden="true"><DatabaseBackup size={30} /></span>
         <h3 className="backup-reminder__title" id="backup-reminder-title">Sudah waktunya backup!</h3>
         <p className="backup-reminder__desc" id="backup-reminder-desc">
           Backup terakhir: <strong>{lastBackupStr}</strong>
         </p>
-        <p className="backup-reminder__desc" style={{ fontSize: 'var(--text-sm)', opacity: 0.7, marginTop: 4 }}>
+        <p className="backup-reminder__desc backup-reminder__hint">
           Backup rutin melindungi data kamu dari kehilangan yang tidak terduga.
         </p>
         <div className="backup-reminder__actions">

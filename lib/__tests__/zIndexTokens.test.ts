@@ -36,7 +36,8 @@ describe('Z-index tokens — semua terdefinisi dengan nilai numerik valid (v1.9.
   it.each(Object.keys(zIndex))(
     '--z-%s ada di tokens.css dengan nilai numerik yang sama dengan lib/design-tokens.ts',
     (key) => {
-      const re = new RegExp(`--z-${key}:\\s*([0-9]+);`);
+      // v2.0.0 (Tahap 2): token --z-behind bernilai -1, jadi pola menerima tanda minus.
+      const re = new RegExp(`--z-${key}:\\s*(-?[0-9]+);`);
       const match = tokensCss.match(re);
       expect(match, `--z-${key} tidak ditemukan di styles/tokens.css`).not.toBeNull();
       const cssValue = Number(match?.[1]);

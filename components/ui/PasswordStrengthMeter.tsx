@@ -38,8 +38,11 @@ export function calcStrength(pw: string): StrengthResult {
   else if (len < 8 || types < 2)           level = 2;
   else if (len < 8 && types >= 2)          level = 3;
   else if (len >= 8  && types === 2)       level = 3;
-  else if (len >= 8  && types === 3)       level = 4;
+  // v2.0.0 (Tahap 4): BUG FIX — urutan dua cabang ini dulu terbalik (>= 8 dicek sebelum
+  // >= 10), sehingga level 5 "Kuat" (>= 10 char, 3 tipe) TIDAK PERNAH tercapai: password 10+
+  // char dengan 3 tipe selalu tampil "Sedang". Ditemukan saat menulis test (bug sejak v1.x).
   else if (len >= 10 && types === 3)       level = 5;
+  else if (len >= 8  && types === 3)       level = 4;
   else if (len >= 12 && types === 4)       level = 6;
   else                                     level = 4;
 

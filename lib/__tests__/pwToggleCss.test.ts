@@ -57,8 +57,17 @@ describe('form-pw-toggle & btn-icon:active — CSS transform tidak boleh konflik
   });
 
   it('.form-pw-toggle memakai margin-top untuk positioning vertikal (pengganti translateY)', () => {
+    // v2.0.0 (Tahap 3): tombol mata naik 32px -> 44px (standar target sentuh >= 44px), sehingga nilainya
+    // tidak lagi dikunci -16px; intinya tetap: margin-top = -(tinggi / 2) (setara translateY(-50%)).
     const body = extractRuleBody(entriesCss, '.form-pw-toggle');
-    expect(body).toMatch(/margin-top\s*:\s*-16px/);
+    const h  = body.match(/\bheight\s*:\s*(\d+)px/);
+    const mt = body.match(/margin-top\s*:\s*-(\d+)px/);
+    expect(h).not.toBeNull();
+    expect(mt).not.toBeNull();
+    const hv = Number(h?.[1]);
+    const mv = Number(mt?.[1]);
+    expect(mv).toBe(hv / 2);
+    expect(hv).toBeGreaterThanOrEqual(44);
   });
 
   it('.btn-icon:active mendeklarasikan transition untuk transform (bukan cuma color/background)', () => {

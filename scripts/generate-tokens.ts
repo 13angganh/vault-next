@@ -72,13 +72,7 @@ ${px(radius, 'radius')}
   --modal-width-sm:  ${layout.modalWidthSm};
 
   /* Z-Index Scale */
-  --z-sticky:   ${zIndex.sticky};
-  --z-content:  ${zIndex.content};
-  --z-dropdown: ${zIndex.dropdown};
-  --z-sidebar:  ${zIndex.sidebar};
-  --z-modal:    ${zIndex.modal};
-  --z-toast:    ${zIndex.toast};
-  --z-top:      ${zIndex.top};
+${Object.entries(zIndex).map(([k, v]) => `  --z-${k}: ${v};`).join('\n')}
 }
 `;
 

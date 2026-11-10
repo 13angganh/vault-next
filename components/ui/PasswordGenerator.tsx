@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Button } from '@/components/ui/primitives';
+import { Button, Toggle } from '@/components/ui/primitives';
 import { Copy, Check, X, RotateCw } from 'lucide-react';
 import { PasswordStrengthMeter } from '@/components/ui/PasswordStrengthMeter';
 
@@ -96,7 +96,7 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
             whileTap={prefersReduced ? {} : { scale: 0.88 }}
             transition={{ duration: 0.12 }}
           >
-            <X size={14} />
+            <X size={18} />
           </motion.button>
         )}
       </div>
@@ -112,7 +112,7 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
           whileTap={prefersReduced ? {} : { scale: 0.88 }}
           transition={{ duration: 0.12 }}
         >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? <Check size={18} /> : <Copy size={18} />}
         </motion.button>
         <motion.button
           className="pw-gen__regen btn-icon"
@@ -122,7 +122,7 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
           whileTap={prefersReduced ? {} : { scale: 0.88, rotate: -45 }}
           transition={{ duration: 0.15 }}
         >
-          <RotateCw size={14} />
+          <RotateCw size={18} />
         </motion.button>
       </div>
 
@@ -154,12 +154,8 @@ export function PasswordGenerator({ onUse, onClose }: PasswordGeneratorProps) {
         ].map(({ label, value, set }) => (
           <label key={label} className="pw-gen__toggle-row">
             <span>{label}</span>
-            <button
-              role="switch"
-              aria-checked={value}
-              className={`settings-toggle ${value ? 'settings-toggle--on' : ''}`}
-              onClick={() => set(!value)}
-            />
+            {/* v2.0.0 (Tahap 3): memakai Toggle primitif — sebelumnya <button> mentah tanpa knob */}
+            <Toggle checked={value} onChange={set} label={label} />
           </label>
         ))}
       </div>

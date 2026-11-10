@@ -17,12 +17,39 @@
  * 3. Fokus TIDAK hilang dari input saat toggle diklik saat sedang aktif
  *    fokus di situ — memverifikasi onMouseDown preventDefault (fix v1.6.3).
  * 4. Value yang sedang diketik tidak berubah/hilang akibat toggle.
+ *
+ * v2.0.0 (Tahap 4): form dirombak — kategori TIDAK lagi deretan chip
+ * bertitle yang digeser, melainkan satu tombol pemilih yang membuka
+ * OptionSheet ("Pilih kategori", role=listbox/option). Semua test yang
+ * dulu memilih kategori lewat getByTitle() kini memakai helper
+ * pilihKategori() — MAKSUD tiap test (2FA Email, field multi, Bank,
+ * multi-jaringan Crypto, anti data-loss) tidak berubah. Tombol simpan
+ * kini berlabel "Tambah entri" (huruf kecil). Grup terakhir file ini
+ * menguji pemilih kategori v2 itu sendiri.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { EntryForm } from '../EntryForm';
 import { useAppStore } from '@/lib/store/appStore';
+import { DEFAULT_CATEGORIES } from '@/lib/types';
+
+/**
+ * Tombol pemilih kategori v2 = satu-satunya tombol ber-aria-haspopup="dialog"
+ * di form (tombol logo brand TIDAK memakainya). Dicari lewat atribut a11y itu,
+ * bukan lewat class CSS, supaya test tahan terhadap perubahan gaya.
+ */
+function pemilihKategori(): HTMLElement {
+  const picker = screen.getAllByRole('button').find((b) => b.getAttribute('aria-haspopup') === 'dialog');
+  if (!picker) throw new Error('Tombol pemilih kategori (aria-haspopup="dialog") tidak ditemukan');
+  return picker;
+}
+
+/** Buka sheet "Pilih kategori" lalu ketuk opsi dengan nama `label`. */
+function pilihKategori(label: string) {
+  fireEvent.click(pemilihKategori());
+  fireEvent.click(screen.getByRole('option', { name: label }));
+}
 
 beforeEach(() => {
   // Reset store ke kondisi minimal yang valid — EntryForm langganan
@@ -116,13 +143,13 @@ describe('EntryForm — Verifikasi 2 Langkah kategori Email (v1.10.0)', () => {
 
   it('section Verifikasi 2 Langkah muncul setelah pindah ke kategori Email', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     expect(screen.getByText('Verifikasi 2 Langkah')).toBeInTheDocument();
   });
 
   it('field pemulihan & kode cadangan tersembunyi sampai toggle 2FA diaktifkan', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
 
     expect(screen.queryByLabelText('Nomor Telepon Pemulihan')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Email Pemulihan')).not.toBeInTheDocument();
@@ -137,7 +164,7 @@ describe('EntryForm — Verifikasi 2 Langkah kategori Email (v1.10.0)', () => {
 
   it('mode grid kode cadangan menampilkan tepat 10 kotak input bernomor 1–10', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     for (let i = 1; i <= 10; i++) {
@@ -150,7 +177,7 @@ describe('EntryForm — Verifikasi 2 Langkah kategori Email (v1.10.0)', () => {
 
   it('mengetik di kotak kode cadangan ke-1 hanya mengubah kotak itu, bukan kotak lain', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     const kode1 = screen.getByPlaceholderText('kode 1') as HTMLInputElement;
@@ -163,7 +190,7 @@ describe('EntryForm — Verifikasi 2 Langkah kategori Email (v1.10.0)', () => {
 
   it('beralih ke mode Teks lalu kembali ke Per Kode mempertahankan isi kode', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     fireEvent.change(screen.getByPlaceholderText('kode 1'), { target: { value: 'KODE-SATU' } });
@@ -180,7 +207,7 @@ describe('EntryForm — Verifikasi 2 Langkah kategori Email (v1.10.0)', () => {
 
   it('mengetik di mode Teks lalu blur mem-parsing ke kode-kode terpisah (pemisah baris ATAU spasi)', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
     fireEvent.click(screen.getByText('Teks'));
 
@@ -196,7 +223,7 @@ describe('EntryForm — Verifikasi 2 Langkah kategori Email (v1.10.0)', () => {
 
   it('mematikan toggle menyembunyikan field pemulihan & kode cadangan lagi', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
     expect(screen.getByLabelText('Nomor Telepon Pemulihan')).toBeInTheDocument();
 
@@ -206,23 +233,23 @@ describe('EntryForm — Verifikasi 2 Langkah kategori Email (v1.10.0)', () => {
 
   it('pindah dari Email ke kategori lain lalu balik ke Email mereset toggle & kode (tidak menempel)', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
     fireEvent.change(screen.getByPlaceholderText('kode 1'), { target: { value: 'AKAN-HILANG' } });
 
     // Kode cadangan yang sudah diisi membuat hasFilledFields() true, jadi
     // ganti kategori memicu dialog konfirmasi "Ganti Kategori?" — perlu
     // dikonfirmasi dulu sebelum doCatChange benar-benar berjalan.
-    fireEvent.click(screen.getByTitle('Sosmed'));
+    pilihKategori('Sosmed');
     fireEvent.click(screen.getByText('Ganti Kategori'));
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
 
     expect(screen.queryByLabelText('Nomor Telepon Pemulihan')).not.toBeInTheDocument();
   });
 
   it('kategori Email TIDAK menampilkan section Seed Phrase (khusus crypto)', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     expect(screen.queryByText(/Seed Phrase/)).not.toBeInTheDocument();
   });
 });
@@ -258,14 +285,14 @@ describe('EntryForm — Field kustom tipe "multi" (v1.10.1)', () => {
 
   it('field bertipe multi muncul dengan label dan jumlah isian yang benar', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Toko'));
+    pilihKategori('Toko');
 
     expect(screen.getByText('Kode Akses (5 isian)')).toBeInTheDocument();
   });
 
   it('mode grid menampilkan tepat sejumlah multiCount kotak input, bukan 10 default', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Toko'));
+    pilihKategori('Toko');
 
     for (let i = 1; i <= 5; i++) {
       expect(screen.getByPlaceholderText(`isian ${i}`)).toBeInTheDocument();
@@ -278,7 +305,7 @@ describe('EntryForm — Field kustom tipe "multi" (v1.10.1)', () => {
 
   it('mengetik di satu kotak hanya mengubah kotak itu, tidak memengaruhi kotak lain', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Toko'));
+    pilihKategori('Toko');
 
     const isian1 = screen.getByPlaceholderText('isian 1') as HTMLInputElement;
     const isian2 = screen.getByPlaceholderText('isian 2') as HTMLInputElement;
@@ -290,7 +317,7 @@ describe('EntryForm — Field kustom tipe "multi" (v1.10.1)', () => {
 
   it('beralih ke mode Teks lalu kembali ke Per Isian mempertahankan isi', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Toko'));
+    pilihKategori('Toko');
 
     fireEvent.change(screen.getByPlaceholderText('isian 1'), { target: { value: 'SATU' } });
     fireEvent.change(screen.getByPlaceholderText('isian 2'), { target: { value: 'DUA' } });
@@ -306,7 +333,7 @@ describe('EntryForm — Field kustom tipe "multi" (v1.10.1)', () => {
 
   it('mengetik di mode Teks lalu blur mem-parsing ke isian terpisah (pemisah baris ATAU spasi)', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Toko'));
+    pilihKategori('Toko');
     fireEvent.click(screen.getByText('Teks'));
 
     const textarea = screen.getByPlaceholderText(/^isian1/) as HTMLTextAreaElement;
@@ -321,12 +348,12 @@ describe('EntryForm — Field kustom tipe "multi" (v1.10.1)', () => {
 
   it('field multi milik kategori LAIN tidak menempel — pindah kategori mereset field multi', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Toko'));
+    pilihKategori('Toko');
     fireEvent.change(screen.getByPlaceholderText('isian 1'), { target: { value: 'AKAN-HILANG' } });
 
-    fireEvent.click(screen.getByTitle('Sosmed'));
+    pilihKategori('Sosmed');
     fireEvent.click(screen.getByText('Ganti Kategori'));
-    fireEvent.click(screen.getByTitle('Toko'));
+    pilihKategori('Toko');
 
     expect((screen.getByPlaceholderText('isian 1') as HTMLInputElement).value).toBe('');
   });
@@ -343,7 +370,7 @@ describe('EntryForm — Field kustom tipe "multi" (v1.10.1)', () => {
 describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', () => {
   it('kelima opsi baru muncul setelah toggle Verifikasi 2 Langkah diaktifkan', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     expect(screen.getByLabelText('Video Selfie')).toBeInTheDocument();
@@ -355,7 +382,7 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
 
   it('nomor telepon verifikasi 2 langkah (opsi 5) TERPISAH dari nomor telepon pemulihan — mengisi satu tidak mengisi yang lain', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     const pemulihan = screen.getByLabelText('Nomor Telepon Pemulihan') as HTMLInputElement;
@@ -378,7 +405,7 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
    */
   it('label Video Selfie, Authenticator App, dan Perintah Google tampil sebagai teks visual (bukan cuma aria-label)', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     expect(screen.getByText('Video Selfie')).toBeInTheDocument();
@@ -388,7 +415,7 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
 
   it('toggle Video Selfie, Authenticator App, dan Perintah Google independen satu sama lain', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     fireEvent.click(screen.getByLabelText('Video Selfie'));
@@ -400,7 +427,7 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
 
   it('field Merk & Tipe HP TIDAK muncul sebelum toggle Perintah Google diaktifkan', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     expect(screen.queryByPlaceholderText(/Merk & tipe HP/)).not.toBeInTheDocument();
@@ -408,7 +435,7 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
 
   it('mengaktifkan toggle Perintah Google menampilkan field Merk & Tipe HP', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
     fireEvent.click(screen.getByLabelText('Perintah Google'));
 
@@ -417,7 +444,7 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
 
   it('mematikan toggle Perintah Google menyembunyikan field Merk & Tipe HP lagi', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
     fireEvent.click(screen.getByLabelText('Perintah Google'));
     fireEvent.change(screen.getByPlaceholderText(/Merk & tipe HP/), { target: { value: 'Samsung Galaxy S24' } });
@@ -429,7 +456,7 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
 
   it('mengetik di Kunci Sandi & Kunci Keamanan tidak memengaruhi field 2FA lain', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     const kunciKeamanan = screen.getByLabelText('Kunci Sandi & Kunci Keamanan') as HTMLInputElement;
@@ -441,13 +468,13 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
 
   it('pindah kategori dari Email lalu balik lagi mereset ketiga toggle baru (tidak menempel)', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
     fireEvent.click(screen.getByLabelText('Video Selfie'));
     fireEvent.click(screen.getByLabelText('Authenticator App'));
 
-    fireEvent.click(screen.getByTitle('Sosmed'));
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Sosmed');
+    pilihKategori('Email');
     fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
 
     expect(screen.getByLabelText('Video Selfie')).not.toBeChecked();
@@ -463,7 +490,7 @@ describe('EntryForm — Perluasan Verifikasi 2 Langkah, 5 opsi baru (v1.10.2)', 
 describe('EntryForm — Kategori Bank: Username & No. Rekening terpisah (v1.10.2)', () => {
   it('field "Username" dan "No. Rekening" muncul sebagai dua field terpisah, bukan gabungan', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Bank'));
+    pilihKategori('Bank');
 
     expect(screen.getByLabelText('Username')).toBeInTheDocument();
     expect(screen.getByLabelText('No. Rekening')).toBeInTheDocument();
@@ -472,7 +499,7 @@ describe('EntryForm — Kategori Bank: Username & No. Rekening terpisah (v1.10.2
 
   it('mengisi Username tidak memengaruhi No. Rekening, dan sebaliknya', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Bank'));
+    pilihKategori('Bank');
 
     const username = screen.getByLabelText('Username') as HTMLInputElement;
     const noRek = screen.getByLabelText('No. Rekening') as HTMLInputElement;
@@ -513,20 +540,20 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('kategori Crypto TIDAK menampilkan section jaringan sama sekali untuk kategori lain', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Email'));
+    pilihKategori('Email');
     expect(screen.queryByText('Jaringan & Alamat Wallet')).not.toBeInTheDocument();
   });
 
   it('awalnya tidak ada kartu jaringan sama sekali (entri baru)', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     expect(screen.getByText('Jaringan & Alamat Wallet')).toBeInTheDocument();
     expect(screen.queryByText('Pilih jaringan…')).not.toBeInTheDocument();
   });
 
   it('klik "Tambah Jaringan" menampilkan satu kartu jaringan baru dengan satu baris alamat kosong', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
 
     expect(screen.getByText('Pilih jaringan…')).toBeInTheDocument();
@@ -535,7 +562,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('klik "Tambah Jaringan" dua kali menampilkan dua kartu jaringan independen', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
     fireEvent.click(screen.getByText('Tambah Jaringan'));
 
@@ -544,7 +571,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('dropdown jaringan menampilkan 3 default (BTC, EVM, Solana) dan memilih salah satunya mengisi nama jaringan', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
     fireEvent.click(screen.getByText('Pilih jaringan…'));
 
@@ -559,7 +586,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('klik "+ Tambah Alamat" menambah baris alamat baru pada kartu jaringan yang sama', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
 
     expect(screen.queryByPlaceholderText('Alamat 2')).not.toBeInTheDocument();
@@ -569,7 +596,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('mengisi alamat pertama tidak memengaruhi alamat kedua, dan sebaliknya', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
     fireEvent.click(screen.getByText('Tambah Alamat'));
 
@@ -587,7 +614,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('tombol hapus alamat TIDAK muncul saat hanya ada satu alamat (mencegah kartu jaringan tanpa baris alamat sama sekali)', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
 
     expect(screen.queryByLabelText('Hapus alamat 1')).not.toBeInTheDocument();
@@ -595,7 +622,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('tombol hapus alamat muncul dan berfungsi saat ada lebih dari satu alamat', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
     fireEvent.click(screen.getByText('Tambah Alamat'));
     fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'addr-satu' } });
@@ -612,7 +639,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('klik tombol hapus jaringan pada kartu menghapus kartu itu saja, kartu jaringan lain tidak terpengaruh', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
     fireEvent.click(screen.getByText('Pilih jaringan…'));
     fireEvent.click(screen.getByText('BTC'));
@@ -631,7 +658,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('menambah jaringan custom baru via "+ Tambah jaringan baru" tersimpan ke store dan muncul di dropdown entri Crypto lain berikutnya', () => {
     const { unmount } = render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
     fireEvent.click(screen.getByText('Pilih jaringan…'));
     fireEvent.click(screen.getByText('Tambah jaringan baru'));
@@ -650,7 +677,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
     // Render form BARU (entri Crypto lain) — "Base" harus sudah muncul
     // di dropdown tanpa perlu ditambahkan ulang.
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
     fireEvent.click(screen.getByText('Pilih jaringan…'));
     expect(screen.getByText('Base')).toBeInTheDocument();
@@ -658,7 +685,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
   it('menambah nama jaringan yang sudah ada (case-insensitive) TIDAK membuat duplikat di store', () => {
     render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-    fireEvent.click(screen.getByTitle('Crypto'));
+    pilihKategori('Crypto');
     fireEvent.click(screen.getByText('Tambah Jaringan'));
     fireEvent.click(screen.getByText('Pilih jaringan…'));
     fireEvent.click(screen.getByText('Tambah jaringan baru'));
@@ -695,13 +722,13 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
     it('walletNetworks TIDAK disertakan sama sekali di payload saat tidak ada jaringan diisi', async () => {
       const onSaved = vi.fn();
       render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
-      fireEvent.click(screen.getByTitle('Crypto'));
+      pilihKategori('Crypto');
       fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Kosong' } });
       // Isi field lama (network) supaya hasFilledFields() true tanpa
       // perlu walletNetworks — memverifikasi walletNetworks murni
       // opsional, tidak wajib ada untuk bisa save.
       fireEvent.change(screen.getByLabelText('Jaringan (Network)'), { target: { value: 'Ethereum' } });
-      fireEvent.click(screen.getByText('Tambah Entri'));
+      fireEvent.click(screen.getByText('Tambah entri'));
 
       await waitFor(() => expect(onSaved).toHaveBeenCalled());
       const saved = onSaved.mock.calls[0][0];
@@ -712,14 +739,14 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
     it('baris alamat kosong dibuang dari payload saat save (hanya alamat terisi yang tersimpan)', async () => {
       const onSaved = vi.fn();
       render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
-      fireEvent.click(screen.getByTitle('Crypto'));
+      pilihKategori('Crypto');
       fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Solana' } });
       fireEvent.click(screen.getByText('Tambah Jaringan'));
       fireEvent.click(screen.getByText('Pilih jaringan…'));
       fireEvent.click(screen.getByText('Solana'));
       fireEvent.click(screen.getByText('Tambah Alamat')); // baris kedua, sengaja dibiarkan kosong
       fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'sol-addr-1' } });
-      fireEvent.click(screen.getByText('Tambah Entri'));
+      fireEvent.click(screen.getByText('Tambah entri'));
 
       await waitFor(() => expect(onSaved).toHaveBeenCalled());
       const saved = onSaved.mock.calls[0][0];
@@ -731,7 +758,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
     it('jaringan yang semua alamatnya kosong dibuang seluruhnya dari payload (tidak menyisakan kartu kosong)', async () => {
       const onSaved = vi.fn();
       render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
-      fireEvent.click(screen.getByTitle('Crypto'));
+      pilihKategori('Crypto');
       fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Campuran' } });
       // Jaringan pertama: diisi
       fireEvent.click(screen.getByText('Tambah Jaringan'));
@@ -744,7 +771,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
       fireEvent.click(screen.getByText('Pilih jaringan…'));
       fireEvent.click(screen.getByText('Solana'));
 
-      fireEvent.click(screen.getByText('Tambah Entri'));
+      fireEvent.click(screen.getByText('Tambah entri'));
 
       await waitFor(() => expect(onSaved).toHaveBeenCalled());
       const saved = onSaved.mock.calls[0][0];
@@ -755,7 +782,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
     it('bisa save dengan LEBIH DARI SATU alamat pada jaringan yang SAMA (satu seed, beberapa alamat)', async () => {
       const onSaved = vi.fn();
       render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
-      fireEvent.click(screen.getByTitle('Crypto'));
+      pilihKategori('Crypto');
       fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Multi-Alamat' } });
       fireEvent.click(screen.getByText('Tambah Jaringan'));
       fireEvent.click(screen.getByText('Pilih jaringan…'));
@@ -763,7 +790,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
       fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'sol-addr-1' } });
       fireEvent.click(screen.getByText('Tambah Alamat'));
       fireEvent.change(screen.getByPlaceholderText('Alamat 2'), { target: { value: 'sol-addr-2' } });
-      fireEvent.click(screen.getByText('Tambah Entri'));
+      fireEvent.click(screen.getByText('Tambah entri'));
 
       await waitFor(() => expect(onSaved).toHaveBeenCalled());
       const saved = onSaved.mock.calls[0][0];
@@ -774,7 +801,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
     it('field lama network/walletAddr/walletPw TETAP tersimpan normal bersamaan dengan walletNetworks baru, tidak saling menimpa', async () => {
       const onSaved = vi.fn();
       render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
-      fireEvent.click(screen.getByTitle('Crypto'));
+      pilihKategori('Crypto');
       fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Wallet Campuran Lama Baru' } });
       fireEvent.change(screen.getByLabelText('Jaringan (Network)'), { target: { value: 'Ethereum Lama' } });
       fireEvent.change(screen.getByLabelText('Alamat Wallet'), { target: { value: '0xLamaAlamat' } });
@@ -782,7 +809,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
       fireEvent.click(screen.getByText('Pilih jaringan…'));
       fireEvent.click(screen.getByText('Solana'));
       fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'sol-addr-baru' } });
-      fireEvent.click(screen.getByText('Tambah Entri'));
+      fireEvent.click(screen.getByText('Tambah entri'));
 
       await waitFor(() => expect(onSaved).toHaveBeenCalled());
       const saved = onSaved.mock.calls[0][0];
@@ -815,11 +842,11 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
     it('mengisi HANYA alamat wallet (tanpa field lain) langsung ter-save tanpa dialog konfirmasi "Simpan Entri Tanpa Data?"', async () => {
       const onSaved = vi.fn();
       render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
-      fireEvent.click(screen.getByTitle('Crypto'));
+      pilihKategori('Crypto');
       fireEvent.change(screen.getByLabelText(/^Nama/), { target: { value: 'Hanya Alamat' } });
       fireEvent.click(screen.getByText('Tambah Jaringan'));
       fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'addr-saja' } });
-      fireEvent.click(screen.getByText('Tambah Entri'));
+      fireEvent.click(screen.getByText('Tambah entri'));
 
       // Dialog "Simpan Entri Tanpa Data?" TIDAK boleh muncul — kalau
       // hasFilledFields() regresi (lupa cek walletNetworks lagi), test
@@ -832,13 +859,13 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
 
     it('pindah dari Crypto ke kategori lain lalu balik lagi ke Crypto MENGOSONGKAN jaringan yang sudah diisi sebelumnya', async () => {
       render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
-      fireEvent.click(screen.getByTitle('Crypto'));
+      pilihKategori('Crypto');
       fireEvent.click(screen.getByText('Tambah Jaringan'));
       fireEvent.change(screen.getByPlaceholderText('Alamat 1'), { target: { value: 'addr-yang-harus-hilang' } });
 
       // hasFilledFields() true (alamat terisi) → pindah kategori memicu
       // dialog konfirmasi "Ganti Kategori?" — perlu dikonfirmasi dulu.
-      fireEvent.click(screen.getByTitle('Sosmed'));
+      pilihKategori('Sosmed');
       fireEvent.click(screen.getByText('Ganti Kategori'));
       // Tunggu dialog benar-benar selesai unmount sebelum lanjut — tanpa
       // ini, sisa render AnimatePresence dari dialog ini bisa membuat
@@ -854,7 +881,7 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
       // Klik balik ke Crypto. Kalau doCatChange BENAR mereset
       // walletNetworks (fix bekerja), hasFilledFields() sudah false,
       // maka pindah kategori terjadi LANGSUNG tanpa dialog apa pun.
-      fireEvent.click(screen.getByTitle('Crypto'));
+      pilihKategori('Crypto');
 
       await waitFor(() => {
         expect(screen.getByText('Jaringan & Alamat Wallet')).toBeInTheDocument();
@@ -862,5 +889,313 @@ describe('EntryForm — Crypto: multi-jaringan, multi-alamat per jaringan (v1.10
       expect(screen.queryByText('Pilih jaringan…')).not.toBeInTheDocument();
       expect(screen.queryByPlaceholderText('Alamat 1')).not.toBeInTheDocument();
     });
+  });
+});
+
+/**
+ * v2.0.0 (Tahap 4): pemilih kategori v2. Keputusan desain terkunci —
+ * kategori TIDAK BOLEH berupa deretan yang digeser horizontal; di form
+ * entri memakai tombol + sheet pilihan vertikal (OptionSheet).
+ */
+describe('EntryForm — pemilih kategori v2 (tombol + OptionSheet)', () => {
+  it('daftar kategori TIDAK tampil inline: tanpa opsi dan tanpa dialog sebelum tombol diketuk', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(screen.queryByRole('dialog', { name: 'Pilih kategori' })).not.toBeInTheDocument();
+    // deretan chip lama (title = nama kategori) sudah tidak ada
+    expect(screen.queryByTitle('Email')).not.toBeInTheDocument();
+  });
+
+  it('tombol pemilih menampilkan kategori aktif (bawaan Sosmed) dan membuka sheet "Pilih kategori"', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    const picker = pemilihKategori();
+    expect(picker).toHaveTextContent('Sosmed');
+
+    fireEvent.click(picker);
+    expect(screen.getByRole('dialog', { name: 'Pilih kategori' })).toBeInTheDocument();
+  });
+
+  it('sheet memuat SEMUA kategori bawaan + kategori kustom, dan hanya kategori aktif yang aria-selected', () => {
+    useAppStore.setState({
+      customCats: [{ id: 'cat_toko', label: 'Toko', emoji: 'Tag', iconKey: 'Tag' }],
+    });
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(pemilihKategori());
+
+    const opsi = screen.getAllByRole('option');
+    expect(opsi.map((o) => within(o).getByText(/\S/, { selector: 'b' }).textContent)).toEqual([
+      ...DEFAULT_CATEGORIES.map((c) => c.label),
+      'Toko',
+    ]);
+    const terpilih = opsi.filter((o) => o.getAttribute('aria-selected') === 'true');
+    expect(terpilih).toHaveLength(1);
+    expect(terpilih[0]).toHaveTextContent('Sosmed');
+  });
+
+  it('memilih kategori menutup sheet, memperbarui tombol pemilih dan menampilkan field kategori itu', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    pilihKategori('Bank');
+
+    expect(screen.queryByRole('dialog', { name: 'Pilih kategori' })).not.toBeInTheDocument();
+    expect(pemilihKategori()).toHaveTextContent('Bank');
+    expect(screen.getByLabelText('No. Rekening')).toBeInTheDocument();
+  });
+
+  it('Escape menutup sheet tanpa mengubah kategori', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.click(pemilihKategori());
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog', { name: 'Pilih kategori' })).not.toBeInTheDocument();
+    expect(pemilihKategori()).toHaveTextContent('Sosmed');
+  });
+
+  it('memilih kategori yang SAMA tidak memicu konfirmasi dan tidak menghapus isian', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'budi' } });
+
+    pilihKategori('Sosmed');
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe('budi');
+  });
+
+  it('ganti kategori TANPA isian langsung berpindah, tanpa dialog konfirmasi', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    pilihKategori('Email');
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(pemilihKategori()).toHaveTextContent('Email');
+  });
+
+  it('ganti kategori SAAT ada isian memunculkan "Ganti Kategori?" — Batal mempertahankan kategori dan isian', async () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'budi' } });
+    pilihKategori('Email');
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText('Ganti Kategori?')).toBeInTheDocument();
+    // ada DUA kontrol bernama "Batal" (ikon X ber-aria-label + tombol footer): ketuk tombol footer lewat teksnya
+    fireEvent.click(within(dialog).getByText('Batal'));
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(pemilihKategori()).toHaveTextContent('Sosmed');
+    expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe('budi');
+  });
+
+  it('konfirmasi "Ganti Kategori" berpindah kategori dan MENGOSONGKAN isian lama', async () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'budi' } });
+    pilihKategori('Email');
+    fireEvent.click(screen.getByText('Ganti Kategori'));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(pemilihKategori()).toHaveTextContent('Email');
+
+    pilihKategori('Sosmed');
+    expect((screen.getByLabelText('Username') as HTMLInputElement).value).toBe('');
+  });
+});
+
+/**
+ * Tahap 4 — celah yang ditemukan mutation check: field kustom bertipe "multi" belum
+ * pernah dites sampai ke payload simpan (hanya render grid dan reset ganti kategori),
+ * dan batas bawaan 10 isian (bila multiCount tidak diisi) tidak dijaga sama sekali.
+ */
+describe('EntryForm — Field multi: batas bawaan 10 isian dan payload simpan (Tahap 4)', () => {
+  const catMulti5 = {
+    id: 'cat_toko', label: 'Toko', emoji: 'Tag', iconKey: 'Tag',
+    fields: [
+      { key: 'user', label: 'Nama Toko' },
+      { key: 'custom_kode_akses', label: 'Kode Akses', type: 'multi' as const, multiCount: 5 },
+    ],
+  };
+  const catMultiBawaan = {
+    id: 'cat_daftar', label: 'Daftar', emoji: 'Tag', iconKey: 'Tag',
+    fields: [
+      { key: 'user', label: 'Pemilik' },
+      { key: 'custom_daftar', label: 'Daftar Kode', type: 'multi' as const }, // TANPA multiCount
+    ],
+  };
+
+  beforeEach(() => {
+    useAppStore.setState({
+      customCats: [catMulti5, catMultiBawaan], customNetworks: [],
+      masterPw: 'test-master-pw-untuk-suite-ini',
+      vaultMeta: { hint: '', recoveryHash: '', recovery: '', encMasterBySeed: '' },
+      vault: [], recycleBin: [],
+    });
+  });
+
+  async function simpanDanAmbil(onSaved: ReturnType<typeof vi.fn>) {
+    fireEvent.click(screen.getByText('Tambah entri'));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    return onSaved.mock.calls[0][0];
+  }
+
+  it('tanpa multiCount: label menyebut 10 isian dan grid berisi tepat 10 kotak', () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    pilihKategori('Daftar');
+
+    expect(screen.getByText('Daftar Kode (10 isian)')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('isian 10')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('isian 11')).not.toBeInTheDocument();
+  });
+
+  it('mode grid: hanya isian terisi yang tersimpan — berurutan, di-trim, dipisah newline', async () => {
+    const onSaved = vi.fn();
+    render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+    pilihKategori('Toko');
+    fireEvent.change(screen.getByLabelText('Nama entri'), { target: { value: 'Toko Uji' } });
+    fireEvent.change(screen.getByPlaceholderText('isian 1'), { target: { value: '  AAA ' } });
+    fireEvent.change(screen.getByPlaceholderText('isian 3'), { target: { value: 'CCC' } });
+
+    const saved = await simpanDanAmbil(onSaved);
+    expect(saved.customFields.custom_kode_akses).toBe('AAA\nCCC');
+  });
+
+  it('mode teks: isian melebihi multiCount (5) DIPOTONG saat simpan', async () => {
+    const onSaved = vi.fn();
+    render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+    pilihKategori('Toko');
+    fireEvent.change(screen.getByLabelText('Nama entri'), { target: { value: 'Toko Teks' } });
+    fireEvent.click(screen.getByText('Teks'));
+    const area = screen.getByPlaceholderText(/\(5 isian\)/);
+    fireEvent.change(area, { target: { value: 'a b c d e f g' } });
+    fireEvent.blur(area); // di perangkat nyata mengetuk "Tambah entri" lebih dulu mem-blur textarea (isian dikomit)
+
+    const saved = await simpanDanAmbil(onSaved);
+    expect(saved.customFields.custom_kode_akses).toBe('a\nb\nc\nd\ne');
+  });
+
+  it('mode teks TANPA multiCount: batas bawaan 10 isian', async () => {
+    const onSaved = vi.fn();
+    render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+    pilihKategori('Daftar');
+    fireEvent.change(screen.getByLabelText('Nama entri'), { target: { value: 'Daftar Teks' } });
+    fireEvent.click(screen.getByText('Teks'));
+    const area = screen.getByPlaceholderText(/\(10 isian\)/);
+    fireEvent.change(area, { target: { value: 'k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12' } });
+    fireEvent.blur(area);
+
+    const saved = await simpanDanAmbil(onSaved);
+    expect(saved.customFields.custom_daftar.split('\n')).toEqual(
+      ['k1', 'k2', 'k3', 'k4', 'k5', 'k6', 'k7', 'k8', 'k9', 'k10'],
+    );
+  });
+
+  it('field multi dibiarkan kosong: tidak ada kunci kosong di customFields (field lain tetap tersimpan)', async () => {
+    const onSaved = vi.fn();
+    render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+    pilihKategori('Toko');
+    fireEvent.change(screen.getByLabelText('Nama entri'), { target: { value: 'Toko Kosong' } });
+    fireEvent.change(screen.getByLabelText('Nama Toko'), { target: { value: 'Warung Budi' } });
+
+    const saved = await simpanDanAmbil(onSaved);
+    expect(saved.customFields?.custom_kode_akses).toBeUndefined();
+    expect(saved.user).toBe('Warung Budi');
+  });
+});
+
+/**
+ * Tahap 4 — tiga celah lain yang ditemukan mutation check pada logika form lama:
+ * (1) nilai field kustom harus di-trim saat disimpan, (2) isian seed phrase crypto
+ * dihitung sebagai "sudah terisi" sehingga ganti kategori meminta konfirmasi
+ * (anti data-loss), (3) nama perangkat "Perintah Google" TIDAK menempel di payload
+ * bila toggle-nya dimatikan (data usang tidak boleh tersimpan diam-diam, v1.10.2).
+ */
+describe('EntryForm — pembersihan payload & anti data-loss tambahan (Tahap 4)', () => {
+  beforeEach(() => {
+    useAppStore.setState({
+      customCats: [{
+        id: 'cat_toko', label: 'Toko', emoji: 'Tag', iconKey: 'Tag',
+        fields: [{ key: 'custom_pin', label: 'PIN Toko' }],
+      }],
+      customNetworks: [],
+      masterPw: 'test-master-pw-untuk-suite-ini',
+      vaultMeta: { hint: '', recoveryHash: '', recovery: '', encMasterBySeed: '' },
+      vault: [], recycleBin: [],
+    });
+  });
+
+  it('nilai field kustom di-trim saat disimpan', async () => {
+    const onSaved = vi.fn();
+    render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+    pilihKategori('Toko');
+    fireEvent.change(screen.getByLabelText('Nama entri'), { target: { value: 'Toko Trim' } });
+    fireEvent.change(screen.getByLabelText('PIN Toko'), { target: { value: '   1234   ' } });
+    fireEvent.click(screen.getByText('Tambah entri'));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(onSaved.mock.calls[0][0].customFields.custom_pin).toBe('1234');
+  });
+
+  it('isian seed phrase crypto dianggap "sudah terisi": ganti kategori memunculkan konfirmasi, Batal mempertahankannya', async () => {
+    render(<EntryForm onClose={() => {}} onSaved={() => {}} />);
+    pilihKategori('Crypto');
+    fireEvent.change(screen.getByPlaceholderText('kata 1'), { target: { value: 'alpha' } });
+
+    pilihKategori('Email');
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText('Ganti Kategori?')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByText('Batal'));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+
+    expect(pemilihKategori()).toHaveTextContent('Crypto');
+    expect((screen.getByPlaceholderText('kata 1') as HTMLInputElement).value).toBe('alpha');
+  });
+
+  it('nama perangkat "Perintah Google" tidak ikut tersimpan bila toggle dimatikan; tetap tersimpan bila aktif', async () => {
+    const onSaved = vi.fn();
+    const { unmount } = render(<EntryForm onClose={() => {}} onSaved={onSaved} />);
+    pilihKategori('Email');
+    fireEvent.change(screen.getByLabelText('Nama entri'), { target: { value: 'Email Aktif' } });
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah')); // opsi 2FA baru tampil setelah toggle induk aktif
+    fireEvent.click(screen.getByLabelText('Perintah Google'));
+    fireEvent.change(screen.getByPlaceholderText(/Merk & tipe HP/), { target: { value: 'Pixel 8' } });
+    fireEvent.click(screen.getByText('Tambah entri'));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    expect(onSaved.mock.calls[0][0].twoFAGoogleCommandDevice).toBe('Pixel 8'); // kontrol: toggle aktif → tersimpan
+    unmount();
+
+    const onSaved2 = vi.fn();
+    render(<EntryForm onClose={() => {}} onSaved={onSaved2} />);
+    pilihKategori('Email');
+    fireEvent.change(screen.getByLabelText('Nama entri'), { target: { value: 'Email Mati' } });
+    fireEvent.click(screen.getByLabelText('Verifikasi 2 Langkah'));
+    fireEvent.click(screen.getByLabelText('Perintah Google'));
+    fireEvent.change(screen.getByPlaceholderText(/Merk & tipe HP/), { target: { value: 'Pixel 8' } });
+    fireEvent.click(screen.getByLabelText('Perintah Google')); // dimatikan lagi
+    fireEvent.click(screen.getByText('Tambah entri'));
+    await waitFor(() => expect(onSaved2).toHaveBeenCalledTimes(1));
+    expect(onSaved2.mock.calls[0][0].twoFAGoogleCommandDevice).toBeUndefined();
+  });
+});
+
+describe('EntryForm — mode edit: field multi dimuat dari entri tersimpan (Tahap 4)', () => {
+  beforeEach(() => {
+    useAppStore.setState({
+      customCats: [{
+        id: 'cat_daftar', label: 'Daftar', emoji: 'Tag', iconKey: 'Tag',
+        fields: [{ key: 'custom_daftar', label: 'Daftar Kode', type: 'multi' as const }], // tanpa multiCount → 10
+      }],
+      customNetworks: [], vault: [], recycleBin: [],
+    });
+  });
+
+  it('isian tersimpan tampil berurutan di kotak grid; sisa kotak sampai 10 kosong (batas bawaan)', () => {
+    render(
+      <EntryForm
+        entry={{ id: 'e1', cat: 'cat_daftar', name: 'Daftar Lama', customFields: { custom_daftar: 'g1\ng2\ng3\ng4\ng5\ng6\ng7' } }}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />,
+    );
+
+    for (let i = 1; i <= 7; i++) {
+      expect((screen.getByPlaceholderText(`isian ${i}`) as HTMLInputElement).value).toBe(`g${i}`);
+    }
+    expect((screen.getByPlaceholderText('isian 8') as HTMLInputElement).value).toBe('');
+    expect((screen.getByPlaceholderText('isian 10') as HTMLInputElement).value).toBe('');
+    expect(screen.queryByPlaceholderText('isian 11')).not.toBeInTheDocument();
   });
 });

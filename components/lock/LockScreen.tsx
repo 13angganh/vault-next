@@ -6,12 +6,13 @@ import { DUR, EASE } from '@/lib/animation';
 import { Button } from '@/components/ui/primitives';
 import {
   Sun, Moon, KeyRound, Lock, Fingerprint,
-  RefreshCw, ArrowLeft, Plus, Loader2, Eye, EyeOff,
+  RefreshCw, ArrowLeft, Plus, Loader2, Eye, EyeOff, ShieldCheck, Hash,
 } from 'lucide-react';
 import { VaultIcon }          from '@/components/common/LoadingScreen';
 import { APP_VERSION }        from '@/lib/constants';
 import { useTheme }           from '@/components/providers/ThemeProvider';
 import { PINPad }             from './PINPad';
+import { getPinLength } from '@/lib/pinLength';
 import { RecoveryPanel }      from './RecoveryPanel';
 import { SetupFlow }          from './SetupFlow';
 import { BiometricHintModal } from './BiometricHintModal';
@@ -169,42 +170,51 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
     onUnlocked(payload, masterPw);
   };
 
-  const S = { // inline style helpers untuk konsistensi
-    link: {
-      background: 'none', border: 'none', cursor: 'pointer',
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      fontSize: 'var(--text-xs)', color: 'var(--muted2)',
-      fontFamily: 'var(--font-sans)', fontWeight: 500,
-      padding: '4px 0', transition: 'color 0.15s ease',
-    } as React.CSSProperties,
+  const hasPin   = hasPinSetup();
+  const pinLen   = getPinLength();
+  const showTabs = panel === 'pin' || panel === 'master' || panel === 'seed';
+  const tabs: { id: Panel; label: string; icon: React.ReactNode }[] = [
+    ...(hasPin ? [{ id: 'pin' as Panel, label: 'PIN', icon: <Hash size={14} /> }] : []),
+    { id: 'master', label: 'Password', icon: <KeyRound size={14} /> },
+    { id: 'seed',   label: 'Seed',     icon: <RefreshCw size={14} /> },
+  ];
+  const subtitle: Record<Panel, string> = {
+    pin:      'Masukkan PIN untuk membuka brankas',
+    master:   'Masukkan master password kamu',
+    seed:     'Masuk dengan 5 kata recovery phrase',
+    recovery: 'Pulihkan akses ke brankas',
+    setup:    'Buat brankas pribadi yang terenkripsi',
   };
 
   return (
     <>
-      <div className="ls">
-
-        {/* Tema toggle */}
-        <button className="ls-theme-btn" onClick={toggleTheme}
-          aria-label={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}>
-          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+      <div className={`ls ls2${panel === 'setup' || panel === 'recovery' ? ' ls2--tall' : ''}${panel === 'pin' ? ' ls2--pin' : ''}`}>
+        <div className="ls2-sp" aria-hidden="true" />
+        <button className="ls-theme-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}>
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
-        {/* Logo — shield + judul + versi dalam satu grup */}
-        <div className="ls-logo">
-          <div className="lock-shield-icon">
-            <VaultIcon size={44} />
-            <span className="lock-shield-ring" aria-hidden="true" />
+        <div className="ls2-hero">
+          <div className="ls2-logo">
+            <VaultIcon size={88} />
           </div>
-          <h1 className="ls-title">
-            Vault <span className="ls-title__gold">Next</span>
-          </h1>
-          <div className="ls-version">v{APP_VERSION}</div>
+          <h1 className="ls2-title"><span>Aurum</span> Vault</h1>
+          <p className="ls2-sub">{subtitle[panel]}</p>
         </div>
 
-        {/* Card */}
-        <div className="ls-card">
+        {showTabs && (
+          <div className="ls2-tabs" role="tablist" aria-label="Metode masuk">
+            {tabs.map((t) => (
+              <button key={t.id} role="tab" aria-selected={panel === t.id}
+                className={`ls2-tab${panel === t.id ? ' ls2-tab--on' : ''}`} onClick={() => goPanel(t.id)}>
+                {t.icon}<span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="ls-card ls2-card">
           <AnimatePresence mode="wait" initial={false}>
-          {/* ── PIN ── */}
           {panel === 'pin' && (
             <motion.div className="ls-panel" key="panel-pin"
               initial={prefersReduced ? false : { opacity: 0, y: 8 }}
@@ -220,7 +230,7 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
 
               <PINPad
                 value={pinBuf}
-                maxLen={6}
+                maxLen={pinLen ?? 8}
                 onDigit={(d) => {
                   if (!pinLocked && !loading) {
                     appendPin(d);
@@ -238,7 +248,11 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
                 locked={pinLocked}
                 lockedLabel={`Dikunci ${lockRemain} detik lagi…`}
                 error={error}
+                sublabel={pinLen === null ? 'Ketuk Buka setelah memasukkan PIN' : undefined}
               />
+              {pinLen === null && (
+                <button type="button" className="btn btn-primary ls2-pin-open" onClick={handlePinSubmit} disabled={loading || pinLocked || pinBuf.length < 4}>Buka</button>
+              )}
             </motion.div>
           )}
 
@@ -348,81 +362,36 @@ export function LockScreen({ onUnlocked }: LockScreenProps) {
               <SetupFlow onComplete={handleSetupComplete} />
             </motion.div>
           )}
-
-          {/* ── Footer: biometrik + setup baru ── */}
-          {panel !== 'setup' && panel !== 'recovery' && (
-            <div className="ls-footer">
-              {/* Baris navigasi teks: Master Password · Seed Phrase · Vault Baru */}
-              <div className="ls-footer__links">
-                {panel === 'pin' && (
-                  <>
-                    <button style={S.link} onClick={() => goPanel('master')}>
-                      <KeyRound size={11} /> Master Password
-                    </button>
-                    <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
-                    <button style={S.link} onClick={() => goPanel('seed')}>
-                      <KeyRound size={11} /> Seed Phrase
-                    </button>
-                  </>
-                )}
-                {panel === 'master' && (
-                  <>
-                    {hasPinSetup() && (
-                      <>
-                        <button style={S.link} onClick={() => goPanel('pin')}>
-                          <ArrowLeft size={11} /> Kembali ke PIN
-                        </button>
-                        <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
-                      </>
-                    )}
-                    <button style={S.link} onClick={() => goPanel('seed')}>
-                      <KeyRound size={11} /> Seed Phrase
-                    </button>
-                    <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
-                    <button style={S.link} onClick={() => goPanel('recovery')}>
-                      <RefreshCw size={11} /> Lupa password?
-                    </button>
-                  </>
-                )}
-                {panel === 'seed' && (
-                  <>
-                    <button style={S.link} onClick={() => goPanel(hasPinSetup() ? 'pin' : 'master')}>
-                      <ArrowLeft size={11} /> Kembali
-                    </button>
-                    <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
-                    <button style={S.link} onClick={() => goPanel('recovery')}>
-                      <RefreshCw size={11} /> Reset password
-                    </button>
-                  </>
-                )}
-                <span style={{ color: 'var(--border2)', fontSize: 'var(--text-xs)' }}>·</span>
-                <button style={S.link} onClick={() => goPanel('setup')}>
-                  <Plus size={11} /> Vault Baru
-                </button>
-              </div>
-
-              {/* Tombol sidik jari — di tengah, hanya jika tersedia */}
-              {hasBiometricCredential() && (
-                <button className="ls-bio-btn" onClick={() => setShowBiometric(true)}
-                  aria-label="Buka dengan sidik jari">
-                  <Fingerprint size={20} />
-                  <span>Sidik Jari</span>
-                </button>
-              )}
-            </div>
-          )}
           </AnimatePresence>
         </div>
-      </div>
 
+        {showTabs && hasBiometricCredential() && (
+          <button className="ls2-bio" onClick={() => setShowBiometric(true)} aria-label="Buka dengan sidik jari">
+            <Fingerprint size={20} /><span>Masuk dengan sidik jari</span>
+          </button>
+        )}
+
+        <div className="ls2-links">
+          {panel === 'recovery' || panel === 'setup' ? (
+            <button className="ls2-link" onClick={() => goPanel(hasPinSetup() ? 'pin' : 'master')}>
+              <ArrowLeft size={13} /> Kembali ke login
+            </button>
+          ) : (
+            <>
+              <button className="ls2-link" onClick={() => goPanel('recovery')}><RefreshCw size={13} /> Lupa password?</button>
+              <button className="ls2-link" onClick={() => goPanel('setup')}><Plus size={13} /> Vault baru</button>
+            </>
+          )}
+        </div>
+
+        <p className="ls2-note"><ShieldCheck size={13} /> Terenkripsi AES-256 · tanpa server · v{APP_VERSION}</p>
+        <div className="ls2-sp" aria-hidden="true" />
+      </div>
       {showBiometric && (
         <BiometricHintModal
           mode="auth"
           onClose={() => setShowBiometric(false)}
-          onSuccess={async (pw) => {
-            setShowBiometric(false);
-            await doUnlockWithMaster(pw);
-          }}
+          onSuccess={async (pw) => { setShowBiometric(false); await doUnlockWithMaster(pw); }}
         />
       )}
     </>

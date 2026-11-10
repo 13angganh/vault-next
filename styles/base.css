@@ -11,37 +11,68 @@
 :root,
 [data-theme="dark"] {
   /* Backgrounds */
-  --bg:          #07080f;
-  --bg-s1:       #0e0f1a;
-  --bg-s2:       #161724;
-  --bg-s3:       #1e1f2e;
+  --bg:          #05060b;
+  --bg-s1:       #0b0d16;
+  --bg-s2:       #12151f;
+  --bg-s3:       #1a1e2c;
   --bg-overlay:  rgba(0,0,0,0.75);
+  /* v1.11.0: background semi-transparan untuk elemen backdrop-blur
+     (search bar redesain Tahap 3) — alpha rendah karena blur sendiri
+     sudah memberi efek "kaca", warna solid penuh akan menghilangkan
+     efek transparansinya. */
+  --bg-glass:    rgba(255,255,255,.05);
+  /* v1.11.0: khusus .app-header (sticky, konten list dgn glow kontras
+     tinggi bisa lewat di baliknya saat scroll) — alpha sedikit lebih
+     tinggi dari --bg-glass biasa agar teks/search tetap terbaca jelas
+     meski backdrop-filter sudah membantu meredam. */
+  --header-glass: rgba(7,9,16,.78);
+
+  /* v1.11.0 (redesain visual Tahap 3, revisi setelah feedback user
+     "masih kurang hidup"): token KHUSUS untuk gradient .entry-card —
+     SENGAJA terpisah dari --bg-s2/--bg-s1/--bg di atas (yang dipakai
+     luas di sidebar/modal/settings dan condong biru-netral), bukan
+     menggantinya. Ditemukan via analisis numerik RGB bahwa preview v3
+     yang dikonfirmasi user "pas" memakai rona HANGAT/keemasan (komponen
+     merah RGB tertinggi), bukan biru — inilah yang membuatnya terasa
+     "hidup" dibanding versi biru-netral, BUKAN soal kontras gelap-
+     terang (yang ternyata besarnya sama, ~6-9%, di kedua versi).
+     Diturunkan proporsional dari nilai preview v3 (#241c0d/#181419/
+     #0d0d10) — sedikit diredam agar tidak terlalu oranye/kecoklatan
+     dan tetap harmonis dengan --gold existing, bukan bersaing dengannya. */
+  --card-bg-1:   #171a27;
+  --card-bg-2:   #10131d;
+  --card-bg-3:   #0b0d15;
 
   /* Brand */
-  --gold:        #f0a500;
-  --gold2:       #ffcc44;
-  --gold-dim:    rgba(240,165,0,0.08);
-  --gold-border: rgba(240,165,0,0.3);
-  --gold-glow:   rgba(240,165,0,0.2);
-  --gold-soft:   rgba(240,165,0,0.12);
-  --gold-text:   #f0a500;
+  --gold:        #e8b04a;
+  --gold2:       #f7d58b;
+  --gold-dim:    rgba(232,176,74,.08);
+  --gold-border: rgba(232,176,74,.3);
+  --gold-glow:   rgba(232,176,74,.24);
+  --gold-soft:   rgba(232,176,74,.13);
+  --gold-text:   #f0c466;
+  /* v1.11.0: --accent ditemukan DIPAKAI (settings.css pw-gen slider)
+     tapi TIDAK PERNAH didefinisikan sebelumnya — bug pra-eksisting,
+     bukan dari redesain visual ini, diperbaiki atas persetujuan user.
+     Nilai = --gold, karena itu warna aksen utama app ini. */
+  --accent:      var(--gold);
 
   /* Accent */
-  --teal:        #00d4aa;
-  --red:         #ff4d6d;
+  --teal:        #2dd4bf;
+  --red:         #ff5470;
   --blue:        #4d8eff;
   --crypto:      #f7931a;
 
   /* Text */
-  --text:        #eeeef5;
-  --text2:       #c8c9d8;
-  --muted:       #8486a2;  /* v1.4.2: dinaikkan 3.77->5.37:1 agar lolos AA teks kecil */
-  --muted2:      #9294ae;
+  --text:        #f5f5f9;
+  --text2:       #cbcedb;
+  --muted:       #8b90a9;  /* v1.4.2: dinaikkan 3.77->5.37:1 agar lolos AA teks kecil */
+  --muted2:      #a1a6bd;
 
   /* Borders */
-  --border:      #2b2d42;
-  --border2:     #3a3d56;
-  --border-gold: rgba(240,165,0,0.35);
+  --border:      #23283a;
+  --border2:     #323852;
+  --border-gold: rgba(232,176,74,.38);
 
   /* Strength Meter */
   --str-1: #ff4d6d;
@@ -54,7 +85,7 @@
 
   /* Status */
   --success:     #00d4aa;
-  --warning:     #f0a500;
+  --warning:     #e8b04a;
   --danger:      #ff4d6d;
   --info:        #4d8eff;
 
@@ -65,59 +96,158 @@
 
   /* Shadows */
   --shadow:         0 4px 20px rgba(0,0,0,0.4);
-  --shadow-gold:    0 6px 20px rgba(240,165,0,0.08);
-  --shadow-modal:   0 20px 60px rgba(0,0,0,0.6);
+  --shadow-gold:    0 10px 28px -8px rgba(232,176,74,.35);
+  --shadow-modal:   0 28px 80px rgba(0,0,0,.7);
   --shadow-sidebar: 4px 0 30px rgba(0,0,0,0.4);
   --logo-shadow:    0 0 40px rgba(240,165,0,0.3);
 
+  /* v-redesign-1: shadow tier kartu premium (elevationTier di design-tokens.ts).
+     --shadow-card: dipakai kartu entry/kategori (radius lg/xl).
+     --shadow-raised: dipakai avatar/logo brand — base shadow saja, tint warna
+     brand ditambahkan per-instance via inline style (karena hex brand dinamis,
+     tidak bisa jadi satu token statis). */
+  --shadow-card:    0 10px 28px -10px rgba(0,0,0,.65);
+  --shadow-raised:  0 8px 22px -6px rgba(0,0,0,.6);
+
+  /* v-redesign-1: gradient gold eksplisit — sebelumnya --gold & --gold2 ada
+     tapi tiap komponen menulis ulang linear-gradient sendiri-sendiri. */
+  --gold-gradient: linear-gradient(135deg,#f7d58b 0%,#e8b04a 55%,#cf9024 100%);
+
   /* Card hover */
-  --card-hover-bg: #161724;
+  --card-hover-bg: #141724;
 
   /* PIN pad */
-  --pin-key-bg:     #0e0f1a;
-  --pin-key-border: #2b2d42;
+  --pin-key-bg:     #10131d;
+  --pin-key-border: #23283a;
 
   /* Sidebar */
-  --sidebar-bg: #0a0b14;
+  --sidebar-bg: #080a12;
+  /*  --- v2.0.0 (Tahap 2): token tambahan; nilai dipindah dari styles/redesign.css atau menggantikan literal warna ---  */
+  --nav-glass:          rgba(13,15,25,.88);
+  /*  teks/ikon di atas gold solid (satu-satunya "ink" gelap; dulu #1a1206 mentah di 16 tempat)  */
+  --on-gold:          #1a1206;
+  /*  tint ink pada kapsul ikon di atas gold solid (sbx-item aktif)  */
+  --on-gold-icon-bg:          rgba(26,18,6,.14);
+  /*  tint ink pada lencana hitungan di atas gold solid (sbx-item aktif)  */
+  --on-gold-count-bg:          rgba(26,18,6,.18);
+  /*  highlight tepi atas permukaan (inset 0 1px 0): kartu entri  */
+  --hl-1:          rgba(255,255,255,.05);
+  /*  highlight tepi atas permukaan: kartu terbuka, nav bawah, kartu login, hero pengaturan  */
+  --hl-2:          rgba(255,255,255,.06);
+  /*  highlight tepi atas: logo layar login  */
+  --hl-3:          rgba(255,255,255,.08);
+  /*  kilau tepi atas pada gold solid: item sidebar aktif  */
+  --hl-gold-1:          rgba(255,255,255,.35);
+  /*  kilau tepi atas pada gold solid: tombol gold/primer  */
+  --hl-gold-2:          rgba(255,255,255,.38);
+  /*  kilau tepi atas pada gold solid: tombol tambah (bn-add)  */
+  --hl-gold-3:          rgba(255,255,255,.4);
+  /*  isian tipis di dalam kartu (field entri); light memakai tint gelap  */
+  --fill-subtle:          rgba(255,255,255,.035);
+  /*  isian saat ditekan (header kartu). tema terang memakai tint gelap (putih di atas terang tak terlihat)  */
+  --press-fill:          rgba(255,255,255,.035);
+  /*  scrim overlay sidebar dan OptionSheet  */
+  --scrim:          rgba(3,4,8,.6);
+  /*  scrim overlay modal/konfirmasi/detail/buka-kunci  */
+  --scrim-modal:          rgba(3,4,8,.62);
+  /*  bayangan bar navigasi bawah  */
+  --shadow-nav:          0 16px 40px -8px rgba(0,0,0,.5);
+  /*  latar ikon baris Pengaturan (biru)  */
+  --ico-blue-bg:          rgba(91,140,255,.15);
+  /*  ikon baris Pengaturan (biru). tema terang memakai warna lebih gelap (kontras ikon >= 3:1)  */
+  --ico-blue-fg:          #7aa2ff;
+  /*  v2.0.0 (Tahap 3) — token layar yang dirombak. Nilai literal hanya di sini.
+      sorot atas tombol emas solid (menggantikan putih .25 di btn-gold/btn-primary/drawer aktif)  */
+  --hl-gold-0:          rgba(255,255,255,.25);
+  /*  riak sentuh (useRipple): umum dan tombol ikon  */
+  --ripple:          rgba(255,255,255,.10);
+  --ripple-icon:          rgba(255,255,255,.12);
+  /*  bayangan menu/pop-up kecil (dropdown jaringan, menu tipe field, swatch)  */
+  --shadow-pop:          0 8px 24px rgba(0,0,0,.3);
+  /*  bayangan sangat kecil (tombol angka PIN, knob saklar, tombol tekan)  */
+  --shadow-xs:          0 1px 4px rgba(0,0,0,.3);
+  /*  bayangan kartu saat disentuh/hover  */
+  --shadow-card-hover:          0 4px 20px rgba(0,0,0,.22), 0 1px 4px rgba(0,0,0,.15);
+  /*  kartu ditekan / kartu terbuka / tombol angka PIN (nilai identik v1.11.0)  */
+  --shadow-card-press:          0 1px 4px rgba(0,0,0,.12);
+  --shadow-card-open:          0 6px 24px rgba(0,0,0,.25);
+  --shadow-key:          0 1px 3px rgba(0,0,0,.15);
+  /*  bilah pembaruan SW (di atas emas): tombol dan titik memakai tinta gelap  */
+  --on-gold-press-bg:          rgba(26,18,6,.25);
+  /*  toast: latar dan teks per jenis  */
+  --toast-success-bg:          #166534;
+  --toast-success-fg:          #86efac;
+  --toast-error-bg:          #7f1d1d;
+  --toast-error-fg:          #fca5a5;
+  --toast-info-bg:          #1e3a5f;
+  --toast-info-fg:          #93c5fd;
+  /*  knob saklar (putih pada trek abu/emas, kedua tema)  */
+  --switch-knob:          #ffffff;
+  /*  latar ikon baris Pengaturan (ungu)  */
+  --ico-violet-bg:          rgba(167,139,250,.15);
+  /*  ikon baris Pengaturan (ungu). tema terang memakai warna lebih gelap (kontras ikon >= 3:1)  */
+  --ico-violet-fg:          #a78bfa;
+  /*  glow latar body::before per tema  */
+  --ambient-bg:          radial-gradient(70% 38% at 8% -6%,rgba(232,176,74,.16),transparent 62%),
+    radial-gradient(60% 40% at 100% 4%,rgba(98,112,255,.10),transparent 60%),
+    radial-gradient(70% 40% at 90% 110%,rgba(45,212,191,.07),transparent 60%);
 }
 
 /* LIGHT MODE — Warm white, bukan cold gray */
 [data-theme="light"] {
-  --bg:          #FAFAF8;
-  --bg-s1:       #FFFFFF;
-  --bg-s2:       #F3F2EF;
-  --bg-s3:       #E8E7E3;
+  --bg:          #f6f4ef;
+  --bg-s1:       #ffffff;
+  --bg-s2:       #efece4;
+  --bg-s3:       #e6e2d7;
   --bg-overlay:  rgba(0,0,0,0.5);
+  /* v1.11.0: lihat catatan dark theme di atas. Alpha putih lebih tinggi
+     di light mode (background dasar sudah terang, perlu sedikit lebih
+     "material" agar backdrop-blur tetap terlihat efeknya, bukan
+     menyatu total dengan bg di belakangnya). */
+  --bg-glass:    rgba(255,255,255,.7);
+  /* v1.11.0: lihat catatan dark theme di atas */
+  --header-glass: rgba(250,248,243,.82);
 
-  --gold:        #9F6400;  /* v1.4.2: dinaikkan 3.06->4.89:1 agar lolos AA */
-  --gold2:       #E09B1A;
-  --gold-dim:    rgba(200,134,10,0.07);
-  --gold-border: rgba(200,134,10,0.3);
-  --gold-glow:   rgba(200,134,10,0.15);
-  --gold-soft:   rgba(200,134,10,0.1);
-  --gold-text:   #A06C08;
+  /* v1.11.0: token kartu khusus, analog dgn dark theme di atas — light
+     mode proyek ini SUDAH warm-white by design (lihat komentar header
+     blok ini), jadi pergeseran di sini lebih halus: sedikit lebih
+     krem/hangat dari --bg-s1 putih murni, bukan kontras drastis spt
+     di dark mode (yang mulai dari nyaris-hitam netral). */
+  --card-bg-1:   #ffffff;
+  --card-bg-2:   #fdfbf6;
+  --card-bg-3:   #f8f5ed;
 
-  --teal:        #059669;
-  --red:         #DC2626;
+  --gold:        #966108;  /* v2.0.0 Tahap 3 (D6): sebelumnya #9a6408 (4,37:1 pada nomor langkah aktif; kini 4,58:1) */  /* v1.4.2: dinaikkan 3.06->4.89:1 agar lolos AA */
+  --gold2:       #e6ad4c;
+  --gold-dim:    rgba(160,106,10,.07);
+  --gold-border: rgba(160,106,10,.32);
+  --gold-glow:   rgba(160,106,10,.18);
+  --gold-soft:   rgba(160,106,10,.11);
+  --gold-text:   #895805;  /* v2.0.0 Tahap 3 (D6): sebelumnya #8f5c05 (4,25:1 pada item menu tipe field aktif #e7decc; kini 4,54:1) */
+  /* v1.11.0: lihat catatan dark theme di atas */
+  --accent:      var(--gold);
+
+  --teal:        #047854;  /* v2.0.0 Tahap 3 (D6): sebelumnya #059669 (3,14:1 pada chip ok; kini 4,58:1) */
+  --red:         #c32020;  /* v2.0.0 Tahap 3 (D6): sebelumnya #DC2626 (3,81:1 pada tint tombol Hapus #f2e1db; 4,45:1 pada tint konfirmasi #f3ddd7; kini >= 4,55:1) */
   --blue:        #2563EB;
   --crypto:      #D97706;
 
-  --text:        #1A1A2E;
-  --text2:       #374151;
-  --muted:       #6B7280;
-  --muted2:      #4B5563;
+  --text:        #14151f;
+  --text2:       #3a3d4d;
+  --muted:       #606474;  /* v2.0.0 Tahap 3 (D6): sebelumnya #6a6e80 (3,90:1 pada --bg-s3; kini 4,54:1) */
+  --muted2:      #4f5364;
 
-  --border:      #DDD9D0;
-  --border2:     #9CA3AF;
-  --border-gold: rgba(200,134,10,0.3);
+  --border:      #e4dfd2;
+  --border2:     #cfc9b9;
+  --border-gold: rgba(160,106,10,.35);
 
   --str-1: #DC2626;
-  --str-2: #EA580C;
-  --str-3: #D97706;
-  --str-4: #65A30D;
-  --str-5: #059669;
-  --str-6: #0D9488;
-  --str-7: #0891B2;
+  --str-2: #C84B0A;  /* v2.0.0 Tahap 3 (D6): sebelumnya #EA580C (3.44:1 pada #fcfbf8; kini 4.54:1) */
+  --str-3: #AE6005;  /* v2.0.0 Tahap 3 (D6): sebelumnya #D97706 (3.08:1 pada #fcfbf8; kini 4.53:1) */
+  --str-4: #4F800A;  /* v2.0.0 Tahap 3 (D6): sebelumnya #65A30D (2.99:1 pada #fcfbf8; kini 4.59:1) */
+  --str-5: #04845D;  /* v2.0.0 Tahap 3 (D6): sebelumnya #059669 (3.64:1 pada #fcfbf8; kini 4.55:1) */
+  --str-6: #0B8177;  /* v2.0.0 Tahap 3 (D6): sebelumnya #0D9488 (3.62:1 pada #fcfbf8; kini 4.59:1) */
+  --str-7: #077E9B;  /* v2.0.0 Tahap 3 (D6): sebelumnya #0891B2 (3.56:1 pada #fcfbf8; kini 4.54:1) */
 
   --success:     #059669;
   --warning:     #D97706;
@@ -129,15 +259,79 @@
   --notice-text:   rgba(5,150,105,0.9);
 
   --shadow:         0 2px 12px rgba(0,0,0,0.07);
-  --shadow-gold:    0 4px 16px rgba(200,134,10,0.1);
-  --shadow-modal:   0 16px 48px rgba(0,0,0,0.18);
+  --shadow-gold:    0 10px 24px -8px rgba(201,138,27,.4);
+  --shadow-modal:   0 24px 64px rgba(30,24,10,.22);
   --shadow-sidebar: 4px 0 20px rgba(0,0,0,0.1);
   --logo-shadow:    0 0 32px rgba(200,134,10,0.25);
 
-  --card-hover-bg:  #F3F2EF;
-  --pin-key-bg:     #F3F2EF;
-  --pin-key-border: #DDD9D0;
-  --sidebar-bg:     #F0EFE9;
+  /* v-redesign-1: lihat catatan dark theme di atas untuk penjelasan tier ini */
+  --shadow-card:    0 8px 24px -12px rgba(60,45,10,.22);
+  --shadow-raised:  0 8px 20px -8px rgba(60,45,10,.25);
+  --gold-gradient:  linear-gradient(135deg,#f3c46f 0%,#e6ad4c 55%,#c98a1b 100%);
+
+  --card-hover-bg:  #f4f1e8;
+  --pin-key-bg:     #ffffff;
+  --pin-key-border: #e4dfd2;
+  --sidebar-bg:     #faf8f3;
+  /*  --- v2.0.0 (Tahap 2): token tambahan; nilai dipindah dari styles/redesign.css atau menggantikan literal warna ---  */
+  --nav-glass:          rgba(255,255,255,.9);
+  /*  teks/ikon di atas gold solid (satu-satunya "ink" gelap; dulu #1a1206 mentah di 16 tempat)  */
+  --on-gold:          #1a1206;
+  /*  tint ink pada kapsul ikon di atas gold solid (sbx-item aktif)  */
+  --on-gold-icon-bg:          rgba(26,18,6,.14);
+  /*  tint ink pada lencana hitungan di atas gold solid (sbx-item aktif)  */
+  --on-gold-count-bg:          rgba(26,18,6,.18);
+  /*  highlight tepi atas permukaan (inset 0 1px 0): kartu entri  */
+  --hl-1:          rgba(255,255,255,.05);
+  /*  highlight tepi atas permukaan: kartu terbuka, nav bawah, kartu login, hero pengaturan  */
+  --hl-2:          rgba(255,255,255,.06);
+  /*  highlight tepi atas: logo layar login  */
+  --hl-3:          rgba(255,255,255,.08);
+  /*  kilau tepi atas pada gold solid: item sidebar aktif  */
+  --hl-gold-1:          rgba(255,255,255,.35);
+  /*  kilau tepi atas pada gold solid: tombol gold/primer  */
+  --hl-gold-2:          rgba(255,255,255,.38);
+  /*  kilau tepi atas pada gold solid: tombol tambah (bn-add)  */
+  --hl-gold-3:          rgba(255,255,255,.4);
+  /*  isian tipis di dalam kartu (field entri); light memakai tint gelap  */
+  --fill-subtle:          rgba(20,21,31,.03);
+  /*  isian saat ditekan (header kartu). tema terang memakai tint gelap (putih di atas terang tak terlihat)  */
+  --press-fill:          rgba(20,21,31,.05);
+  /*  scrim overlay sidebar dan OptionSheet  */
+  --scrim:          rgba(3,4,8,.6);
+  /*  scrim overlay modal/konfirmasi/detail/buka-kunci  */
+  --scrim-modal:          rgba(3,4,8,.62);
+  /*  bayangan bar navigasi bawah  */
+  --shadow-nav:          0 16px 40px -8px rgba(0,0,0,.5);
+  /*  latar ikon baris Pengaturan (biru)  */
+  --ico-blue-bg:          rgba(91,140,255,.15);
+  /*  ikon baris Pengaturan (biru). tema terang memakai warna lebih gelap (kontras ikon >= 3:1)  */
+  --ico-blue-fg:          var(--blue);
+  /*  v2.0.0 (Tahap 3) — token layar yang dirombak (lihat blok dark untuk keterangan)  */
+  --hl-gold-0:          rgba(255,255,255,.25);
+  --ripple:          rgba(255,255,255,.10);
+  --ripple-icon:          rgba(255,255,255,.12);
+  --shadow-pop:          0 8px 24px rgba(60,45,10,.18);
+  --shadow-xs:          0 1px 4px rgba(0,0,0,.3);
+  --shadow-card-hover:          0 3px 14px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.06);
+  --shadow-card-press:          0 1px 4px rgba(0,0,0,.12);
+  --shadow-card-open:          0 4px 18px rgba(0,0,0,.08);
+  --shadow-key:          0 1px 3px rgba(0,0,0,.15);
+  --on-gold-press-bg:          rgba(26,18,6,.25);
+  --toast-success-bg:          #166534;
+  --toast-success-fg:          #86efac;
+  --toast-error-bg:          #7f1d1d;
+  --toast-error-fg:          #fca5a5;
+  --toast-info-bg:          #1e3a5f;
+  --toast-info-fg:          #93c5fd;
+  /*  knob saklar (putih pada trek abu/emas, kedua tema)  */
+  --switch-knob:          #ffffff;
+  /*  latar ikon baris Pengaturan (ungu)  */
+  --ico-violet-bg:          rgba(167,139,250,.15);
+  /*  ikon baris Pengaturan (ungu). tema terang memakai warna lebih gelap (kontras ikon >= 3:1)  */
+  --ico-violet-fg:          #7c3aed;
+  /*  glow latar body::before per tema  */
+  --ambient-bg:          radial-gradient(70% 36% at 10% -8%,rgba(230,173,76,.22),transparent 62%),radial-gradient(60% 40% at 100% 100%,rgba(120,140,255,.08),transparent 60%);
 }
 
 /* RESET & BASE */
@@ -149,6 +343,12 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+}
+
+/* v2.0.0 (Tahap 2): scroll halus adalah pemicu vestibular; hormati preferensi OS.
+   (Animasi/transisi sudah diredam oleh aturan global di styles/components/lock.css.) */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 body {
@@ -163,24 +363,30 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ambient glow background — dark only */
-[data-theme="dark"] body::before {
+/* v2.0.0 (Tahap 2): kontrol form tidak mewarisi font secara bawaan (browser memakai
+   Arial/system-ui). Tanpa aturan ini teks di <button> tanpa font-family eksplisit
+   (mis. label kartu brand-picker) tampil dengan font bawaan browser, bukan Inter.
+   Spesifisitas (0,0,1): aturan komponen yang menetapkan font-family tetap menang. */
+button, input, select, textarea { font-family: inherit; }
+
+/* Ambient glow latar: dark dan light.
+   v1.11.0: hanya dark (intensitas dinaikkan lewat 3 iterasi preview user).
+   v2.0.0 (Tahap 2): dark dan light dalam SATU aturan; gradient ada di token
+   --ambient-bg (per tema) sehingga tidak ada warna hardcode di aturan, dan
+   z-index lewat --z-behind (dulu 0 di v1.11.0, lalu -1 mentah di redesign.css). */
+[data-theme="dark"] body::before,
+[data-theme="light"] body::before {
   content: '';
   position: fixed; inset: 0;
-  background:
-    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(240,165,0,0.035) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 30% at 80% 90%, rgba(0,212,170,0.03) 0%, transparent 60%);
+  background: var(--ambient-bg);
   pointer-events: none;
-  z-index: 0;
+  z-index: var(--z-behind);
 }
 
 /* Transisi tema — hanya elemen interaktif yang punya state warna berubah.
    v1.4.4: wildcard * dihapus karena menyebabkan GPU composite overhead di
    semua 100+ elemen DOM. Setiap komponen mendefinisikan transition sendiri. */
-button, a, input, select, textarea, [role="button"],
-.btn, .ibtn, .icon-btn, .btn-icon,
-.entry-card, .sidebar-item, .nav-item,
-.settings-section__header, .cat-picker__item {
+button, a, input, select, textarea, [role="button"], .btn, .ibtn, .icon-btn, .btn-icon, .entry-card, .nav-item, .cat-picker__item {
   transition-property: background-color, border-color, color, box-shadow, transform;
   transition-duration: var(--transition-fast);
   transition-timing-function: var(--ease-default);
@@ -204,15 +410,17 @@ button, a, input, select, textarea, [role="button"],
 /* Selection */
 ::selection { background: var(--gold-soft); color: var(--text); }
 
-/* Focus ring */
+/* Focus ring.
+   v2.0.0 (Tahap 2): (1) warna --gold (solid), bukan --gold-border (alpha .3):
+   kontras cincin terhadap --bg hanya 1,82:1 (dark) / 1,49:1 (light), di bawah
+   3:1 (WCAG 1.4.11); --gold = 10,35:1 / 4,55:1. (2) `border-radius: var(--radius-sm)`
+   dihapus: deklarasi itu mengubah bentuk setiap elemen yang difokus (pil/lingkaran
+   menjadi sudut 10px). Outline mengikuti border-radius elemen. */
 :focus-visible {
-  outline: 2px solid var(--gold-border);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
 }
 
 /* Tap highlight mobile */
 * { -webkit-tap-highlight-color: transparent; }
 
-/* Smooth scroll global */
-html { scroll-behavior: smooth; }

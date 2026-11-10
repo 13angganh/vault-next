@@ -24,9 +24,9 @@ interface ToastItem {
 }
 
 const ICONS: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle2 size={15} />,
-  error:   <XCircle size={15} />,
-  info:    <Info size={15} />,
+  success: <CheckCircle2 size={18} />,
+  error:   <XCircle size={18} />,
+  info:    <Info size={18} />,
 };
 
 export function useToast(duration = 2200) {

@@ -21,7 +21,20 @@ export interface VaultEntry {
   fav?:        boolean;
   ts?:         number;
 
-  // ── Field BARU — ditambahkan, tidak mengganti ──
+  // ── Field BARU v1.11.0 — Logo brand asli per-entri (redesain visual) ──
+  // Permintaan eksplisit pengguna: setiap entri BEBAS memilih logo brand
+  // aslinya sendiri (Gmail/GitHub/Binance/dll) lewat BrandIconPicker,
+  // TERPISAH dari kategori — dua entri di kategori sama (mis. Crypto)
+  // bisa punya logo berbeda (Binance vs OKX vs custom lainnya).
+  // Nilainya adalah `slug` yang merujuk ke lib/brand-icons.ts
+  // (ALL_BRAND_ICONS, dicari via getBrandIconBySlug). Opsional — kosong/
+  // undefined berarti fallback ke inisial huruf otomatis (CategoryIcon,
+  // perilaku existing, TIDAK berubah). Murni field visual, TIDAK
+  // menyimpan data gambar (bukan base64/blob) — hanya identifier
+  // string ringan, aman untuk payload vault terenkripsi & backup.
+  brandIconSlug?: string;
+
+  // ── Field BARU — tidak mengganti ──
   cardNo?:     string;
   cardHolder?: string;
   cardExpiry?: string;

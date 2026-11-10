@@ -1,11 +1,12 @@
 /**
- * lib/constants.ts — Vault Next
+ * lib/constants.ts — Aurum Vault (nama lama: Vault Next)
  * Konstanta aplikasi yang tersebar di berbagai file.
  * Import dari sini untuk konsistensi.
  */
 
 /** Nama aplikasi */
-export const APP_NAME = 'Vault Next';
+export const APP_NAME = 'Aurum Vault';
+export const APP_TAGLINE = 'Pengelola kata sandi offline';
 
 /** Versi aplikasi — sync dengan package.json
  *
@@ -17,9 +18,17 @@ export const APP_NAME = 'Vault Next';
  * WAJIB update di DUA tempat secara bersamaan:
  *  1. File ini (APP_VERSION)
  *  2. package.json ("version")
- * ZIP export selalu diberi nama: vault-next-v{APP_VERSION}.zip
+ * Lalu jalankan `npm run sw-version` (otomatis juga saat `npm run build` lewat prebuild)
+ * agar CACHE_VER di public/sw.js ikut sinkron; swVersion.test.ts menjaganya.
+ *
+ * 2.0.0 = MAJOR karena redesain total (merek Aurum Vault), BUKAN karena format data:
+ * skema data, kripto, kunci penyimpanan, dan format backup .vault sama dengan v1.11.0
+ * sehingga pengguna dan backup lama tetap berfungsi (lihat CHANGELOG.md).
+ *
+ * ZIP rilis diberi nama: aurum-vault-v{APP_VERSION}.zip (folder akar di dalam zip
+ * tetap vault-next-main/ karena nama repo GitHub tetap vault-next).
  */
-export const APP_VERSION = '1.10.3';
+export const APP_VERSION = '2.0.0';
 
 /** Auto-lock default timeout (menit) */
 export const AUTO_LOCK_DEFAULT_MIN = 5;

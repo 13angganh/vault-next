@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/primitives';
 import { X, Fingerprint, CheckCircle2, AlertCircle, Loader2, Shield } from 'lucide-react';
 
 /* ── Constants ── */
-const RP_NAME    = 'Vault Next';
+const RP_NAME    = 'Aurum Vault';
 const USER_NAME  = 'vault-user';
 const USER_ID    = new TextEncoder().encode('vault-next-user-001');
 const SS_KEY     = 'vault_ss_mpw';
@@ -267,7 +267,7 @@ export function BiometricHintModal({
           </div>
           {step !== 'loading' && (
             <button className="ibtn" onClick={onClose} aria-label="Tutup">
-              <X size={16} />
+              <X size={18} />
             </button>
           )}
         </div>
@@ -290,7 +290,7 @@ export function BiometricHintModal({
         {supported && mode === 'register' && step === 'idle' && (
           <div className="bio-modal__body">
             <div className="bio-modal__notice bio-modal__notice--teal">
-              <Shield size={12} className="bio-modal__notice-icon" />
+              <Shield size={16} className="bio-modal__notice-icon" />
               Sidik jari disimpan aman di perangkat (tidak dikirim ke server).
               Sesi biometrik aktif hingga browser/tab ditutup.
             </div>
@@ -342,7 +342,7 @@ export function BiometricHintModal({
         {step === 'session_expired' && (
           <div className="bio-modal__body">
             <div className="bio-modal__notice bio-modal__notice--warning">
-              <Fingerprint size={16} className="bio-modal__notice-icon" />
+              <Fingerprint size={18} className="bio-modal__notice-icon" />
               <span>{errMsg}</span>
             </div>
             <Button variant="gold" full onClick={onClose}>Masuk dengan PIN / Password</Button>
@@ -353,14 +353,14 @@ export function BiometricHintModal({
         {step === 'error' && (
           <div className="bio-modal__body">
             <div className="bio-modal__notice bio-modal__notice--error">
-              <AlertCircle size={14} className="bio-modal__notice-icon" />
+              <AlertCircle size={18} className="bio-modal__notice-icon" />
               <span>{errMsg}</span>
             </div>
             {mode === 'auth' && (
-              <Button variant="gold" full onClick={handleAuth}><Fingerprint size={16} /> Coba Lagi</Button>
+              <Button variant="gold" full onClick={handleAuth}><Fingerprint size={18} /> Coba Lagi</Button>
             )}
             {mode === 'register' && (
-              <Button variant="gold" full onClick={handleRegister}><Fingerprint size={16} /> Coba Lagi</Button>
+              <Button variant="gold" full onClick={handleRegister}><Fingerprint size={18} /> Coba Lagi</Button>
             )}
             <Button variant="ghost" full onClick={onClose}>Tutup</Button>
           </div>

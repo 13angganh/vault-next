@@ -12,15 +12,25 @@
 }
 
 .entry-card {
-  background: var(--bg-s1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  /* v1.11.0 (redesain visual Tahap 3): gradient 3-titik pakai token
+     --card-bg-* KHUSUS (base.css) — bukan --bg-s2/--bg-s1/--bg global
+     — agar kartu punya rona hangat sesuai preview v3 yang dikonfirmasi
+     user, tanpa mengubah warna sidebar/modal/settings lain yang masih
+     pakai token global tsb. Base netral (belum dapat tema warna brand)
+     untuk entry yang belum memilih brandIconSlug; entry dengan brand
+     icon mendapat tambahan inline style bertema warna brand spesifik —
+     lihat EntryCard.tsx getCardThemeStyle().*/
+  background: linear-gradient(160deg, var(--card-bg-1) 0%, var(--card-bg-2) 45%, var(--card-bg-3) 100%);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .entry-card:hover {
   border-color: var(--border2);
+  transform: translateY(-1px);
 }
 
 .entry-card--expanded {
@@ -40,8 +50,12 @@
 .entry-card__header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px var(--space-4);
+  gap: 13px;
+  /* v1.11.0: padding vertikal 12px->14px — avatar naik ke 52px (dari
+     36px), rasio avatar-ke-padding perlu sedikit lebih lega agar tetap
+     proporsional dgn arah "premium/lega" yang sudah diterapkan di
+     elemen lain Tahap 3. */
+  padding: 14px var(--space-4);
   cursor: pointer;
   user-select: none;
   outline: none;
@@ -61,8 +75,13 @@
 }
 
 .entry-card__name {
+  /* v1.11.0: font-weight 600->700 & tambahan letter-spacing tipis —
+     dikonfirmasi user lebih tegas/hidup di preview v3. Tetap pakai
+     var(--text) (bukan #fff hardcode seperti di widget preview) agar
+     tetap ikut sistem tema light/dark yang sudah ada. */
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: var(--ls-tight);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -70,18 +89,11 @@
 }
 
 .entry-card__sub {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.entry-card__badges {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  font-size: var(--text-base);
 }
 
 .entry-card__fav,
@@ -126,7 +138,7 @@
 }
 
 .entry-field__label {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -185,7 +197,7 @@
 }
 
 .entry-seed-word {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text2);
   display: flex;
   gap: 4px;
@@ -205,7 +217,7 @@
 }
 
 .entry-action-btn {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   padding: 5px var(--space-3);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
@@ -226,7 +238,7 @@
 .entry-action-btn--fav-active  { color: var(--gold); border-color: var(--gold); }
 .entry-action-btn--restore:hover { color: var(--teal); border-color: var(--teal); }
 .entry-action-btn--delete:hover  { color: var(--red); border-color: var(--red); }
-.entry-action-btn--confirm { background: rgba(239,68,68,0.12); border-color: var(--red); color: var(--red); }
+.entry-action-btn--confirm { background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: var(--red); color: var(--red); }
 
 /* Unlock overlay */
 
@@ -234,7 +246,7 @@
 .entry-unlock-overlay--fixed {
   position: fixed !important;
   inset: 0 !important;
-  background: rgba(0,0,0,0.72);
+  background: var(--scrim-modal);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
@@ -265,8 +277,12 @@
 }
 
 .entry-unlock-card {
-  background: var(--bg-s2);
-  border: 1px solid var(--border);
+  /* v1.11.0 (redesain visual Tahap 6, QA final): terlewat dari Tahap
+     3-5, ditemukan lewat audit menyeluruh — kartu ini muncul saat
+     entry di kategori terkunci diminta dibuka, momen signifikan.
+     Konsisten dgn .modal/.confirm-card. */
+  background: linear-gradient(160deg, var(--card-bg-1) 0%, var(--card-bg-3) 100%);
+  border: 1px solid var(--gold-border);
   border-radius: var(--radius-xl);
   padding: 20px;
   width: 100%;
@@ -276,15 +292,15 @@
   align-items: center;
   gap: 12px;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow-modal);
   animation: fadeScaleIn 0.22s var(--ease-spring) both;
 }
 
 .entry-unlock-icon { font-size: 32px; }
 .entry-unlock-title { font-size: var(--text-sm); font-weight: 700; color: var(--text); }
-.entry-unlock-desc  { font-size: var(--text-xs); color: var(--muted); }
+.entry-unlock-desc  { font-size: var(--text-sm); color: var(--muted); }
 .entry-unlock-input { width: 100%; text-align: center; }
-.entry-unlock-error { font-size: var(--text-xs); color: var(--red); }
+.entry-unlock-error { font-size: var(--text-sm); color: var(--red); }
 
 .entry-unlock-actions {
   display: flex;
@@ -317,14 +333,8 @@
   gap: var(--space-2);
 }
 
-.form-group--inline {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .form-label {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text2);
   text-transform: uppercase;
@@ -337,18 +347,14 @@
   justify-content: space-between;
 }
 
-.form-required {
-  color: var(--red);
-}
-
 .form-hint {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--muted);
   margin: 0;
 }
 
 .form-error {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--red);
   margin: 0;
 }
@@ -369,13 +375,17 @@
 }
 
 .form-pw-gen-link {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--gold);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 0 6px;
   font-family: inherit;
+  margin: -14px -6px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .form-pw-gen-link:hover {
@@ -428,11 +438,11 @@
  */
 .form-pw-toggle {
   position: absolute;
-  right: 4px;
+  right: 2px;
   top: 50%;
-  margin-top: -16px;   /* setengah dari height:32px — setara translateY(-50%) tanpa transform */
-  width: 32px;
-  height: 32px;
+  margin-top: -22px;   /* setengah dari height:44px — setara translateY(-50%) tanpa transform */
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -501,7 +511,7 @@
 }
 
 .cat-picker__label {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-family: var(--font-sans);
   font-weight: 500;
   color: var(--muted2);
@@ -543,7 +553,7 @@
 }
 
 .seed-grid__num {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--muted);
   min-width: 16px;
   text-align: right;
@@ -553,7 +563,7 @@
 .seed-grid__input {
   flex: 1;
   min-width: 0;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   padding: 5px var(--space-2);
 }
 
@@ -577,7 +587,7 @@
 
 .seed-mode-tab {
   font-family: var(--font-sans);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--muted2);
   background: transparent;
@@ -609,9 +619,13 @@
    sengaja diberi nama sendiri (bukan reuse langsung field-type-*)
    supaya jelas konteksnya di kode, meski nilai propertinya identik. */
 .crypto-net-card {
-  background: var(--bg-s1);
+  /* v1.11.0 (Tahap 6 QA final): gradient hangat TANPA border gold
+     (sama pertimbangan .settings-section) — kartu ini bisa BERULANG
+     dlm 1 form (lihat .crypto-net-card + .crypto-net-card di bawah),
+     semua dpt border gold akan terasa berlebihan. */
+  background: linear-gradient(160deg, var(--card-bg-1) 0%, var(--card-bg-3) 100%);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
@@ -676,14 +690,19 @@
   top: calc(100% + var(--space-2));
   left: 0;
   right: 0;
-  background: var(--bg-s2);
+  /* v1.11.0 (Tahap 6 QA final): --card-bg-2 solid (BUKAN gradient
+     penuh) — dropdown dibaca cepat, gradient dekoratif kurang perlu
+     di sini; warna disamakan dgn keluarga --card-bg-* biar tetap
+     terasa "sefamili" dgn kartu lain, radius dinaikkan utk konsisten
+     skala. */
+  background: var(--card-bg-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: var(--space-1);
   max-height: 240px;
   overflow-y: auto;
   z-index: calc(var(--z-dropdown) + 1);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-pop);
   animation: fadeScaleIn 0.15s var(--ease-spring) both;
 }
 
@@ -807,7 +826,7 @@
 }
 
 .detail-header__cat {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -838,7 +857,7 @@
 }
 
 .detail-field__label {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
@@ -879,7 +898,7 @@
 }
 
 .detail-seed-word {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text2);
   display: flex;
   gap: 4px;
@@ -891,7 +910,7 @@
 }
 
 .detail-ts {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--muted);
   margin: 0;
   padding-top: 8px;
@@ -908,7 +927,7 @@
 }
 
 .detail-action-btn {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   padding: 6px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
@@ -949,17 +968,8 @@
 }
 
 /* Settings row action — flex */
-.settings-row__action {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  white-space: nowrap;
-}
 
 /* Sidebar active state untuk icon (sama dengan emoji) */
-.sidebar-item[data-active="true"] .sidebar-item__icon {
-  color: var(--gold);
-}
 
 /* Drawer active state untuk icon */
 .drawer-item[data-active="true"] .drawer-item__icon {
@@ -1009,32 +1019,30 @@
 .entry-card:hover {
   will-change: transform;
   border-color: var(--border2);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.22), 0 1px 4px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-card-hover);
   transform: translateY(-1px);
 }
 
 .entry-card:active {
   will-change: auto;
   transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-card-press);
 }
 
 .entry-card--expanded {
   border-color: var(--gold-border);
   box-shadow:
-    0 0 0 1px var(--gold-soft),
-    0 6px 24px rgba(0,0,0,0.25);
+    0 0 0 1px var(--gold-soft), var(--shadow-card-open);
   transform: none !important;  /* tidak naik saat expanded */
 }
 
 [data-theme="light"] .entry-card:hover {
-  box-shadow: 0 3px 14px rgba(0,0,0,0.09), 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-card-hover);
 }
 
 [data-theme="light"] .entry-card--expanded {
   box-shadow:
-    0 0 0 1px var(--gold-border),
-    0 4px 18px rgba(0,0,0,0.08);
+    0 0 0 1px var(--gold-border), var(--shadow-card-open);
 }
 
 /* ── Left accent bar on expanded ─────────────────────────────────────── */
@@ -1098,7 +1106,7 @@
 
 .entry-field__value.mono {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   letter-spacing: 0.04em;
   color: var(--text2);
   background: var(--bg-s3);
@@ -1161,4 +1169,4 @@
   transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
 }
 .entry-card__qc-btn:hover { color: var(--gold); border-color: var(--gold-border); background: var(--gold-dim); }
-.entry-card__qc-btn--copied { color: var(--teal) !important; border-color: rgba(0,212,170,0.3) !important; background: rgba(0,212,170,0.08) !important; }
+.entry-card__qc-btn--copied { color: var(--teal) !important; border-color: color-mix(in srgb, var(--success) 30%, transparent) !important; background: color-mix(in srgb, var(--success) 8%, transparent) !important; }

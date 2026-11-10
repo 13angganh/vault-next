@@ -8,7 +8,8 @@
  */
 
 import { useState } from 'react';
-import { Eye, EyeOff, ShieldCheck, KeyRound, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, KeyRound, ArrowRight, ArrowLeft, CheckCircle2, Copy, Check, RefreshCw } from 'lucide-react';
+import { generateRecoveryPhrase } from '@/lib/recoveryPhrase';
 import { Button } from '@/components/ui/primitives';
 
 interface SetupFlowProps {
@@ -25,6 +26,11 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
   const [showPwC, setShowPwC]     = useState(false);
   const [hint, setHint]           = useState('');
   const [recovery, setRecovery]   = useState('');
+  const [saved, setSaved]         = useState(false);
+  const [copied, setCopied]       = useState(false);
+  const goRecovery = () => { if (!recovery) setRecovery(generateRecoveryPhrase()); setStep('recovery'); };
+  const regenRecovery = () => { setRecovery(generateRecoveryPhrase()); setSaved(false); setCopied(false); };
+  const copyRecovery = () => { navigator.clipboard?.writeText(recovery).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); }).catch(() => {}); };
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(false);
 
@@ -168,7 +174,7 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
             <Button variant="ghost" onClick={() => setStep('password')} leftIcon={<ArrowLeft size={14} />}>
               Kembali
             </Button>
-            <Button variant="gold" style={{ flex: 1 }} onClick={() => setStep('recovery')} rightIcon={<ArrowRight size={15} />}>
+            <Button variant="gold" style={{ flex: 1 }} onClick={goRecovery} rightIcon={<ArrowRight size={15} />}>
               Lanjut
             </Button>
           </div>
@@ -178,40 +184,41 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
       {/* Step: Recovery */}
       {step === 'recovery' && (
         <div className="setup-panel">
-          <h3 className="setup-panel__title">
-            Recovery Phrase{' '}
-            <span className="setup-panel__title-muted">(opsional)</span>
-          </h3>
+          <h3 className="setup-panel__title">Recovery Phrase</h3>
           <p className="setup-panel__desc">
-            Jika kamu lupa master password, recovery phrase ini bisa digunakan untuk memulihkan akses. Simpan di tempat aman.
+            Ini satu-satunya cara memulihkan akses jika kamu lupa master password. Catat kelima kata ini
+            secara berurutan dan simpan di tempat aman. Jangan difoto atau dibagikan.
           </p>
-          <textarea
-            value={recovery}
-            onChange={(e) => setRecovery(e.target.value)}
-            placeholder="Ketikkan recovery phrase kamu… (boleh dikosongkan)"
-            rows={3}
-            autoFocus
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            inputMode="text"
-            enterKeyHint="next"
-            className="setup-input setup-input--mono setup-input--textarea"
-            style={{ marginBottom: 'var(--space-5)' }}
-          />
+          <div className="rp-words" role="list" aria-label="Recovery phrase">
+            {recovery.split(' ').map((w, i) => (
+              <div key={i} className="rp-word" role="listitem">
+                <span className="rp-word__num">{i + 1}</span>
+                <span className="rp-word__val">{w}</span>
+              </div>
+            ))}
+          </div>
+          <div className="rp-tools">
+            <button type="button" className="rp-tool" onClick={copyRecovery}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Tersalin' : 'Salin'}
+            </button>
+            <button type="button" className="rp-tool" onClick={regenRecovery}>
+              <RefreshCw size={14} />Buat ulang
+            </button>
+          </div>
+          <label className="rp-ack">
+            <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />
+            <span>Saya sudah mencatat 5 kata ini di tempat yang aman</span>
+          </label>
           <div className="setup-panel__row">
             <Button variant="ghost" onClick={() => setStep('hint')} leftIcon={<ArrowLeft size={14} />}>
               Kembali
             </Button>
-            <Button variant="gold" style={{ flex: 1 }} onClick={() => setStep('done')} rightIcon={<ArrowRight size={15} />}>
+            <Button variant="gold" style={{ flex: 1 }} disabled={!saved} onClick={() => setStep('done')} rightIcon={<ArrowRight size={15} />}>
               Lanjut
             </Button>
           </div>
         </div>
       )}
-
-      {/* Step: Done */}
       {step === 'done' && (
         <div className="setup-panel setup-panel--center">
           <div className="setup-done-icon">
@@ -227,7 +234,7 @@ export function SetupFlow({ onComplete }: SetupFlowProps) {
             {[
               { label: 'Password', value: '••••••' + (pw.length > 6 ? '•'.repeat(pw.length - 6) : '') },
               { label: 'Petunjuk', value: hint || '(tidak diset)' },
-              { label: 'Recovery', value: recovery ? `${recovery.length} karakter` : '(tidak diset)' },
+              { label: 'Recovery', value: '5 kata (dibuat otomatis)' },
             ].map((item) => (
               <div key={item.label} className="setup-summary__row">
                 <span className="setup-summary__label">{item.label}</span>

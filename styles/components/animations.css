@@ -94,20 +94,17 @@
 .ripple-effect {
   position: absolute;
   border-radius: 50%;
-  background: rgba(240,165,0,0.22);
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
   transform: scale(0);
   animation: ripple 480ms var(--ease-out);
   pointer-events: none;
 }
 
 /* Sidebar item: ripple lebih subtle */
-.sidebar-item .ripple-effect {
-  background: rgba(240,165,0,0.14);
-}
 
 /* Icon btn: ripple putih-abu */
 .icon-btn .ripple-effect {
-  background: rgba(255,255,255,0.12);
+  background: var(--ripple-icon);
 }
 
 /* SKELETON LOADER */
@@ -133,22 +130,6 @@
    dipakai (PIN dot animation diimplementasikan via Framer Motion di PINPad.tsx). */
 
 /* Shield security glow — M-14 */
-@keyframes shieldPulse {
-  0%, 100% {
-    opacity: 0.7;
-    filter: drop-shadow(0 0 0px var(--gold));
-  }
-  50% {
-    opacity: 1;
-    filter: drop-shadow(0 0 8px var(--gold));
-  }
-}
-
-@keyframes shieldRing {
-  0%   { transform: scale(1);   opacity: 0.5; }
-  70%  { transform: scale(1.5); opacity: 0;   }
-  100% { transform: scale(1.5); opacity: 0;   }
-}
 
 /* Input focus glow ring */
 @keyframes inputFocusRing {
@@ -169,6 +150,6 @@
 
 @keyframes pinDotSuccess {
   0%   { transform: scale(1.1);  box-shadow: 0 0 0 0 var(--teal); }
-  50%  { transform: scale(1.2);  box-shadow: 0 0 0 5px rgba(0,212,170,0); }
+  50%  { transform: scale(1.2);  box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 0%, transparent); }
   100% { transform: scale(1.1);  box-shadow: 0 0 0 0 transparent; }
 }

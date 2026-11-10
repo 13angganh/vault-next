@@ -2,19 +2,22 @@
 
 import React, { useState, forwardRef, useImperativeHandle, useMemo, useCallback, useEffect } from 'react';
 import { Search as SearchIcon, Trash2, Lock, X,
-  Star, FolderOpen, PackageOpen, SortAsc, Check as CheckIcon,
+  Star, FolderOpen, PackageOpen,
   LayoutGrid, ShieldOff,
 } from 'lucide-react';
 import { verifyPinAndGetMaster, saveVault } from '@/lib/vaultService';
 import { Button, EmptyState, Skeleton, ConfirmDialog } from '@/components/ui/primitives';
 import { useAppStore }       from '@/lib/store/appStore';
 import { DEFAULT_CATEGORIES } from '@/lib/types';
-import { EntryCard }         from '@/components/entries/EntryCard';
+import { EntryCardMemo as EntryCard } from '@/components/entries/EntryCard';
 import { DetailView }        from '@/components/entries/DetailView';
 import { EntryForm }         from '@/components/entries/EntryForm';
 import { useToast }          from '@/components/ui/Toast';
 import type { VaultEntry }   from '@/lib/types';
-import type { SortType }     from '@/lib/store/appStore';
+import type { SortType, FilterType } from '@/lib/store/appStore';
+import { CategoryIcon } from '@/components/entries/CategoryIcon';
+import { Star as OvStar, LayoutGrid as OvGrid, ArrowUpDown, ChevronDown as VChev } from 'lucide-react';
+import { OptionSheet } from '@/components/ui/OptionSheet';
 
 export interface VaultListViewRef {
   openAddForm: () => void;
@@ -65,14 +68,18 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     const vault         = useAppStore((s) => s.vault);
     const recycleBin    = useAppStore((s) => s.recycleBin);
     const customCats    = useAppStore((s) => s.customCats);
+    // v2.0.0 (Tahap 3): lockedIds dilanggan lewat selector agar memo daftar ikut berubah
+    // (sebelumnya dibaca lewat getState() di dalam memo tanpa masuk dependensi -> daftar "Terkunci" basi).
+    const lockedIds     = useAppStore((s) => s.lockedIds);
     const currentFilter = useAppStore((s) => s.currentFilter);
     const searchQuery   = useAppStore((s) => s.searchQuery);
     const sortBy        = useAppStore((s) => s.sortBy);
+    const setFilter     = useAppStore((s) => s.setFilter);
     const setSortBy     = useAppStore((s) => s.setSortBy);
 
     const [detailEntry,      setDetailEntry]      = useState<VaultEntry | null>(null);
     const [editEntry,        setEditEntry]        = useState<VaultEntry | null>(null);
-    const [showSortMenu,     setShowSortMenu]     = useState(false);
+    const [sheet,            setSheet]            = useState<null | 'cat' | 'sort'>(null);
     const [activeFilter,     setActiveFilter]     = useState<'all'|'fav'|'locked'|'no_pass'>('all');
     const [confirmEmptyBin,  setConfirmEmptyBin]  = useState(false);
     const [showAddForm,      setShowAddForm]      = useState(false);
@@ -113,6 +120,10 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     }, [currentFilter, allCats]);
 
     const isRecycleBin = currentFilter === 'bin';
+    // v2.0.0 (Tahap 4B): chip cepat hanya ditampilkan di luar Sampah dan saat TIDAK mencari. Sebelumnya
+    // activeFilter tetap menyaring daftar walau chipnya tersembunyi (mis. chip "Favorit" aktif lalu buka
+    // Sampah -> "Sampah kosong" padahal berisi; atau cari saat chip aktif -> hasil tersaring tanpa petunjuk).
+    const chipsVisible = !isRecycleBin && !searchQuery;
 
     const entries = useMemo(() => {
       let list = isRecycleBin ? recycleBin : vault;
@@ -132,10 +143,11 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           (e.emailAddr ?? '').toLowerCase().includes(q),
         );
       }
-      // Quick filter
-    if (activeFilter==='fav')     list=list.filter(e=>e.fav);
-    if (activeFilter==='locked')  list=list.filter(e=>useAppStore.getState().lockedIds.includes(e.id));
-    if (activeFilter==='no_pass') list=list.filter(e=>!e.pass&&!e.wifiPass&&!e.cardNo);
+      // Quick filter (hanya bila chipnya tampil; lihat chipsVisible)
+    const quick = chipsVisible ? activeFilter : 'all';
+    if (quick==='fav')     list=list.filter(e=>e.fav);
+    if (quick==='locked')  list=list.filter(e=>lockedIds.includes(e.id));
+    if (quick==='no_pass') list=list.filter(e=>!e.pass&&!e.wifiPass&&!e.cardNo);
     // Sort
     const copy=[...list];
     switch(sortBy){
@@ -147,7 +159,7 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       case 'cat_group':  copy.sort((a,b)=>a.cat.localeCompare(b.cat,'id')||a.name.localeCompare(b.name,'id')); break;
     }
     return copy;
-    }, [vault, recycleBin, currentFilter, searchQuery, isRecycleBin, sortBy, activeFilter]);
+    }, [vault, recycleBin, currentFilter, searchQuery, isRecycleBin, chipsVisible, sortBy, activeFilter, lockedIds]);
 
     const handleCopy    = useCallback((_t: string, label: string) => showToast(`${label} disalin!`), [showToast]);
 
@@ -206,6 +218,8 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
       }
     }, [unlockEntry, unlockInput, showToast]);
 
+    const handleDetail = useCallback((e: VaultEntry) => setDetailEntry(e), []);
+    const handleRequestUnlock = useCallback((e: VaultEntry) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }, []);
     const handleEdit    = useCallback((entry: VaultEntry) => { setDetailEntry(null); setEditEntry(entry); }, []);
     const handleSaved   = useCallback(() => showToast('Entri disimpan'), [showToast]);
 
@@ -250,6 +264,16 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
             description="Entri yang dihapus akan muncul di sini"
           />
         );
+      }
+      // v2.0.0 (Tahap 3): chip cepat aktif -> pesan sesuai chip (sebelumnya jatuh ke "Vault masih kosong" / "Kategori X kosong")
+      if (activeFilter === 'fav') {
+        return <EmptyState icon={<Star size={40} strokeWidth={1.4} />} title="Belum ada favorit" description="Tandai entri sebagai favorit untuk melihatnya di sini" />;
+      }
+      if (activeFilter === 'locked') {
+        return <EmptyState icon={<Lock size={40} strokeWidth={1.4} />} title="Belum ada entri terkunci" description="Kunci entri dari menu aksinya untuk melihatnya di sini" />;
+      }
+      if (activeFilter === 'no_pass') {
+        return <EmptyState icon={<ShieldOff size={40} strokeWidth={1.4} />} title="Semua entri punya password" description="Entri tanpa password akan muncul di sini" />;
       }
       if (currentFilter === 'fav') {
         return (
@@ -311,69 +335,52 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     return (
       <>
         {/* ── Header: sticky, tidak ikut scroll ── */}
-        <div className="vault-list-header">
-          <div className="vault-list-header__top">
+        <div className="vault-list-header vlh">
+          <div className="vlh-top">
             <div>
               <h2 className="vault-list-title">{filterLabel}</h2>
               <p className="vault-list-subtitle">
-                {searchQuery
-                  ? `${entries.length} hasil untuk "${searchQuery}"`
-                  : `${entries.length} entri`}
+                {searchQuery ? `${entries.length} hasil untuk "${searchQuery}"` : `${entries.length} entri`}
               </p>
             </div>
-            <div style={{ display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
-              {/* Kosongkan sampah */}
-              {isRecycleBin && recycleBin.length > 0 && (
-                <button className="vault-empty-bin-btn" onClick={() => setConfirmEmptyBin(true)} aria-label="Kosongkan semua sampah">
-                  Kosongkan
-                </button>
-              )}
-              {/* Sort button */}
-              {!isRecycleBin && (
-                <div className="vault-sort-wrap">
-                  <button className={`vault-sort-btn${showSortMenu?' vault-sort-btn--active':''}`}
-                    onClick={() => setShowSortMenu(v=>!v)} aria-label="Urutkan entri">
-                    <SortAsc size={14} />
-                  </button>
-                  {showSortMenu && (
-                    <>
-                      <div className="vault-sort-backdrop" onClick={() => setShowSortMenu(false)} />
-                      <div className="vault-sort-menu">
-                        {(['default','fav_first','name_asc','name_desc','newest','oldest','cat_group'] as SortType[]).map(val => {
-                          const labels:Record<SortType,string>={default:'Default',fav_first:'Favorit dulu',name_asc:'Nama A–Z',name_desc:'Nama Z–A',newest:'Terbaru',oldest:'Terlama',cat_group:'Per Kategori'};
-                          return (
-                            <button key={val} className={`vault-sort-item${sortBy===val?' vault-sort-item--active':''}`}
-                              onClick={()=>{setSortBy(val);setShowSortMenu(false);}}>
-                              {sortBy===val && <CheckIcon size={12}/>}
-                              {labels[val]}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+            {isRecycleBin && recycleBin.length > 0 && (
+              <button className="vault-empty-bin-btn" onClick={() => setConfirmEmptyBin(true)} aria-label="Kosongkan semua sampah">Kosongkan</button>
+            )}
           </div>
-          {/* Filter chips */}
-          {!isRecycleBin && !searchQuery && (
-            <div className="vault-filter-chips">
-              {(['all','fav','locked','no_pass'] as const).map(val => {
+          {!isRecycleBin && (
+            <div className="vlh-bar">
+              <button type="button" className="vlh-pick" onClick={() => setSheet('cat')} aria-haspopup="dialog">
+                <span className="vlh-pick__ico">
+                  {currentFilter === 'all' || currentFilter === 'fav'
+                    ? (currentFilter === 'fav' ? <OvStar size={18} /> : <OvGrid size={18} />)
+                    : <CategoryIcon catId={currentFilter} customCats={customCats} size="sm" />}
+                </span>
+                <span className="vlh-pick__txt">
+                  <small>Kategori</small>
+                  <b>{currentFilter === 'all' ? 'Semua kategori' : currentFilter === 'fav' ? 'Favorit' : (allCats.find((c) => c.id === currentFilter)?.label ?? currentFilter)}</b>
+                </span>
+                <VChev size={18} />
+              </button>
+              <button type="button" className="vlh-sort" onClick={() => setSheet('sort')} aria-haspopup="dialog" aria-label="Urutkan entri">
+                <ArrowUpDown size={18} /><span>{SORT_LABELS[sortBy]}</span>
+              </button>
+            </div>
+          )}
+          {chipsVisible && (
+            <div className="vlh-chips" role="group" aria-label="Filter cepat">
+              {(['fav', 'locked', 'no_pass'] as const).map((val) => {
                 const { icon, label } = FILTER_META[val];
+                const on = activeFilter === val;
                 return (
-                  <button key={val} className={`vault-chip${activeFilter===val?' vault-chip--active':''}`}
-                    onClick={()=>setActiveFilter(val)}>
-                    {icon}
-                    {label}
+                  <button key={val} type="button" className={`vlh-chip${on ? ' vlh-chip--on' : ''}`} aria-pressed={on}
+                    onClick={() => setActiveFilter(on ? 'all' : val)}>
+                    {icon}{label}
                   </button>
                 );
               })}
             </div>
           )}
         </div>
-
-        {/* ── Entries: scroll mandiri ── */}
         <div className="vault-entries-scroll">
           {showSkeleton ? (
             <VaultSkeletonList />
@@ -404,9 +411,9 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
                           entry={entry}
                           isRecycleBin={isRecycleBin}
                           onEdit={handleEdit}
-                          onDetail={(e) => setDetailEntry(e)}
+                          onDetail={handleDetail}
                           onCopy={handleCopy}
-                          onRequestUnlock={(e) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }}
+                          onRequestUnlock={handleRequestUnlock}
                         />
                       </div>
                     );
@@ -420,9 +427,9 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
                       entry={entry}
                       isRecycleBin={isRecycleBin}
                       onEdit={handleEdit}
-                      onDetail={(e) => setDetailEntry(e)}
+                      onDetail={handleDetail}
                       onCopy={handleCopy}
-                      onRequestUnlock={(e) => { setUnlockEntry(e); setUnlockInput(''); setUnlockError(''); }}
+                      onRequestUnlock={handleRequestUnlock}
                     />
                   </div>
                 ))
@@ -431,6 +438,13 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           )}
         </div>
 
+        <OptionSheet open={sheet === 'cat'} title="Pilih kategori" value={currentFilter === 'fav' ? 'all' : currentFilter} onClose={() => setSheet(null)}
+          onSelect={(id) => setFilter(id as FilterType)}
+          options={[{ id: 'all', label: 'Semua kategori', icon: <OvGrid size={20} />, meta: vault.length },
+            ...allCats.map((c) => ({ id: c.id, label: c.label, icon: <CategoryIcon catId={c.id} customCats={customCats} size="sm" />, meta: vault.filter((e) => e.cat === c.id).length }))]} />
+        <OptionSheet open={sheet === 'sort'} title="Urutkan entri" value={sortBy} onClose={() => setSheet(null)}
+          onSelect={(id) => setSortBy(id as SortType)}
+          options={(Object.keys(SORT_LABELS) as SortType[]).map((k) => ({ id: k, label: SORT_LABELS[k] }))} />
         <ToastContainer />
 
         {/* ── Unlock Modal — di root VaultListView, bebas dari overflow clip ── */}
@@ -441,10 +455,10 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
           >
             <div className="vl-unlock-card" onClick={(e) => e.stopPropagation()}>
               <div className="vl-unlock-header">
-                <Lock size={20} style={{ color: 'var(--gold)' }} />
+                <span className="vl-unlock-icon" aria-hidden="true"><Lock size={24} /></span>
                 <span className="vl-unlock-title">Buka Entri</span>
-                <button className="vl-unlock-close" onClick={() => { setUnlockEntry(null); setUnlockInput(''); }}>
-                  <X size={16} />
+                <button className="vl-unlock-close" aria-label="Tutup" onClick={() => { setUnlockEntry(null); setUnlockInput(''); }}>
+                  <X size={18} />
                 </button>
               </div>
               <p className="vl-unlock-name">{unlockEntry.name}</p>
@@ -504,3 +518,6 @@ export const VaultListView = forwardRef<VaultListViewRef, VaultListViewProps>(
     );
   }
 );
+
+
+const SORT_LABELS: Record<SortType, string> = { default: 'Default', fav_first: 'Favorit dulu', name_asc: 'Nama A–Z', name_desc: 'Nama Z–A', newest: 'Terbaru', oldest: 'Terlama', cat_group: 'Per kategori' };

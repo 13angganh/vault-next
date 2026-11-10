@@ -1,6 +1,7 @@
 /**
  * Vault Next — useRipple
  * Pasang ripple effect ke semua elemen .btn dan .icon-btn via event delegation.
+ * v2.0.0 (Tahap 3): target item sidebar diganti ke kelas item Sidebar v2 (sbx-item); kelas lama sudah dihapus.
  * Dipanggil sekali di AppShell — tidak perlu dipasang per-komponen.
  */
 
@@ -9,7 +10,7 @@ import { useEffect } from 'react';
 export function useRipple() {
   useEffect(() => {
     function createRipple(e: PointerEvent) {
-      const target = (e.target as HTMLElement).closest<HTMLElement>('.btn, .icon-btn, .sidebar-item, .lock-bio-btn');
+      const target = (e.target as HTMLElement).closest<HTMLElement>('.btn, .icon-btn, .sbx-item, .lock-bio-btn');
       if (!target) return;
 
       const rect = target.getBoundingClientRect();

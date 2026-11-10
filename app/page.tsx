@@ -66,7 +66,7 @@ export default function Page() {
         style={{
           position: 'fixed', inset: 0,
           background: 'var(--bg)',
-          zIndex: 9998,
+          zIndex: 'calc(var(--z-top) - 1)',
         }}
         aria-hidden="true"
       />

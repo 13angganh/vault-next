@@ -34,7 +34,7 @@
 .sidebar-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: var(--scrim);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: calc(var(--z-sidebar) - 1);
@@ -49,213 +49,40 @@
 }
 
 /* Header sidebar */
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-3) var(--space-3);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
+/* v1.11.0 (redesain visual Tahap 4): gradient hangat + border gold
+   tipis di bawah — dikonfirmasi user di preview, konsisten dgn bahasa
+   kartu di Tahap 3 (--card-bg-* dan border bertema gold). */
 
 /* Scrollable area */
-.sidebar-scroll-area {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-  padding: 6px 8px 8px;
-}
 
 /* Close button */
-.sidebar-close {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  background: none;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  color: var(--muted);
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  touch-action: manipulation;
-}
-.sidebar-close:hover {
-  border-color: var(--red);
-  color: var(--red);
-  background: rgba(255,77,109,0.08);
-}
 
 /* Logo */
-.sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2);
-}
-
-.sidebar-logo__text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sidebar-logo__name {
-  font-family: var(--font-sans);
-  font-weight: 800;
-  font-size: var(--text-md);
-  color: var(--text);
-  letter-spacing: -0.02em;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.sidebar-logo__name--gold {
-  color: var(--gold);
-}
 
 /* Nav section */
-.sidebar-section {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
 
 /* Section label — collapsible button */
-.sidebar-section-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: var(--ls-label);
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: var(--space-3) var(--space-2) var(--space-2);
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-fast);
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-.sidebar-section-label:hover { color: var(--text2); }
-
-.sidebar-section-label__chevron {
-  transition: transform 280ms var(--ease-default);
-  flex-shrink: 0;
-  opacity: 0.6;
-}
-
-.sidebar-section-label--open .sidebar-section-label__chevron {
-  transform: rotate(180deg);
-}
 
 /* Divider */
-.sidebar-divider {
-  height: 1px;
-  background: var(--border);
-  margin: var(--space-3) var(--space-2);
-}
 
 /* Categories collapse */
-.sidebar-cats {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height 280ms var(--ease-default);
-}
-
-.sidebar-cats--open {
-  max-height: 700px;
-}
 
 /* Footer */
-.sidebar-footer {
-  flex-shrink: 0;
-  padding: var(--space-2) var(--space-2) var(--space-1);
-  border-top: 1px solid var(--border);
-}
 
 /* Nav item */
-.sidebar-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: var(--text2);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  text-align: left;
-  transition: background var(--transition-fast), color var(--transition-fast);
-  position: relative;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 40px;
-}
 
-.sidebar-item:hover {
-  background: var(--bg-s2);
-  color: var(--text);
-}
-
-.sidebar-item[data-active="true"] {
-  background: var(--gold-dim);
-  color: var(--gold);
-  border: 1px solid var(--gold-border);
-}
+/* v1.11.0: state aktif diganti dari --gold-dim solid datar menjadi
+   gradient gold penuh + shadow — dikonfirmasi user di preview,
+   konsisten dgn .vault-chip--active (layout.css, Tahap 3). Warna teks
+   diganti ke gelap hardcode (bukan var(--gold)) krn kontras teks di
+   atas background gold SOLID butuh warna gelap, sama seperti alasan
+   di EntryIcon.tsx & vault-chip--active. */
 
 /* Lucide icon slot */
-.sidebar-item__icon {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: inherit;
-}
 
-.sidebar-item__label {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sidebar-item__badge {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  background: var(--bg-s3);
-  color: var(--muted2);
-  border-radius: var(--radius-full);
-  padding: 1px 7px;
-  min-width: 20px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.sidebar-item[data-active="true"] .sidebar-item__badge {
-  background: var(--gold-soft);
-  color: var(--gold);
-}
+/* v1.11.0: badge di dalam item aktif sekarang di atas background gold
+   SOLID (bukan --gold-dim tipis spt sebelumnya) — warna disesuaikan
+   agar tidak jadi gold-on-gold yang nyaris tak kebaca. */
 
 /* ── BOTTOM NAV ─────────────────────────────────────────────────────────── */
 
@@ -327,7 +154,7 @@
 }
 
 .drawer-section-label {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: var(--ls-label);
   text-transform: uppercase;
@@ -347,7 +174,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  border-radius: var(--radius-md);
+  /* v1.11.0: disamakan dgn .sidebar-item — lihat catatan di sana */
+  border-radius: var(--radius-lg);
   border: none;
   background: none;
   cursor: pointer;
@@ -360,10 +188,15 @@
 }
 
 .drawer-item:hover { background: var(--bg-s2); color: var(--text); }
+/* v1.11.0: sama seperti .sidebar-item[data-active] di atas — drawer
+   adalah varian mobile-bottom-sheet dari nav ini (app ini mobile-
+   first), jadi harus konsisten dengan redesain sidebar desktop. */
 .drawer-item[data-active="true"] {
-  background: var(--gold-dim);
-  color: var(--gold);
-  border: 1px solid var(--gold-border);
+  background: var(--gold-gradient);
+  color: var(--on-gold);
+  font-weight: 700;
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-gold), inset 0 1px 0 var(--hl-gold-0);
 }
 
 .drawer-item__icon {
@@ -379,15 +212,15 @@
 .drawer-item__label { flex: 1; }
 .drawer-item__badge {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   background: var(--bg-s3);
   color: var(--muted2);
   border-radius: var(--radius-full);
   padding: 1px 8px;
 }
 .drawer-item[data-active="true"] .drawer-item__badge {
-  background: var(--gold-soft);
-  color: var(--gold);
+  background: var(--on-gold-count-bg);
+  color: var(--on-gold);
 }
 
 /* ── Versi di sidebar footer — v1.3.1 ───────────────────────────────── */
@@ -396,7 +229,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3) var(--space-1);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--muted);
   letter-spacing: var(--ls-label);
@@ -406,22 +239,6 @@
 .sidebar-version span { opacity: 1; }
 
 /* ── Sidebar logo: nama + versi dalam satu text group — v1.3.2 ─────── */
-.sidebar-logo__name-row {
-  display: flex;
-  align-items: baseline;
-  gap: 0;
-  line-height: 1;
-}
-
-.sidebar-logo__version {
-  font-size: var(--text-xs);
-  font-weight: 400;
-  color: var(--muted);
-  opacity: 0.6;
-  letter-spacing: var(--ls-label);
-  margin-top: 2px;
-  line-height: 1;
-}
 
 /* Hapus sidebar-version di footer (sudah dipindah ke header) */
 .sidebar-version { display: none; }
